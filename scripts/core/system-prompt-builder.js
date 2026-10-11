@@ -6,6 +6,7 @@
 
 import { createLogger } from '../utils/logger.js';
 import { toolRegistry } from './tool-registry.js';
+import { getAutomationPromptBlocks } from './domain-prompt.js';
 
 const logger = createLogger('SystemPrompt');
 
@@ -122,16 +123,26 @@ export async function buildSystemPrompt() {
       toolSchemas,
     ].join('\n\n');
   } else {
-    basePrompt = [
-      game.i18n.localize('SIMULACRUM.SystemPrompt.Standard.Identity'),
-      game.i18n.localize('SIMULACRUM.SystemPrompt.Standard.CriticalRules'),
-      documentTypesInfo,
-      game.i18n.localize('SIMULACRUM.SystemPrompt.Standard.StrategicProtocol'),
-      game.i18n.localize('SIMULACRUM.SystemPrompt.Standard.ToolOperatives'),
-      `## Available Macros\nThe following macros are available for execution via the execute_macro tool:\n${macrosList}`,
-      game.i18n.localize('SIMULACRUM.SystemPrompt.Standard.CommunicationStyle_v2'),
-      game.i18n.localize('SIMULACRUM.SystemPrompt.Standard.LoopTermination'),
-    ].join('\n\n');
+    const automationMode = game?.settings?.get('simulacrum', 'automationMode') ?? true;
+
+    if (automationMode) {
+      // Automation-builder fork: replace the generalist campaign-copilot prompt with
+      // the scoped automation domain prompt. Document types are still included so the
+      // model knows the system's schema; the macros list is omitted because this fork
+      // does not use execute_macro for automation.
+      basePrompt = [...getAutomationPromptBlocks(), documentTypesInfo].join('\n\n');
+    } else {
+      basePrompt = [
+        game.i18n.localize('SIMULACRUM.SystemPrompt.Standard.Identity'),
+        game.i18n.localize('SIMULACRUM.SystemPrompt.Standard.CriticalRules'),
+        documentTypesInfo,
+        game.i18n.localize('SIMULACRUM.SystemPrompt.Standard.StrategicProtocol'),
+        game.i18n.localize('SIMULACRUM.SystemPrompt.Standard.ToolOperatives'),
+        `## Available Macros\nThe following macros are available for execution via the execute_macro tool:\n${macrosList}`,
+        game.i18n.localize('SIMULACRUM.SystemPrompt.Standard.CommunicationStyle_v2'),
+        game.i18n.localize('SIMULACRUM.SystemPrompt.Standard.LoopTermination'),
+      ].join('\n\n');
+    }
   }
 
   // Append custom system prompt if provided

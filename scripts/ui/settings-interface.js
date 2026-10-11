@@ -158,9 +158,23 @@ function _registerLegacySettings() {
     default: false,
     restricted: true,
   });
+
+  _registerAutomationSettings();
 }
 
 function _registerContextSettings() {}
+
+function _registerAutomationSettings() {
+  game.settings.register('simulacrum', 'automationMode', {
+    name: 'Automation Builder Mode',
+    hint: 'Use the scoped automation-builder system prompt instead of the generalist campaign-copilot prompt. Disable to fall back to upstream behaviour.',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: true,
+    restricted: true,
+  });
+}
 
 function _registerStylingSettings() {
   game.settings.register('simulacrum', 'customSystemPrompt', {
