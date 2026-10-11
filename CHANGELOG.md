@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0] - 2026-10-12
+
+First release of the Ebonhawk automation-builder fork. Upstream's generalist
+campaign-assistant prompt is replaced with an automation-builder domain prompt,
+the provider layer is reduced to OpenRouter, and three tools are added.
+
+### Added
+
+- **editable spec preview**: `preview_spec` returns the parsed ability as a form, drawn from a closed vocabulary (text, number, select, checkbox, group) so a misreading is corrected before any document is written. The form is data, never markup, and `showIf` is evaluated without `eval`. Edited values never round-trip through the model: the spec is stashed under a single-use token and the builder reads it verbatim.
+- **`build_save_ability`**: writes a save-based automation as a dnd5e Feature with its save activity, damage, applied effect, DAE changes and midi-qol flags. Idempotent by `system.identifier`, so rebuilding corrects rather than duplicates.
+- **`test_ability`**: runs the built ability twice against the token the user has targeted, forcing the save to fail and then to succeed, and reports one checklist entry per claim. Claims that could not be observed report as untested rather than passed. Teardown is unconditional.
+- shared spec contract (`automation-spec.js`) accepting both flat and nested specs, with correction-guidance errors and warnings for unrecognised keys.
+- `preview_spec` and the builder tools as permission-gated destructive tools, so "Always Allow" is available after first use.
+
+### Changed
+
+- system prompt replaced with automation-domain blocks (identity, rules, domain model, protocol, feedback, form vocabulary, communication); the generalist prompt is retained as a fallback behind the `automationMode` setting.
+- packaging rewritten to be dependency-free: the release is built by `tools/build-release.mjs` instead of shelling out to the `zip` binary, which is absent on Windows.
+
+### Fixed
+
+- `module.json` defined `description` twice; the first value was dead. Duplicate keys are now rejected at build time.
+- the `package` test tier failed on any machine without `unzip`. It now reads the archive with the bundled reader and verifies the module contract directly.
+
 ## [Unreleased] - 2026-09-14
 
 ### Added
