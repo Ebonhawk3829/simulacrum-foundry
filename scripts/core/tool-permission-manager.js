@@ -51,6 +51,16 @@ set_document_ownership: {
     explainer: 'SIMULACRUM.ToolExplainer.SetDocumentOwnership',
     defaultState: PermissionState.ASK,
   },
+  build_save_ability: {
+    displayName: 'SIMULACRUM.Tools.build_save_ability',
+    explainer: 'SIMULACRUM.ToolExplainer.BuildSaveAbility',
+    defaultState: PermissionState.ASK,
+  },
+  test_ability: {
+    displayName: 'SIMULACRUM.Tools.test_ability',
+    explainer: 'SIMULACRUM.ToolExplainer.TestAbility',
+    defaultState: PermissionState.ASK,
+  },
 };
 
 /**
