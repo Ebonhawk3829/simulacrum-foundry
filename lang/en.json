@@ -2,8 +2,8 @@
   "SIMULACRUM": {
     "Settings": {
       "ApiKey": {
-        "Name": "AI Provider API Key",
-        "Hint": "Enter your API key (OpenAI-compatible APIs)."
+        "Name": "OpenRouter API Key",
+        "Hint": "Enter your OpenRouter API key (openrouter.ai/keys)."
       },
       "TrustAllTools": "Trust All Tools (Dangerous)",
       "TrustAllToolsHint": "⚠️ WARNING: Allows AI to execute ANY tool without confirmation. Only enable if you fully trust the AI.",

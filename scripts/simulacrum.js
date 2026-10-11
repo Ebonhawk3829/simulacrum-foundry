@@ -25,6 +25,7 @@ try {
 import { InteractionLogDownloader } from './core/interaction-logger.js';
 import { assetIndexService } from './core/asset-index-service.js';
 import { modelService } from './core/model-service.js';
+import { OPENROUTER_BASE_URL } from './core/ai-client.js';
 
 const MODULE_ID = 'simulacrum';
 const MODULE_NAME = 'Simulacrum AI Assistant';
@@ -62,12 +63,9 @@ async function validateAndUpdateTabButton() {
  */
 async function testEndpoint() {
   try {
-    const baseURL = game.settings.get(MODULE_ID, 'baseURL');
     const apiKey = game.settings.get(MODULE_ID, 'apiKey');
 
-    if (!baseURL) return false;
-
-    const modelsURL = baseURL.replace(/\/+$/, '') + '/models';
+    const modelsURL = OPENROUTER_BASE_URL.replace(/\/+$/, '') + '/models';
     const headers = { 'Content-Type': 'application/json' };
     if (apiKey) {
       headers['Authorization'] = `Bearer ${apiKey}`;
@@ -208,28 +206,6 @@ function registerAPISettings() {
         createLogger('Module').info('AI client reinitialized after apiKey change');
       } catch (e) {
         createLogger('Module').warn('Failed to reinitialize AI after apiKey change', e);
-      }
-    },
-  });
-
-  game.settings.register(MODULE_ID, 'baseURL', {
-    name: 'API Base URL',
-    hint: 'Base URL for the AI provider API (for Ollama or custom endpoints).',
-    scope: 'world',
-    config: true,
-    type: String,
-    default: 'http://localhost:11434/v1',
-    restricted: true,
-    onChange: async _value => {
-      try {
-        modelService.invalidateCache();
-        ui.simulacrum?.invalidateModelList(true);
-        await game.settings.set(MODULE_ID, 'model', '');
-        await SimulacrumCore.initializeAIClient();
-        await validateAndUpdateTabButton();
-        createLogger('Module').info('AI client reinitialized after baseURL change');
-      } catch (e) {
-        createLogger('Module').warn('Failed to reinitialize AI after baseURL change', e);
       }
     },
   });

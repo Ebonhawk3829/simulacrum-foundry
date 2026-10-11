@@ -406,25 +406,31 @@ class InteractionLogger {
 /**
  * InteractionLogDownloader - FormApplication for the settings menu button
  * Immediately triggers download when opened
+ *
+ * FormApplication is a Foundry global, only defined in a browser. Guard the
+ * class definition so this module stays importable in plain Node (unit tests).
  */
-class InteractionLogDownloader extends FormApplication {
-  static get defaultOptions() {
-    return mergeObject(super.defaultOptions, {
-      id: 'interaction-log-downloader',
-      title: 'Download Interaction Log',
-      template: null,
-      width: 1,
-      height: 1,
-    });
-  }
+let InteractionLogDownloader = null;
+if (typeof FormApplication !== 'undefined') {
+  InteractionLogDownloader = class InteractionLogDownloader extends FormApplication {
+    static get defaultOptions() {
+      return mergeObject(super.defaultOptions, {
+        id: 'interaction-log-downloader',
+        title: 'Download Interaction Log',
+        template: null,
+        width: 1,
+        height: 1,
+      });
+    }
 
-  /** @override */
-  async _render(_force, _options) {
-    // Don't actually render - just trigger download and close
-    interactionLogger.downloadAsFile();
-    ui?.notifications?.info(`Exported ${interactionLogger.entryCount} interaction log entries`);
-    this.close();
-  }
+    /** @override */
+    async _render(_force, _options) {
+      // Don't actually render - just trigger download and close
+      interactionLogger.downloadAsFile();
+      ui?.notifications?.info(`Exported ${interactionLogger.entryCount} interaction log entries`);
+      this.close();
+    }
+  };
 }
 
 // Singleton instance

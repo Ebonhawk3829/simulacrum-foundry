@@ -31,7 +31,6 @@
     "test:foundry": "node tools/test-tier-runner.mjs foundry",
     "test:local": "npm run test:policy && npm run test:static && npm run test:unit && npm run test:regression && npm run test:integration && npm run test:component && npm run test:security && npm run test:package",
     "test:repair": "node tests/utils/test-repair.mjs",
-    "test:gemini": "node tests/integration/test-gemini-openai.js",
     "test:e2e": "npm run test:foundry",
     "test:e2e:ui": "playwright test --config=tests/e2e/playwright.config.mjs --ui",
     "test:e2e:headed": "playwright test --config=tests/e2e/playwright.config.mjs --headed",

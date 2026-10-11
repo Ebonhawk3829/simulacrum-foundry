@@ -131,15 +131,13 @@ class SimulacrumCore {
   static async initializeAIClient() {
     try {
       const apiKey = game.settings.get('simulacrum', 'apiKey');
-      const baseURL = game.settings.get('simulacrum', 'baseURL');
       const model = game.settings.get('simulacrum', 'model');
 
       // Do not enforce API key at this layer. Some endpoints may not require it.
 
-      // Create AI client (OpenAI-compatible)
+      // Create AI client (OpenRouter, OpenAI-compatible)
       this.aiClient = new AIClient({
         apiKey,
-        baseURL,
         model,
       });
       this.logger.info('AI Client Initialized');

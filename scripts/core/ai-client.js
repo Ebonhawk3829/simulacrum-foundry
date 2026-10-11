@@ -21,13 +21,12 @@ import {
   DEFAULT_RETRY_CONFIG,
 } from '../utils/retry-helpers.js';
 import { modelService } from './model-service.js';
-// Import providers
-import { AIProvider } from './providers/base-provider.js';
-import { MockAIProvider } from './providers/mock-provider.js';
-import { OpenAIProvider } from './providers/openai-provider.js';
 
-// Re-export providers for backward compatibility
-export { AIProvider, MockAIProvider, OpenAIProvider };
+/**
+ * The only supported AI endpoint in this fork. OpenRouter is OpenAI-compatible,
+ * so the request/response handling is identical to any OpenAI-style backend.
+ */
+export const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
 export const AI_ERROR_CODES = Object.freeze({
   TOOL_CALL_FAILURE: 'TOOL_CALL_FAILURE',
@@ -72,7 +71,7 @@ export class AIClient {
    */
   constructor(config = {}) {
     this.apiKey = config.apiKey ? config.apiKey.trim() : config.apiKey;
-    this.baseURL = config.baseURL;
+    this.baseURL = config.baseURL || OPENROUTER_BASE_URL;
     this.model = config.model;
 
     // Context length will be dynamically derived when needed
@@ -87,32 +86,6 @@ export class AIClient {
     } catch {
       // Ignore settings access errors (e.g. during tests)
     }
-
-    this.providers = new Map();
-    this.defaultProvider = null;
-  }
-
-  /**
-   * Detect provider type from baseURL
-   * @param {string} baseURL - Base URL to check
-   * @returns {string} Provider type
-   */
-  detectProvider(baseURL) {
-    if (!baseURL) return null;
-    if (baseURL.includes('openai.com')) return 'openai';
-    if (baseURL.includes('localhost') || baseURL.includes('ollama')) return 'ollama';
-    if (baseURL.includes('anthropic.com')) return 'anthropic';
-    return null;
-  }
-
-  /**
-   * Check if baseURL is from a supported provider
-   * @param {string} baseURL - Base URL to check
-   * @returns {boolean} Whether provider is supported
-   */
-  isSupportedProvider(baseURL) {
-    // Be permissive: allow any URL; rely on provider selection and runtime errors
-    return true;
   }
 
   /**
@@ -316,10 +289,6 @@ export class AIClient {
    * @returns {Promise<Object>} AI response
    */
   async chat(messages, tools = null, options = {}) {
-    if (!this.baseURL) {
-      throw new SimulacrumError('No baseURL configured for AI client');
-    }
-
     // Task-14: Apply request delay to prevent rate limiting
     await this._applyRequestDelay();
 
@@ -338,10 +307,10 @@ export class AIClient {
       messages: messages.map((m, i) => {
         let role = m.role;
         let content = m.content;
-        const isOpenAI = this.detectProvider(this.baseURL) === 'openai';
-        // Downgrade 'developer' role for providers that don't support it.
-        // OpenAI supports 'developer'; local/unknown backends get 'user' with prefix.
-        if (role === 'developer' && !isOpenAI) {
+        // Downgrade 'developer' role unconditionally: OpenRouter passes 'developer'
+        // through only for models that support it, and non-OpenAI models reject it.
+        // Treating every backend as "not OpenAI-direct" avoids 400s.
+        if (role === 'developer') {
           role = 'user';
           content = `[DEVELOPER CORRECTION] ${content}`;
         }
@@ -406,6 +375,9 @@ export class AIClient {
 
       const headers = {
         'Content-Type': 'application/json',
+        // OpenRouter app attribution (recommended for app identification/rankings)
+        'HTTP-Referer': 'https://github.com/Ebonhawk3829/simulacrum-foundry',
+        'X-Title': 'Simulacrum (Ebonhawk fork)',
         ...(this.apiKey ? { Authorization: `Bearer ${this.apiKey}` } : {}),
       };
 
@@ -660,58 +632,16 @@ export class AIClient {
     return data.data && data.data.some(model => model.id === this.model);
   }
 
-  // Provider-agnostic: Ollama validation same as OpenAI-compatible /v1
-  async validateOllama() {
-    return this.validateOpenAI();
-  }
-
-  /**
-   * Register a new AI provider
-   * @param {string} name - Provider name
-   * @param {AIProvider} provider - Provider instance
-   * @param {boolean} setAsDefault - Whether to set as default provider
-   */
-  registerProvider(name, provider, setAsDefault = false) {
-    if (!(provider instanceof AIProvider)) {
-      throw new SimulacrumError('Provider must extend AIProvider');
-    }
-
-    this.providers.set(name, provider);
-
-    if (setAsDefault || !this.defaultProvider) {
-      this.defaultProvider = name;
-    }
-  }
-
   /**
    * Send a message to AI
    * @param {string} message - User message
-   * @param {Object} options - Options including provider, context, etc.
+   * @param {Object} options - Options including context, tools, signal
    * @returns {Promise<Object>} AI response
    */
   async sendMessage(message, options = {}) {
-    const providerName = options.provider || this.defaultProvider || 'openai';
-    const provider = providerName ? this.providers.get(providerName) : null;
-
-    if (provider) {
-      if (!provider.isAvailable()) {
-        throw new APIError(`Provider '${providerName}' is not available`);
-      }
-      try {
-        const response = await provider.sendMessage(message, options.context || []);
-        return {
-          ...response,
-          provider: providerName,
-        };
-      } catch (error) {
-        throw new APIError(`AI request failed: ${error.message}`);
-      }
-    }
-
     const contextMessages = Array.isArray(options.context) ? options.context : [];
     const baseMessages = [...contextMessages, { role: 'user', content: message }];
     const raw = await this.chat(baseMessages, options.tools || null, {
-      provider: providerName,
       signal: options.signal,
     });
     const normalized = normalizeAIResponse(raw);
@@ -719,7 +649,6 @@ export class AIClient {
       content: normalized.content,
       usage: normalized.usage || raw.usage,
       model: normalized.model || raw.model,
-      provider: providerName,
       raw,
     };
   }
@@ -727,30 +656,11 @@ export class AIClient {
   /**
    * Generate a response from conversation history
    * @param {Array} messages - Array of message objects
-   * @param {Object} options - Options including provider
+   * @param {Object} options - Options including tools, signal
    * @returns {Promise<Object>} AI response
    */
   async generateResponse(messages, options = {}) {
-    const providerName = options.provider || this.defaultProvider || 'openai';
-    const provider = providerName ? this.providers.get(providerName) : null;
-
-    if (provider) {
-      if (!provider.isAvailable()) {
-        throw new APIError(`Provider '${providerName}' is not available`);
-      }
-      try {
-        const response = await provider.generateResponse(messages);
-        return {
-          ...response,
-          provider: providerName,
-        };
-      } catch (error) {
-        throw new APIError(`AI request failed: ${error.message}`);
-      }
-    }
-
     const raw = await this.chat(messages, options.tools || null, {
-      provider: providerName,
       signal: options.signal,
       systemPrompt: options.systemPrompt,
     });
@@ -759,60 +669,8 @@ export class AIClient {
       content: normalized.content,
       usage: normalized.usage || raw.usage,
       model: normalized.model || raw.model,
-      provider: providerName,
       raw,
       toolCalls: normalized.toolCalls,
     };
-  }
-
-  /**
-   * Set the default AI provider
-   * @param {string} name - Provider name
-   */
-  setDefaultProvider(name) {
-    if (!this.providers.has(name)) {
-      throw new SimulacrumError(`Provider '${name}' not registered`);
-    }
-    this.defaultProvider = name;
-  }
-
-  /**
-   * Get list of available providers
-   * @returns {Array} List of provider information
-   */
-  getAvailableProviders() {
-    return Array.from(this.providers.entries()).map(([name, provider]) => ({
-      name,
-      available: provider.isAvailable(),
-    }));
-  }
-
-  /**
-   * Initialize with default providers
-   * @param {Object} configs - Configuration for providers
-   */
-  initialize(configs = {}) {
-    // Register mock provider (always available for testing)
-    this.registerProvider('mock', new MockAIProvider(configs.mock || {}));
-
-    // Register OpenAI provider if configured
-    if (configs.openai) {
-      this.registerProvider('openai', new OpenAIProvider(configs.openai), configs.openai.default);
-    }
-
-    // Set mock as default if no other default set
-    if (!this.defaultProvider) {
-      this.defaultProvider = 'mock';
-    }
-  }
-
-  /**
-   * Check if a provider is available
-   * @param {string} name - Provider name
-   * @returns {boolean} Availability status
-   */
-  isProviderAvailable(name) {
-    const provider = this.providers.get(name);
-    return provider ? provider.isAvailable() : false;
   }
 }

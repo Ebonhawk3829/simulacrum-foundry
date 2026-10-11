@@ -4,6 +4,7 @@
  */
 
 import { createLogger } from '../utils/logger.js';
+import { OPENROUTER_BASE_URL } from './ai-client.js';
 
 const MODULE_ID = 'simulacrum';
 const logger = createLogger('ModelService');
@@ -34,9 +35,6 @@ class ModelService {
   /** @type {Map<string, object>} Cached full model metadata by ID */
   #cachedModelMetadata = new Map();
 
-  /** @type {string|null} Base URL when cache was last populated */
-  #cachedBaseURL = null;
-
   /** @type {string|null} API key when cache was last populated */
   #cachedApiKey = null;
 
@@ -58,14 +56,12 @@ class ModelService {
    * @returns {Promise<string[]>} Array of model IDs
    */
   async fetchModels(forceRefresh = false) {
-    const baseURL = game.settings.get(MODULE_ID, 'baseURL');
     const apiKey = game.settings.get(MODULE_ID, 'apiKey');
 
     // Check if cache is valid
     if (
       !forceRefresh &&
       this.#cachedModels.length > 0 &&
-      this.#cachedBaseURL === baseURL &&
       this.#cachedApiKey === apiKey
     ) {
       return this.#cachedModels;
@@ -77,7 +73,7 @@ class ModelService {
     }
 
     // Start new fetch
-    this.#fetchPromise = this._doFetch(baseURL, apiKey);
+    this.#fetchPromise = this._doFetch(apiKey);
 
     try {
       const models = await this.#fetchPromise;
@@ -89,19 +85,13 @@ class ModelService {
 
   /**
    * Perform the actual fetch operation
-   * @param {string} baseURL - API base URL
    * @param {string} apiKey - API key
    * @returns {Promise<string[]>} Array of model IDs
    * @private
    */
-  async _doFetch(baseURL, apiKey) {
-    if (!baseURL) {
-      logger.debug('No baseURL configured, returning empty models list');
-      return [];
-    }
-
+  async _doFetch(apiKey) {
     try {
-      const modelsURL = baseURL.replace(/\/+$/, '') + '/models';
+      const modelsURL = OPENROUTER_BASE_URL.replace(/\/+$/, '') + '/models';
       const headers = { 'Content-Type': 'application/json' };
       if (apiKey) {
         headers['Authorization'] = `Bearer ${apiKey}`;
@@ -119,7 +109,6 @@ class ModelService {
 
       // Update cache
       this.#cachedModels = models;
-      this.#cachedBaseURL = baseURL;
       this.#cachedApiKey = apiKey;
 
       logger.debug(`Fetched ${models.length} models from endpoint`);
@@ -453,7 +442,6 @@ class ModelService {
   invalidateCache() {
     this.#cachedModels = [];
     this.#cachedModelMetadata.clear();
-    this.#cachedBaseURL = null;
     this.#cachedApiKey = null;
     logger.debug('Model cache invalidated');
   }
@@ -465,7 +453,6 @@ class ModelService {
   reset() {
     this.#cachedModels = [];
     this.#cachedModelMetadata.clear();
-    this.#cachedBaseURL = null;
     this.#cachedApiKey = null;
     this.#openRouterCache.clear();
     this.#openRouterFetchPromise = null;
