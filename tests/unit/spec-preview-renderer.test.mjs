@@ -281,3 +281,48 @@ test('refreshVisibility keeps a field visible when the expression is unparseable
 test('refreshVisibility is a no-op on a missing root', () => {
   assert.doesNotThrow(() => refreshVisibility(null));
 });
+
+test('an actor field becomes a searchable list of the world actors', () => {
+  const previous = globalThis.game;
+  globalThis.game = {
+    actors: {
+      contents: [
+        { id: 'a1', name: 'Goblin Boss' },
+        { id: 'a2', name: 'Ancient Red Dragon' },
+      ],
+    },
+  };
+
+  try {
+    const html = renderFieldsHtml(
+      [{ id: 'actor', label: 'Actor', type: 'text', control: 'actor' }],
+      { actor: 'a2' }
+    );
+
+    assert.match(html, /<select name="actor"/, 'a known control renders a picker, not a text box');
+    assert.match(html, /data-control="actor"/);
+    assert.match(html, /value="a2" selected/, 'the current choice is preselected');
+    assert.match(html, /Ancient Red Dragon/);
+    assert.match(html, /Goblin Boss/);
+  } finally {
+    globalThis.game = previous;
+  }
+});
+
+test('an actor field falls back to a text input so the value still round-trips', () => {
+  const previous = globalThis.game;
+  delete globalThis.game;
+
+  try {
+    const html = renderFieldsHtml(
+      [{ id: 'actor', label: 'Actor', type: 'text', control: 'actor' }],
+      { actor: 'Goblin Boss' }
+    );
+
+    assert.match(html, /<input type="text"/);
+    assert.match(html, /data-control="actor"/);
+    assert.match(html, /value="Goblin Boss"/, 'the value survives so a build can still resolve it');
+  } finally {
+    globalThis.game = previous;
+  }
+});

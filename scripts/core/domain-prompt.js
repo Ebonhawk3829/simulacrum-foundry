@@ -111,8 +111,11 @@ export const AUTOMATION_FORM_VOCABULARY = `PREVIEW FORM VOCABULARY - the preview
 
 Any field may carry showIf, a small expression evaluated on the current form values, for example: showIf: "rechargeMode in [d6, d6+start]". The expression references field ids or dotted paths and is evaluated client-side; it is not code.
 
+A field may also carry control to request a richer widget than its type implies. The one available today is control: "actor", which renders a searchable list of the world's actors and stores the chosen actor's id. Use it on the "actor" field; never ask the user to type an actor name.
+
 Rules for composing a form:
 - Include a field for every value a human might plausibly want to change. The point of the preview is to catch your misreading cheaply.
+- Always include "actor" with control "actor": it is how the user says which actor the ability belongs on, and the builder cannot write anything without it.
 - Include a "notes" text field when the ability has a nuance no other field expresses. It is preserved on the item as a flag and shown to the user.
 - Emit only fields the description justifies. Defaults live in the spec, not in the form. Do not pad.
 - Field ids must match spec key paths exactly (including dots for nesting). That shared key space is what makes the round-trip work: your spec, your form, and the builder's validation all use the same names.
