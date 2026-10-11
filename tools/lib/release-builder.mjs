@@ -25,7 +25,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, posix, relative, sep } from 'node:path';
 
-import { createZip } from './zip.mjs';
+import { createZip, readZip } from './zip.mjs';
 
 /**
  * Directories and files that never belong in a release.
@@ -207,6 +207,47 @@ export function collectFiles(root, { exclude = [] } = {}) {
   }
 
   return files.sort((a, b) => a.path.localeCompare(b.path));
+}
+
+/**
+ * Compare a built archive against the working tree it was built from.
+ *
+ * Nothing else catches a stale artifact. `dist/` is gitignored, so a release
+ * built before the last edit sits there looking finished, and the failure is
+ * silent: the upload succeeds and ships content that predates the release. This
+ * was found the hard way, with a published 0.1.0 whose bundled CHANGELOG did not
+ * contain the 0.1.0 entry.
+ *
+ * The stamped manifest and the generated build stamp are expected to differ from
+ * the tree, so they are excluded and must be named explicitly.
+ *
+ * @param {Buffer} zip - A built archive
+ * @param {string} root - Repository root to compare against
+ * @param {object} [options]
+ * @param {string[]} [options.ignore] - Root-relative paths expected to differ
+ * @returns {{differing: string[], absent: string[]}} Paths that are stale
+ */
+export function checkArchiveFreshness(zip, root, { ignore = [] } = {}) {
+  const skip = new Set(ignore);
+  const differing = [];
+  const absent = [];
+
+  for (const entry of readZip(zip)) {
+    if (entry.name.endsWith('/')) continue; // directory entry
+    const path = entry.name.replace(/^[^/]+\//, '');
+    if (skip.has(path)) continue;
+
+    let disk;
+    try {
+      disk = readFileSync(join(root, path));
+    } catch {
+      absent.push(path);
+      continue;
+    }
+    if (Buffer.compare(disk, entry.data) !== 0) differing.push(path);
+  }
+
+  return { differing, absent };
 }
 
 /**

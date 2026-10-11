@@ -5,6 +5,7 @@ import test from 'node:test';
 
 import {
   buildRelease,
+  checkArchiveFreshness,
   collectFiles,
   directoryEntries,
   parseManifest,
@@ -160,6 +161,34 @@ test('an incoherent build is rejected rather than published', () => {
     () => buildRelease({ root: join(ROOT, 'tests'), version: '0.0.0' }),
     /module\.json|ENOENT|no "id"/i
   );
+});
+
+test('a fresh archive matches the tree it was built from', () => {
+  // The stamped manifest and the generated build stamp are not on disk, so they
+  // are named as expected differences rather than reported as staleness.
+  const { differing, absent } = checkArchiveFreshness(release.zip, ROOT, {
+    ignore: ['module.json', 'scripts/build-info.js'],
+  });
+  assert.deepEqual(differing, []);
+  assert.deepEqual(absent, []);
+});
+
+test('a stale archive is detected rather than published', () => {
+  // The failure this guards against is silent: dist/ is gitignored, so an
+  // artifact built before the last edit survives a commit and uploads happily.
+  // A published 0.1.0 shipped exactly this way, with a bundled CHANGELOG that
+  // predated the release it was inside.
+  const stale = createZip([
+    { name: 'simulacrum/module.json', data: Buffer.from('{"id":"simulacrum","version":"9.9.9"}') },
+    { name: 'simulacrum/CHANGELOG.md', data: Buffer.from('an older changelog than the tree') },
+  ]);
+
+  const { differing, absent } = checkArchiveFreshness(stale, ROOT, { ignore: ['module.json'] });
+  assert.deepEqual(differing, ['CHANGELOG.md']);
+
+  // A file the archive carries that the tree no longer has is also staleness.
+  const ghost = createZip([{ name: 'simulacrum/removed-file.js', data: Buffer.from('gone') }]);
+  assert.deepEqual(checkArchiveFreshness(ghost, ROOT).absent, ['removed-file.js']);
 });
 
 test('a version Foundry cannot parse is rejected', () => {

@@ -22,7 +22,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 
-import { parseManifest } from './lib/release-builder.mjs';
+import { parseManifest, checkArchiveFreshness } from './lib/release-builder.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');
@@ -127,7 +127,28 @@ const branch = run('git', ['rev-parse', '--abbrev-ref', 'HEAD']);
 const head = run('git', ['rev-parse', '--short', 'HEAD']);
 console.log(`[publish] Source: ${branch} @ ${head}`);
 
-// 5. Never reuse a tag: a moved tag makes two different builds share a version.
+// 5. The archive must match the commit being tagged.
+//
+// dist/ is gitignored, so a build made before the last edit survives a commit
+// and looks finished. Its staleness is invisible in the upload: the release
+// succeeds and ships content that predates the version it claims to be. Caught
+// here rather than trusted, because that failure is both silent and permanent.
+const { differing, absent } = checkArchiveFreshness(readFileSync(zipPath), ROOT, {
+  ignore: ['module.json', 'scripts/build-info.js'],
+});
+if (differing.length || absent.length) {
+  const lines = [
+    ...differing.map(p => `  stale    ${p}`),
+    ...absent.map(p => `  vanished ${p}`),
+  ];
+  fail(
+    `the archive does not match the working tree:\n${lines.join('\n')}\n\n` +
+      `Run \`npm run build:release\` and commit the result before publishing.`
+  );
+}
+console.log('[publish] Archive matches the working tree.');
+
+// 6. Never reuse a tag: a moved tag makes two different builds share a version.
 if (succeeds('git', ['rev-parse', '--verify', `refs/tags/${tag}`])) {
   fail(`tag ${tag} already exists locally. Bump the version rather than re-releasing.`);
 }
@@ -167,7 +188,7 @@ if (args.dryRun) {
   process.exit(0);
 }
 
-// 6. Tag, push, and upload. Order matters: the tag must exist before the release
+// 7. Tag, push, and upload. Order matters: the tag must exist before the release
 //    is created against it, and the release must exist before its assets.
 console.log(`[publish] Tagging ${tag}...`);
 run('git', ['tag', '-a', tag, '-m', `Release ${version}`]);
