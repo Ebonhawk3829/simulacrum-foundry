@@ -1,0 +1,30 @@
+{{!--
+  Editable automation spec preview.
+  The field tree is rendered in JS (spec-preview-renderer.js) with explicit
+  escaping, because descriptors nest arbitrarily and template recursion is fragile.
+  This template is the wrapper only.
+--}}
+<div class="simulacrum-spec-preview" data-preview-token="{{token}}">
+  <div class="spec-preview-header">
+    <i class="fa-solid fa-wand-sparkles"></i>
+    <span class="spec-preview-title">{{abilityName}}</span>
+    {{#if archetype}}
+    <span class="spec-preview-archetype">{{archetype}}</span>
+    {{/if}}
+  </div>
+
+  {{#if summary}}
+  <div class="spec-preview-summary">{{summary}}</div>
+  {{/if}}
+
+  <div class="spec-preview-fields">{{{fieldsHtml}}}</div>
+
+  <div class="spec-preview-actions">
+    <button type="button" class="spec-btn build" data-action="build">
+      <i class="fa-solid fa-hammer"></i> Build
+    </button>
+    <button type="button" class="spec-btn discard" data-action="discard">
+      <i class="fa-solid fa-trash"></i> Discard
+    </button>
+  </div>
+</div>

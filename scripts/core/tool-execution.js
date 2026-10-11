@@ -214,8 +214,17 @@ export async function executeToolCalls(toolCalls, context) {
 
       // Context Compaction: Store large outputs in buffer, inject reference
       // IMPORTANT: Store BEFORE truncation so read_tool_output can access full content
-      let resultForConversation = result;
-      const resultStr = JSON.stringify(result);
+      // A UI payload is a rendering instruction for this client, not information
+      // for the model, so it is dropped from the conversation copy. Sending it
+      // back would waste context and invite the model to echo the form as text.
+      let resultForConversation;
+      if (result && result.preview !== undefined) {
+        resultForConversation = { ...result };
+        delete resultForConversation.preview;
+      } else {
+        resultForConversation = result;
+      }
+      const resultStr = JSON.stringify(resultForConversation);
       const TOKEN_THRESHOLD = 1000; // ~4000 chars
       const estimatedTokens = Math.ceil(resultStr.length / 4);
 
@@ -286,6 +295,10 @@ export async function executeToolCalls(toolCalls, context) {
         content: JSON.stringify(result),
         toolCallId: toolCall.id,
         toolName,
+        // Tools may return a UI payload alongside their text result (e.g.
+        // preview_spec's editable form). It is forwarded separately so it is
+        // never truncated or mistaken for conversation content.
+        preview: result?.preview ?? undefined,
       });
     }
   }

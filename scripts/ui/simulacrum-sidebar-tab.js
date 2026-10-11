@@ -18,6 +18,11 @@ import { formatPendingToolCall, formatToolCallDisplay } from '../utils/message-u
 import { emitProcessCancelled, SimulacrumHooks } from '../core/hook-manager.js';
 import { SequentialQueue } from '../utils/sequential-queue.js';
 import { SidebarMessageQueue } from './sidebar-message-queue.js';
+import {
+  buildSpecPreviewContext,
+  hydrateSpecPreview,
+  attachSpecPreviewHandlers,
+} from '../core/spec-preview-renderer.js';
 
 // Stable base class resolution for FoundryVTT v13 with fallback safety
 const AbstractSidebarTab =
@@ -40,6 +45,7 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
       templates: [
         'modules/simulacrum/templates/simulacrum/message.hbs',
         'modules/simulacrum/templates/simulacrum/sidebar-notifications.hbs',
+        'modules/simulacrum/templates/simulacrum/spec-preview.hbs',
       ],
       scrollable: [''],
     },
@@ -95,6 +101,17 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
     this._sidebarQueue = new SidebarMessageQueue(this);
     this.messageQueue = this._sidebarQueue.messageQueue;
 
+    this._registerHookListeners();
+  }
+
+  /**
+   * Subscribe to the events other parts of the module raise.
+   *
+   * Split out of the constructor purely for readability: the listener set has
+   * grown past the point where it can be scanned inside a constructor, and this
+   * is the one part of construction that has no ordering dependency.
+   */
+  _registerHookListeners() {
     // Sync when conversation is loaded (race condition fix)
     Hooks.on('simulacrumConversationLoaded', async () => {
       await this._syncFromCoreConversation();
@@ -115,6 +132,11 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
     Hooks.on('simulacrumToolResult', data => {
       this._removePendingToolCard(data.toolCallId);
       this._addToolResultCard(data);
+      // Queued like the cards above so the form lands after its tool result
+      // rather than racing it.
+      if (data.preview) {
+        this._messageQueue.add(() => this._showSpecPreview(data.preview));
+      }
     });
 
     // Listen for API retry status to show connection error warnings
@@ -1123,6 +1145,153 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
     });
   }
 
+  /**
+   * Render an editable automation spec preview inline in the chat.
+   *
+   * The agent supplies both the values it read out of an ability description and
+   * the form layout to review them in. Editing happens here, off the model, so
+   * the two cost the same whether the parse was perfect or not: one field edit.
+   *
+   * Build emits the edited values as a fresh user turn naming the preview token.
+   * That keeps the agent in the loop to run the builder and the self-test rather
+   * than silently writing world data from a click.
+   * @param {object} preview - Payload attached by the preview_spec tool
+   */
+  async _showSpecPreview(preview) {
+    if (!this.rendered || !this.element) return;
+
+    const lastAssistantContent = this._getLastAssistantMessageContent();
+    if (!lastAssistantContent) {
+      this.logger.warn('No assistant message found to attach spec preview');
+      return;
+    }
+
+    let html;
+    try {
+      html = await foundry.applications.handlebars.renderTemplate(
+        'modules/simulacrum/templates/simulacrum/spec-preview.hbs',
+        buildSpecPreviewContext(preview)
+      );
+    } catch (err) {
+      this.logger.error('Failed to render spec preview template', err);
+      return;
+    }
+
+    const container = document.createElement('div');
+    container.className = 'content-block tool-card spec-preview-inline';
+    container.dataset.previewToken = preview.token || '';
+    container.innerHTML = html;
+
+    lastAssistantContent.appendChild(container);
+
+    // Fill the field area: descriptors nest, so they are rendered in JS where
+    // escaping is explicit rather than in recursive template syntax.
+    hydrateSpecPreview(container, preview);
+
+    attachSpecPreviewHandlers(container, {
+      onBuild: (values, fields, token) => this._onSpecPreviewBuild(preview, values, fields, token),
+      onDiscard: () => this._scrollToBottom(),
+    });
+
+    // Keep the panel with the rest of the message so a re-render restores it.
+    if (this.messages.length > 0) {
+      const lastMsg = this.messages[this.messages.length - 1];
+      if (lastMsg.role === 'assistant') {
+        lastMsg.preview = preview;
+        lastMsg.display = (lastMsg.display || '') + container.outerHTML;
+      }
+    }
+
+    this._scrollToBottom();
+  }
+
+  /**
+   * Rebuild any spec previews present in a freshly rendered log.
+   *
+   * Previews capture their field markup as part of the stored message display,
+   * so after a full render the panels exist but their field area is empty (the
+   * template renders `{{{fieldsHtml}}}` and only the original payload can supply
+   * it). Re-hydrating from that payload also re-binds visibility and buttons.
+   * @param {HTMLElement} scroll - The `.chat-scroll` element
+   */
+  _rehydrateSpecPreviews(scroll) {
+    const panels = scroll?.querySelectorAll?.('.simulacrum-spec-preview');
+    if (!panels?.length) return;
+
+    panels.forEach(panel => {
+      const token = panel.dataset?.previewToken;
+      if (!token || panel.dataset.rehydrated === '1') return;
+
+      const owner = this.messages.find(m => m.preview?.token === token);
+      if (!owner?.preview) return;
+
+      panel.dataset.rehydrated = '1';
+      hydrateSpecPreview(panel, owner.preview);
+      attachSpecPreviewHandlers(panel, {
+        onBuild: (values, fields, t) => this._onSpecPreviewBuild(owner.preview, values, fields, t),
+        onDiscard: () => this._scrollToBottom(),
+      });
+    });
+  }
+
+  /**
+   * Hand the user's edited spec back to the agent as the next instruction.
+   *
+   * Only the token travels. The edited values are already in the spec store, so
+   * re-serialising them into the prompt would spend context to restate what the
+   * builder reads directly - and would risk the model "tidying" the user's
+   * numbers on the way through.
+   * @param {object} preview - Original preview payload
+   * @param {object} values - Flat edited values keyed by field id
+   * @param {Array} fields - Descriptors carrying the edited values
+   * @param {string} token - The preview token
+   */
+  async _onSpecPreviewBuild(preview, values, fields, token) {
+    const abilityName = preview?.abilityName || 'the ability';
+    const archetype = preview?.archetype || 'save';
+
+    const message = [
+      `The user reviewed and built the preview for ${abilityName}.`,
+      '',
+      `Call build_${archetype} with previewToken "${token}" and no spec argument; the user's edited values are already stored under that token. Do not ask for the values again.`,
+      '',
+      'Then run the self-test and report the result.',
+    ].join('\n');
+
+    const input = this.element?.querySelector('form textarea[name="message"]');
+    if (input) input.value = '';
+    await this._submitPreviewBuild(message);
+  }
+
+  /**
+   * Send a composed message through the same path as typed input.
+   * @param {string} message
+   */
+  async _submitPreviewBuild(message) {
+    const { SidebarEventHandlers } = await import('./sidebar-event-handlers.js');
+    if (this.isProcessing()) {
+      this._sidebarQueue.enqueue(message);
+      return;
+    }
+
+    const signal = this.startProcess();
+    this.setProcessing(true);
+    try {
+      await SidebarEventHandlers._processMessageThroughHandler(this, message, signal);
+    } catch (error) {
+      if (!signal.aborted) {
+        this.logger.error('Spec preview build failed', error);
+        ui.notifications?.error(`Simulacrum: ${error.message}`);
+      }
+    } finally {
+      this.finishProcess(signal);
+      if (this.messageQueue && !signal.aborted) {
+        this.messageQueue.setBusy(this.isProcessing());
+        await this.messageQueue.drain(this);
+      }
+    }
+  }
+
   /** Event Handler Delegates */
 
   async _onSendMessage(event, target) {
@@ -1169,6 +1338,10 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
             justification.classList.toggle('expanded');
           }
         });
+
+        // Spec previews write their own field markup, so a re-render would leave
+        // empty shells. Re-hydrate from the stored payload instead.
+        this._rehydrateSpecPreviews(scroll);
       }
     }
     if (partId === 'input') {

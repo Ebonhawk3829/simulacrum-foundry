@@ -1759,3 +1759,182 @@ section[data-tab="simulacrum"] .discord-btn:hover {
   color: var(--color-text-dark-secondary, #888);
   font-style: italic;
 }
+
+/* ---------------------------------------- */
+/*     Editable Spec Preview (inline)       */
+/* ---------------------------------------- */
+
+/* The agent-authored form for confirming a parsed ability. Deliberately reads
+   like a form, not like chat output: this is the point where the user judges
+   the parse, so fields must be scannable and editable at a glance. */
+
+.simulacrum-spec-preview {
+  border: 1px solid #665c3b;
+  border-left: 3px solid #daa520;
+  border-radius: 6px;
+  background: rgba(16, 19, 24, 0.55);
+  padding: 0.6rem 0.7rem;
+  margin: 0.4rem 0;
+  font-size: 0.9em;
+}
+
+.simulacrum-spec-preview .spec-preview-header {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.simulacrum-spec-preview .spec-preview-header i {
+  color: #daa520;
+}
+
+.simulacrum-spec-preview .spec-preview-title {
+  font-weight: 600;
+  color: #fff4c2;
+}
+
+.simulacrum-spec-preview .spec-preview-archetype {
+  margin-left: auto;
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+  border: 1px solid rgba(218, 165, 32, 0.4);
+  border-radius: 3px;
+  padding: 0 0.35rem;
+}
+
+.simulacrum-spec-preview .spec-preview-summary {
+  font-size: 0.9em;
+  line-height: 1.35;
+  opacity: 0.85;
+  margin-bottom: 0.6rem;
+  padding-left: 0.5rem;
+  border-left: 2px solid rgba(218, 165, 32, 0.3);
+}
+
+.simulacrum-spec-preview .spec-preview-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.simulacrum-spec-preview .spec-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.simulacrum-spec-preview .spec-field[hidden],
+.simulacrum-spec-preview .spec-field-group[hidden] {
+  display: none;
+}
+
+.simulacrum-spec-preview .spec-field label {
+  font-size: 0.85em;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.simulacrum-spec-preview .spec-field input[type='text'],
+.simulacrum-spec-preview .spec-field input[type='number'],
+.simulacrum-spec-preview .spec-field select {
+  width: 100%;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  color: inherit;
+  font-size: 0.95em;
+}
+
+.simulacrum-spec-preview .spec-field input:focus,
+.simulacrum-spec-preview .spec-field select:focus {
+  outline: none;
+  border-color: #daa520;
+  box-shadow: 0 0 4px rgba(218, 165, 32, 0.35);
+}
+
+.simulacrum-spec-preview .spec-field input[type='checkbox'] {
+  align-self: flex-start;
+  width: auto;
+}
+
+.simulacrum-spec-preview .spec-field-help {
+  margin: 0;
+  font-size: 0.78em;
+  font-style: italic;
+  opacity: 0.6;
+}
+
+.simulacrum-spec-preview .spec-field-group {
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  border-radius: 4px;
+  padding: 0.4rem 0.5rem 0.5rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.simulacrum-spec-preview .spec-field-group legend {
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+  padding: 0 0.25rem;
+}
+
+.simulacrum-spec-preview .spec-preview-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(128, 128, 128, 0.2);
+}
+
+.simulacrum-spec-preview .spec-btn {
+  flex: 1 1 auto;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-size: 0.85em;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  transition: all 0.2s ease;
+}
+
+.simulacrum-spec-preview .spec-btn.build {
+  background: #28a745;
+  color: #fff;
+  border-color: #28a745;
+}
+
+.simulacrum-spec-preview .spec-btn.build:hover {
+  background: #218838;
+  box-shadow: 0 0 6px rgba(40, 167, 69, 0.5);
+}
+
+.simulacrum-spec-preview .spec-btn.build[disabled] {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.simulacrum-spec-preview .spec-btn.discard {
+  flex: 0 0 auto;
+  background: transparent;
+  color: inherit;
+  border-color: rgba(128, 128, 128, 0.4);
+  opacity: 0.75;
+}
+
+.simulacrum-spec-preview .spec-btn.discard:hover {
+  opacity: 1;
+  border-color: #dc3545;
+  color: #dc3545;
+}

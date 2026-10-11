@@ -436,9 +436,8 @@ class ChatHandler {
         }
 
         // Retrieve justification stored during pending phase (skip for self-explanatory tools)
-        const justification = noJustificationTools.includes(toolResult.toolName)
-          ? ''
-          : retrieveToolJustification(toolResult.toolCallId);
+        const noJust = noJustificationTools.includes(toolResult.toolName);
+        const justification = noJust ? '' : retrieveToolJustification(toolResult.toolCallId);
 
         let preRendered = null;
         try {
@@ -482,6 +481,7 @@ class ChatHandler {
           toolName: toolResult.toolName,
           formattedDisplay,
           content: toolResult.content,
+          preview: toolResult.preview ?? undefined, // UI payload (preview_spec's form)
         };
 
         // Prefer direct callback if provided (Closed Loop for Active UI)

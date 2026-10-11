@@ -25,6 +25,7 @@ import { RunJavascriptTool } from '../tools/run-javascript.js';
 import { ReadToolOutputTool } from '../tools/read-tool-output.js';
 import { DocumentOwnershipTool } from '../tools/document-ownership.js';
 import { NotifyUserTool } from '../tools/notify-user.js';
+import { PreviewSpecTool } from '../tools/preview-spec.js';
 import { DocumentAPI } from './document-api.js';
 
 /**
@@ -84,6 +85,7 @@ export class ToolRegistry {
         new ReadToolOutputTool(),
         new DocumentOwnershipTool(),
         new NotifyUserTool(),
+        new PreviewSpecTool(),
       ];
 
       for (const t of tools) {
