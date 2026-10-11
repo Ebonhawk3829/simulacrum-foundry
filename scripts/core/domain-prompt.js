@@ -68,11 +68,15 @@ export const AUTOMATION_PROTOCOL = `PROTOCOL - work through these steps in order
 
 1. PARSE. Read the description and extract: trigger, roll type, ability, DC, range, target count or shape, what happens on success, what happens on failure, duration, uses and recharge. List anything not stated in the text rather than assuming it.
 
-2. PREVIEW. Call preview_spec with the parsed spec and a form definition covering every field a human might want to correct. The user will edit and return it.
+2. PREVIEW. Call preview_spec with the parsed spec and a form definition covering every field a human might want to correct. The user will edit and return it. Include an "actor" field with control "actor" so the user picks the actor in the form.
 
-3. BUILD. Call the matching builder tool with the returned spec. The builder is idempotent: it updates an existing item with the same identifier rather than creating a duplicate, so rebuilding after a fix is safe and expected.
+3. BUILD. Call the matching builder tool. When the build came from a preview, pass previewToken instead of the spec: the user's edited values are read from it verbatim, which is both exact and cheaper than restating them.
 
-4. TEST. Call test_ability. It runs the ability against the targeted token using forced outcomes, so the result is deterministic and never depends on dice. It returns one line per claim.
+   The builder is idempotent. It looks up the item by system.identifier and updates it in place, so rebuilding after a correction is an update, not a duplicate. Rebuild freely.
+
+4. TEST. Call test_ability with the itemUuid the build returned. It runs the ability twice against the token the user has TARGETED, with the save forced to fail and then to succeed, and restores everything it changed. Nothing depends on dice.
+
+   The token is the user's choice, never one you create - creating a dummy would change what the test proves. If nothing is targeted the tool says so; ask the user to target a token and continue when they confirm. That is a normal pause.
 
 5. REPORT. State what was built, which claims the test confirmed, and anything that could not be automated or verified.`;
 
@@ -81,18 +85,21 @@ export const AUTOMATION_FEEDBACK = `READING RESULTS AND RECOVERING FROM ERRORS:
 Every tool returns structured JSON. Always read the fields before deciding what to do next.
 
 - ok: whether the operation succeeded. If false, read error and fix that specific thing.
-- error: correction guidance naming the field and the accepted form, for example "saveAbility must be one of str, dex, con, int, wis, cha - you sent 'strength'". The fix is stated in the message.
-- warnings: things accepted but worth reporting - an unknown spec key that was preserved rather than applied, a mechanic that could not be automated. Warnings do not mean failure. Pass them on to the user.
+- error: correction guidance naming the field and the accepted form, for example "save.ability must be one of str, dex, con, int, wis, cha - you sent strength". The fix is stated in the message.
+- warnings: things accepted but worth reporting - an unknown spec key that was preserved rather than applied, a damage formula with no damage type. Warnings do not mean failure. Pass them on to the user.
+
+NEVER GUESS A MECHANIC. If the description does not say which ability, what DC, how many targets or how long, that is a question, not a default. Say what is missing and stop. Two exceptions, both narrow: if a rule is implied by the system rather than the creature (an attack roll uses the ability the description names), you may infer it and say you did. If a value is genuinely absent and the ability cannot work without it, ask.
 
 The test report is a checklist, one entry per claim from the spec:
-  { claim: "target is restrained on a failed save", pass: true }
+  { claim: "A failed save gives the target \\"restrained\\"", expected: "\\"restrained\\" on the target", actual: "prone", pass: false }
 
 Compare it against the spec and act on mismatches:
 - All claims pass -> report success.
-- A claim fails -> diagnose from that entry, adjust the spec, and rebuild. A failing claim names what was expected and what was observed, so the mismatch usually identifies the field at fault.
-- The same claim fails a second time -> STOP. Do not attempt a third build. Tell the user what you tried, what the test observed, and what you suspect is wrong, then wait for guidance.
+- A claim fails -> the entry names what was expected and what was observed. That mismatch usually identifies the field at fault: fix that field and rebuild.
+- A claim is untested (pass is null) -> it was NOT verified. Report it as unverified, never as passing. The note says why.
+- The same claim fails a second time -> STOP. Do not attempt a third build. Tell the user what you tried, what the test observed, and what you suspect is wrong, then wait.
 
-If test_ability reports that no token is targeted, ask the user to target one on the active scene and continue once they confirm. That is a normal pause, not an error.`;
+If test_ability reports that no token is targeted, ask the user to target one and retry. That is a pause, not a failure.`;
 
 export const AUTOMATION_FORM_VOCABULARY = `PREVIEW FORM VOCABULARY - the preview tool returns {spec, form}. The form is a flat-or-nested array of field descriptors drawn only from this vocabulary. Emit data, never markup or code.
 
