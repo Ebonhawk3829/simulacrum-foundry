@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { BuildSaveAbilityTool } from '../../scripts/tools/build-save-ability.js';
+import { BuildAbilityTool } from '../../scripts/tools/build-ability.js';
 import { stashSpec, clearSpecs } from '../../scripts/core/spec-store.js';
 
 /**
@@ -99,6 +99,10 @@ function withFoundry(actors, run) {
 
 const TANGLEFOOT = {
   name: 'Tanglefoot',
+  // preview_spec stamps the archetype into the spec it stashes, so a spec that
+  // travelled through a preview carries it. Fixtures include it for the same
+  // reason: it is what the builder actually receives in the real flow.
+  archetype: 'save',
   'save.ability': 'str',
   'save.dc': 14,
   'range.units': 'ft',
@@ -117,10 +121,10 @@ const TANGLEFOOT = {
 
 test('creates an item when no item with the identifier exists', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
   const result = await withFoundry([actor], () =>
-    tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id } })
+    tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id } })
   );
 
   assert.equal(result.error, undefined, JSON.stringify(result));
@@ -133,13 +137,13 @@ test('creates an item when no item with the identifier exists', async () => {
 
 test('updates in place when the identifier already exists, never duplicating', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
-  await withFoundry([actor], () => tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id } }));
+  await withFoundry([actor], () => tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id } }));
   const first = actor.items.contents[0];
 
   const second = await withFoundry([actor], () =>
-    tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id, 'save.dc': 16 } })
+    tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id, 'save.dc': 16 } })
   );
 
   const body = JSON.parse(second.content);
@@ -151,14 +155,14 @@ test('updates in place when the identifier already exists, never duplicating', a
 
 test('an update clears a stale activity from a previous build', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
-  await withFoundry([actor], () => tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id } }));
+  await withFoundry([actor], () => tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id } }));
   const item = actor.items.contents[0];
   // Simulate the previous build having left two activities behind.
   item.system.activities.contents.push({ id: 'stale', type: 'save' });
 
-  await withFoundry([actor], () => tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id } }));
+  await withFoundry([actor], () => tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id } }));
 
   assert.equal(
     actor.items.contents[0].system.activities.contents.length,
@@ -169,9 +173,9 @@ test('an update clears a stale activity from a previous build', async () => {
 
 test('writes the range on the activity range, not on the area', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
-  await withFoundry([actor], () => tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id } }));
+  await withFoundry([actor], () => tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id } }));
   const activity = actor.items.contents[0].system.activities.contents[0];
 
   assert.equal(activity.range.value, '30', 'the ability distance belongs on range');
@@ -183,11 +187,12 @@ test('writes the range on the activity range, not on the area', async () => {
 
 test('an ability with only a target count writes no template', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
   await withFoundry([actor], () =>
     tool.execute({
-      spec: {
+      archetype: 'save',
+      archetype: 'save', spec: {
         name: 'Gaze',
         actor: actor.id,
         'save.ability': 'wis',
@@ -207,9 +212,9 @@ test('an ability with only a target count writes no template', async () => {
 
 test('a fixed DC is written as a formula with no calculation, which is what dnd5e reads', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
-  await withFoundry([actor], () => tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id } }));
+  await withFoundry([actor], () => tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id } }));
   const { save } = actor.items.contents[0].system.activities.contents[0];
 
   assert.equal(save.dc.formula, '14');
@@ -219,18 +224,18 @@ test('a fixed DC is written as a formula with no calculation, which is what dnd5
 
 test('writes the save ability as an array, as SetField on 5.3.3 expects', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
-  await withFoundry([actor], () => tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id } }));
+  await withFoundry([actor], () => tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id } }));
   const { save } = actor.items.contents[0].system.activities.contents[0];
   assert.ok(Array.isArray(save.ability), 'a bare string here would be silently dropped');
 });
 
 test('the applied effect is marked onSave false so it only lands on a failed save', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
-  await withFoundry([actor], () => tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id } }));
+  await withFoundry([actor], () => tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id } }));
   const activity = actor.items.contents[0].system.activities.contents[0];
 
   assert.equal(activity.effects.length, 1);
@@ -243,9 +248,9 @@ test('the applied effect is marked onSave false so it only lands on a failed sav
 
 test('the activity effect id matches the effect document id', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
-  await withFoundry([actor], () => tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id } }));
+  await withFoundry([actor], () => tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id } }));
   const item = actor.items.contents[0];
   const activity = item.system.activities.contents[0];
 
@@ -258,9 +263,9 @@ test('the activity effect id matches the effect document id', async () => {
 
 test('writes the condition through a DAE macro.StatusEffect change', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
-  await withFoundry([actor], () => tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id } }));
+  await withFoundry([actor], () => tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id } }));
   const effect = actor.items.contents[0].effects.contents[0];
 
   const change = effect.system.changes.find(c => c.key === 'macro.StatusEffect');
@@ -271,9 +276,9 @@ test('writes the condition through a DAE macro.StatusEffect change', async () =>
 
 test('writes the repeating save as a midi-qol OverTime flag on the effect', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
-  await withFoundry([actor], () => tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id } }));
+  await withFoundry([actor], () => tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id } }));
   const effect = actor.items.contents[0].effects.contents[0];
 
   const overTime = effect.flags['midi-qol'].OverTime;
@@ -286,11 +291,12 @@ test('writes the repeating save as a midi-qol OverTime flag on the effect', asyn
 
 test('omits the repeating save when the spec does not ask for one', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
   await withFoundry([actor], () =>
     tool.execute({
-      spec: {
+      archetype: 'save',
+      archetype: 'save', spec: {
         name: 'Simple Hex',
         actor: actor.id,
         'save.ability': 'wis',
@@ -307,11 +313,12 @@ test('omits the repeating save when the spec does not ask for one', async () => 
 
 test('creates no effect when there is neither a condition nor a repeat save', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
   await withFoundry([actor], () =>
     tool.execute({
-      spec: {
+      archetype: 'save',
+      archetype: 'save', spec: {
         name: 'Pure Damage',
         actor: actor.id,
         'save.ability': 'dex',
@@ -335,11 +342,12 @@ test('creates no effect when there is neither a condition nor a repeat save', as
 
 test('damage on a save uses the activity vocabulary, not "full"', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
   const result = await withFoundry([actor], () =>
     tool.execute({
-      spec: {
+      archetype: 'save',
+      archetype: 'save', spec: {
         name: 'Zap',
         actor: actor.id,
         'save.ability': 'dex',
@@ -357,9 +365,9 @@ test('damage on a save uses the activity vocabulary, not "full"', async () => {
 
 test('writes limited uses and their recovery', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
-  await withFoundry([actor], () => tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id } }));
+  await withFoundry([actor], () => tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id } }));
   const { uses } = actor.items.contents[0].system;
 
   assert.equal(uses.max, '1');
@@ -368,11 +376,12 @@ test('writes limited uses and their recovery', async () => {
 
 test('omits uses entirely when the ability is not limited', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
   await withFoundry([actor], () =>
     tool.execute({
-      spec: { name: 'At Will', actor: actor.id, 'save.ability': 'dex', 'save.dc': 11 },
+      archetype: 'save',
+      archetype: 'save', spec: { name: 'At Will', actor: actor.id, 'save.ability': 'dex', 'save.dc': 11 },
     })
   );
 
@@ -381,10 +390,10 @@ test('omits uses entirely when the ability is not limited', async () => {
 
 test('rejects an unknown actor with guidance rather than throwing', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
   const result = await withFoundry([actor], () =>
-    tool.execute({ spec: { ...TANGLEFOOT, actor: 'Nobody' } })
+    tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: 'Nobody' } })
   );
 
   assert.ok(result.error);
@@ -396,10 +405,10 @@ test('rejects an unknown actor with guidance rather than throwing', async () => 
 
 test('resolves the actor by name when given one', async () => {
   const actor = fakeActor('actor0000000001', 'Goblin Boss');
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
   const result = await withFoundry([actor], () =>
-    tool.execute({ spec: { ...TANGLEFOOT, actor: 'goblin boss' } })
+    tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: 'goblin boss' } })
   );
 
   assert.equal(result.error, undefined, JSON.stringify(result));
@@ -409,10 +418,10 @@ test('resolves the actor by name when given one', async () => {
 test('reports an ambiguous actor name instead of guessing', async () => {
   const a = fakeActor('actor0000000001', 'Goblin');
   const b = fakeActor('actor0000000002', 'Goblin');
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
   const result = await withFoundry([a, b], () =>
-    tool.execute({ spec: { ...TANGLEFOOT, actor: 'Goblin' } })
+    tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: 'Goblin' } })
   );
 
   assert.equal(result.error.type, 'ACTOR_UNRESOLVED');
@@ -421,10 +430,10 @@ test('reports an ambiguous actor name instead of guessing', async () => {
 
 test('rejects a spec with a bad enum and names the field', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
   const result = await withFoundry([actor], () =>
-    tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id, 'save.ability': 'strength' } })
+    tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id, 'save.ability': 'strength' } })
   );
 
   assert.equal(result.error.type, 'SPEC_VALIDATION_ERROR');
@@ -434,7 +443,7 @@ test('rejects a spec with a bad enum and names the field', async () => {
 
 test('rejects a missing spec and a missing token with the same named error', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
   const result = await withFoundry([actor], () => tool.execute({}));
   assert.equal(result.error.type, 'VALIDATION_ERROR');
@@ -442,7 +451,7 @@ test('rejects a missing spec and a missing token with the same named error', asy
 
 test('accepts a previewToken and uses the stashed spec verbatim', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
   clearSpecs();
 
   // What the user actually confirmed in the preview panel differs from the
@@ -458,7 +467,7 @@ test('accepts a previewToken and uses the stashed spec verbatim', async () => {
 
 test('a preview token is single-use, so a rebuild needs a fresh preview', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
   clearSpecs();
 
   const token = stashSpec({ ...TANGLEFOOT, actor: actor.id });
@@ -472,7 +481,7 @@ test('a preview token is single-use, so a rebuild needs a fresh preview', async 
 
 test('an unknown token is rejected with the same guidance', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
   clearSpecs();
 
   const result = await withFoundry([actor], () => tool.execute({ previewToken: 'nosuchtoken' }));
@@ -481,7 +490,7 @@ test('an unknown token is rejected with the same guidance', async () => {
 
 test('a previewToken takes precedence over a spec argument', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
   clearSpecs();
 
   const token = stashSpec({ ...TANGLEFOOT, actor: actor.id, 'save.dc': 18 });
@@ -499,12 +508,12 @@ test('a previewToken takes precedence over a spec argument', async () => {
 
 test('refuses to build for a non-GM', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
   const previous = globalThis.game;
   globalThis.game = { user: { isGM: false }, actors: { contents: [actor] } };
   try {
-    const result = await tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id } });
+    const result = await tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id } });
     assert.equal(result.error.type, 'PERMISSION_DENIED');
   } finally {
     globalThis.game = previous;
@@ -513,11 +522,12 @@ test('refuses to build for a non-GM', async () => {
 
 test('reports warnings alongside a successful build', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
   const result = await withFoundry([actor], () =>
     tool.execute({
-      spec: { ...TANGLEFOOT, actor: actor.id, 'weird.nuance': 'not automated' },
+      archetype: 'save',
+      archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id, 'weird.nuance': 'not automated' },
     })
   );
 
@@ -529,11 +539,12 @@ test('reports warnings alongside a successful build', async () => {
 
 test('records the notes field on the item description', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
   await withFoundry([actor], () =>
     tool.execute({
-      spec: { ...TANGLEFOOT, actor: actor.id, notes: 'Cannot target a creature already restrained.' },
+      archetype: 'save',
+      archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id, notes: 'Cannot target a creature already restrained.' },
     })
   );
 
@@ -546,10 +557,10 @@ test('records the notes field on the item description', async () => {
 
 test('returns the uuids the next step needs', async () => {
   const actor = fakeActor();
-  const tool = new BuildSaveAbilityTool();
+  const tool = new BuildAbilityTool();
 
   const result = await withFoundry([actor], () =>
-    tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id } })
+    tool.execute({ archetype: 'save', spec: { ...TANGLEFOOT, actor: actor.id } })
   );
   const body = JSON.parse(result.content);
 

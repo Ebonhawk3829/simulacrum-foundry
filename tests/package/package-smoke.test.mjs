@@ -53,7 +53,7 @@ test('the in-game tools ship, because they are the point of the module', () => {
   // then failed on its first tool import.
   const toolFiles = files.filter(name => name.startsWith('simulacrum/scripts/tools/'));
   assert.ok(toolFiles.length >= 20, `expected the tool modules, found ${toolFiles.length}`);
-  assert.ok(toolFiles.includes('simulacrum/scripts/tools/build-save-ability.js'));
+  assert.ok(toolFiles.includes('simulacrum/scripts/tools/build-ability.js'));
   assert.ok(toolFiles.includes('simulacrum/scripts/tools/test-ability.js'));
   assert.ok(toolFiles.includes('simulacrum/scripts/tools/preview-spec.js'));
 });

@@ -19,7 +19,11 @@
  *   report, because that is what the loop machinery already does.
  * - Tool names and flag keys are given verbatim; guessing them is the most common
  *   failure mode.
+ * - The archetype list is generated from the builder registry rather than written
+ *   here, so the prompt cannot name an archetype that has no builder.
  */
+
+import { describeArchetypesForPrompt } from './archetypes/registry.js';
 
 export const AUTOMATION_IDENTITY = `You are the Automation Builder for a FoundryVTT world running dnd5e 5.3.3 with midi-qol, DAE and CAT (Coven's Automation Toolkit).
 
@@ -51,18 +55,21 @@ An ACTIVITY is the roll the user triggers - a save, an attack, a damage roll, a 
 
 An EFFECT stored ON THE ITEM is the payload - the condition, the buff, the rider. Effects are found by identifier (flags.cat.identifier, falling back to name.slugify()), never by display name, because names change and get translated.
 
-FLAGS carry configuration for the modules: midi-qol (workflow behaviour, optional prompts), DAE (effect change keys, special durations), CAT (event passes, auras, generic config).
+FLAGS carry configuration for the modules: midi-qol (workflow behaviour, optional prompts), DAE (effect change keys, special durations), CAT (event passes, auras, generic config).`;
 
-Ability archetypes and the tool that builds each:
-
-- Save-or-suffer  (Tanglefoot): target rolls a save; on failure gains a condition; may repeat the save at end of turn and end on success. Tool: build_save_ability.
-- Save-or-damage  (Crushing Grip): save halves damage; optional rider when the save fails by a margin, or when the target is dazed/prone/etc. Tool: build_save_ability.
-- Attack rider     (sneak attack, smites): extra damage or an extra activity on a hit. Tool: build_attack_rider.
-- Reaction         (Aggress): triggers on damage taken or being attacked; may move, apply an effect, or prompt. Tool: build_reaction.
-- Recurring effect (regeneration): fires at turn start or end, optionally conditional on what happened since. Tool: build_overtime.
-- Aura             (Hand of Death): applies an effect to creatures within a radius. Tool: build_aura.
-
-If an ability spans more than one archetype, build the dominant one first and tell the user which part is not yet automated. Do not invent a hybrid.`;
+/**
+ * The archetype list, generated from the registry.
+ *
+ * Deliberately not a string constant. The first release hard-coded six
+ * archetypes and shipped one builder, so the prompt told the model to call four
+ * tools that did not exist, and no test could catch it because a prompt is only
+ * a string until a model acts on it. Deriving the list means the prompt can only
+ * ever name an archetype that has a builder behind it.
+ * @returns {string} The prompt block
+ */
+export function buildArchetypeBlock() {
+  return describeArchetypesForPrompt();
+}
 
 export const AUTOMATION_PROTOCOL = `PROTOCOL - work through these steps in order for every request:
 
@@ -139,6 +146,7 @@ export function getAutomationPromptBlocks() {
     AUTOMATION_IDENTITY,
     AUTOMATION_CRITICAL_RULES,
     AUTOMATION_DOMAIN_MODEL,
+    buildArchetypeBlock(),
     AUTOMATION_PROTOCOL,
     AUTOMATION_FEEDBACK,
     AUTOMATION_FORM_VOCABULARY,

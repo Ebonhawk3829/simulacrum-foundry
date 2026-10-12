@@ -59,7 +59,7 @@ export class TestAbilityTool extends BaseTool {
   constructor() {
     super(
       'test_ability',
-      'Run a built ability against the token the user has targeted and report whether it behaves as described. Forces the save to fail and then to succeed, so the result never depends on dice, and restores everything it changed afterwards. Call this after build_save_ability and report the checklist it returns. If no token is targeted it asks the user to target one; that is a normal pause, not an error.'
+      'Run a built ability against the token the user has targeted and report whether it behaves as described. Forces the save to fail and then to succeed, so the result never depends on dice, and restores everything it changed afterwards. Call this after build_ability and report the checklist it returns. If no token is targeted it asks the user to target one; that is a normal pause, not an error.'
     );
     this.requiresConfirmation = true;
     this.settleMs = DEFAULT_SETTLE_MS;
@@ -69,7 +69,7 @@ export class TestAbilityTool extends BaseTool {
         itemUuid: {
           type: 'string',
           description:
-            'The itemUuid returned by build_save_ability. Identifies the ability to run.',
+            'The itemUuid returned by build_ability. Identifies the ability to run.',
         },
         spec: {
           type: 'object',
@@ -210,7 +210,7 @@ export class TestAbilityTool extends BaseTool {
     if (!uuid || typeof uuid !== 'string') {
       return {
         error: this._reject(
-          { ok: false, error: 'itemUuid is required; use the value returned by build_save_ability.' },
+          { ok: false, error: 'itemUuid is required; use the value returned by build_ability.' },
           'Missing itemUuid',
           'VALIDATION_ERROR'
         ),
@@ -224,7 +224,7 @@ export class TestAbilityTool extends BaseTool {
           {
             ok: false,
             error: `No item found for "${uuid}". It may have been deleted or rebuilt since the build step.`,
-            next: 'Call build_save_ability again to rebuild it.',
+            next: 'Call build_ability again to rebuild it.',
           },
           'Item not found',
           'ITEM_NOT_FOUND'
@@ -387,7 +387,7 @@ export class TestAbilityTool extends BaseTool {
 
     if (failures.length) {
       content.next =
-        'Fix the spec fields behind the failing claims and call build_save_ability again with the corrected spec, then re-test. If the same claim fails twice, stop and report it to the user instead of rebuilding a third time.';
+        'Fix the spec fields behind the failing claims and call build_ability again with the corrected spec, then re-test. If the same claim fails twice, stop and report it to the user instead of rebuilding a third time.';
       content.failingClaims = failures.map(f => ({
         claim: f.claim,
         expected: f.expected,

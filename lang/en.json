@@ -89,7 +89,7 @@
       "set_document_ownership": "Set Ownership",
       "end_loop": "End Loop",
       "preview_spec": "Preview Ability",
-      "build_save_ability": "Build Save Ability",
+      "build_ability": "Build Ability",
       "test_ability": "Test Ability"
     },
     "ToolStatus": {
@@ -137,7 +137,7 @@
       "RunJavascript": "Allows the AI to execute any JavaScript code with full access to your game session.",
       "MacroGeneric": "Allows the AI to execute this macro, which may contain arbitrary code.",
       "SetDocumentOwnership": "Allows the AI to change who can view or edit documents by modifying their ownership permissions.",
-      "BuildSaveAbility": "Creates or updates a Feature item on an actor, including its save activity, applied effects and midi-qol automation flags. Rebuilding the same ability updates the existing item rather than creating a duplicate.",
+      "BuildAbility": "Creates or updates a Feature item on an actor from a spec: its activities, applied effects and module automation flags. The archetype decides what kind of ability is built. Rebuilding the same ability updates the existing item rather than creating a duplicate.",
       "TestAbility": "Runs a built ability against the token you have targeted, using forced roll outcomes, and reports whether the result matched the ability description. It changes nothing permanent but does roll dice and post results."
     },
     "ModelSelector": {

@@ -78,7 +78,7 @@ function fakeTarget({ hp = 30, statuses = [] } = {}) {
   return token;
 }
 
-/** An item shaped like the one build_save_ability produces. */
+/** An item shaped like the one build_ability produces. */
 function fakeItem(overrides = {}) {
   const activity = {
     id: 'act1',
@@ -392,7 +392,7 @@ test('a failed claim tells the agent to fix the spec and retry once', async () =
   const dcClaim = body.failingClaims.find(c => c.claim.includes('DC'));
   assert.equal(dcClaim.expected, '20');
   assert.equal(dcClaim.actual, '14');
-  assert.match(body.next, /build_save_ability again/);
+  assert.match(body.next, /build_ability again/);
   assert.match(body.next, /same claim fails twice/, 'the two-attempt rule is restated');
 });
 
@@ -428,7 +428,7 @@ test('rejects a uuid that does not resolve', async () => {
   });
 
   assert.equal(result.error.type, 'ITEM_NOT_FOUND');
-  assert.match(JSON.parse(result.content).next, /build_save_ability again/);
+  assert.match(JSON.parse(result.content).next, /build_ability again/);
 });
 
 test('rejects a missing uuid before doing anything else', async () => {

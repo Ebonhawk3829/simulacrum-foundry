@@ -43,10 +43,11 @@ test('preview_spec returns a token and stashes the spec', async () => {
   assert.ok(payload.previewToken, 'a token is returned');
   assert.equal(payload.fieldCount, 2);
 
-  // The token must resolve to the exact spec we passed in - this is what makes
-  // the user's edits lossless.
+  // The token must resolve to the exact spec we passed in, plus the archetype.
+  // The archetype is stamped in because the builder may be handed only the token
+  // and resolves the archetype from the spec, the same way everything else does.
   const stashed = peekSpec(payload.previewToken);
-  assert.deepEqual(stashed.spec, VALID_SPEC);
+  assert.deepEqual(stashed.spec, { ...VALID_SPEC, archetype: 'save' });
 });
 
 test('preview_spec attaches the render payload for the sidebar', async () => {

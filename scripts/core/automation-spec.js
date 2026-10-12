@@ -122,7 +122,7 @@ export const FAILS_BY_CONDITIONS = Object.freeze([
 ]);
 
 /**
- * Spec keys build_save_ability understands, with the type each expects. An
+ * Spec keys build_ability understands, with the type each expects. An
  * unknown key is a warning rather than an error: the description may carry a
  * nuance we have no field for, and silently dropping it would lose information.
  */

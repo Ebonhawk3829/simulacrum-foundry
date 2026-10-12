@@ -26,7 +26,7 @@ import { ReadToolOutputTool } from '../tools/read-tool-output.js';
 import { DocumentOwnershipTool } from '../tools/document-ownership.js';
 import { NotifyUserTool } from '../tools/notify-user.js';
 import { PreviewSpecTool } from '../tools/preview-spec.js';
-import { BuildSaveAbilityTool } from '../tools/build-save-ability.js';
+import { BuildAbilityTool } from '../tools/build-ability.js';
 import { TestAbilityTool } from '../tools/test-ability.js';
 import { DocumentAPI } from './document-api.js';
 
@@ -88,7 +88,7 @@ export class ToolRegistry {
         new DocumentOwnershipTool(),
         new NotifyUserTool(),
         new PreviewSpecTool(),
-        new BuildSaveAbilityTool(),
+        new BuildAbilityTool(),
         new TestAbilityTool(),
       ];
 

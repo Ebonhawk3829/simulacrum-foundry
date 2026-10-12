@@ -1253,7 +1253,7 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
     const message = [
       `The user reviewed and built the preview for ${abilityName}.`,
       '',
-      `Call build_${archetype} with previewToken "${token}" and no spec argument; the user's edited values are already stored under that token. Do not ask for the values again.`,
+      `Call build_ability with archetype "${archetype}" and previewToken "${token}", and no spec argument; the user's edited values are already stored under that token. Do not ask for the values again.`,
       '',
       'Then run the self-test and report the result.',
     ].join('\n');

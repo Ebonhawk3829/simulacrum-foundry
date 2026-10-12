@@ -17,6 +17,7 @@
 import { BaseTool } from './base-tool.js';
 import { validateForm } from '../core/form-descriptors.js';
 import { stashSpec } from '../core/spec-store.js';
+import { archetypeIds, listArchetypes } from '../core/archetypes/registry.js';
 
 const SCHEMA = {
   type: 'object',
@@ -39,9 +40,13 @@ const SCHEMA = {
     },
     archetype: {
       type: 'string',
-      description:
-        'Which builder will handle this: "save", "attack_rider", "reaction", "overtime" or "aura". Determines which builder tool to call next.',
-      enum: ['save', 'attack_rider', 'reaction', 'overtime', 'aura'],
+      // Generated from the registry. The model can therefore only choose an
+      // archetype that has a builder behind it, which is the guard against the
+      // shipped-then-broken release where four were named and none existed.
+      enum: archetypeIds(),
+      description: `Which builder handles this. One of: ${listArchetypes()
+        .map(a => `${a.id} (${a.label})`)
+        .join(', ')}. Determines which builder tool to call next.`,
     },
     summary: {
       type: 'string',
@@ -158,7 +163,11 @@ export class PreviewSpecTool extends BaseTool {
     if (check.rejection) return check.rejection;
     const { fieldCount } = check;
 
-    const previewToken = stashSpec(spec, { form, abilityName, archetype, summary });
+    // The archetype is stamped into the spec as well as stored alongside it.
+    // The builder may be handed only the token, and it resolves the archetype
+    // by the same lookup the rest of the system uses.
+    const stashed = { ...spec, archetype };
+    const previewToken = stashSpec(stashed, { form, abilityName, archetype, summary });
 
     return {
       content: JSON.stringify(
@@ -178,7 +187,7 @@ export class PreviewSpecTool extends BaseTool {
       // Consumed by the sidebar to render the editable form. Not shown as text.
       preview: {
         token: previewToken,
-        spec,
+        spec: stashed,
         form,
         abilityName,
         archetype,
