@@ -12,7 +12,7 @@
       "url": "https://github.com/Daxiongmao87"
     }
   ],
-  "version": "0.2.0",
+  "version": "0.1.0",
   "compatibility": {
     "minimum": 13,
     "verified": "14"
@@ -84,7 +84,7 @@
   ],
   "socket": false,
   "manifest": "https://github.com/Ebonhawk3829/simulacrum-foundry/releases/latest/download/module.json",
-  "download": "https://github.com/Ebonhawk3829/simulacrum-foundry/releases/download/0.2.0/simulacrum.zip",
+  "download": "https://github.com/Ebonhawk3829/simulacrum-foundry/releases/download/0.1.0/simulacrum.zip",
   "url": "https://github.com/Ebonhawk3829/simulacrum-foundry",
   "flags": {
     "simulacrum": {
@@ -94,7 +94,7 @@
     }
   },
   "bugs": "https://github.com/Ebonhawk3829/simulacrum-foundry/issues",
-  "changelog": "https://github.com/Ebonhawk3829/simulacrum-foundry/blob/main/CHANGELOG.md",
-  "readme": "https://github.com/Ebonhawk3829/simulacrum-foundry/blob/main/README.md",
-  "license": "https://github.com/Ebonhawk3829/simulacrum-foundry/blob/main/LICENSE"
+  "changelog": "https://github.com/Ebonhawk3829/simulacrum-foundry/blob/personal/CHANGELOG.md",
+  "readme": "https://github.com/Ebonhawk3829/simulacrum-foundry/blob/personal/README.md",
+  "license": "https://github.com/Ebonhawk3829/simulacrum-foundry/blob/personal/LICENSE"
 }

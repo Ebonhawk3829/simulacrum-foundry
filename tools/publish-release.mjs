@@ -14,7 +14,7 @@
  * Usage:
  *   node tools/publish-release.mjs --dry-run
  *   node tools/publish-release.mjs
- *   node tools/publish-release.mjs --version 0.1.0 --notes-file RELEASE.md
+ *   node tools/publish-release.mjs --version 0.1.0 --notes-file NOTES.md
  */
 
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
@@ -156,17 +156,26 @@ if (succeeds('gh', ['release', 'view', tag, '--repo', repo])) {
   fail(`a GitHub release for ${tag} already exists.`);
 }
 
-const notesFile = args.notesFile ?? join(ROOT, 'tools', 'release-notes', `${version}.md`);
-let notes;
-if (existsSync(notesFile)) {
-  notes = readFileSync(notesFile, 'utf8');
-  console.log(`[publish] Notes: ${notesFile}`);
-} else {
-  notes = readFileSync(join(ROOT, 'tools', 'release-notes', 'default.md'), 'utf8')
-    .replaceAll('{{version}}', version)
-    .replaceAll('{{repo}}', repo);
-  console.log('[publish] Notes: generated from tools/release-notes/default.md');
-}
+// The release body is deliberately short. It used to be a long document
+// describing requirements, installation and configuration, which was a readme's
+// job done in the wrong place: no one looks for "what dnd5e version does this
+// need" on a release page, and the copy there went stale every time.
+//
+// This says only what a release page is actually good for - which build this is
+// - and points at the changelog for the rest. Pass --notes-file to override.
+const notes =
+  args.notesFile && existsSync(args.notesFile)
+    ? readFileSync(args.notesFile, 'utf8')
+    : [
+        `**${manifest.title} ${version}**`,
+        '',
+        `Install via the manifest URL:\n\`\`\`\n${stamped.manifest}\n\`\`\``,
+        '',
+        `Requirements and configuration: [README](https://github.com/${repo}#readme). ` +
+          `What changed: [CHANGELOG](https://github.com/${repo}/blob/${branch}/CHANGELOG.md).`,
+      ].join('\n');
+if (args.notesFile) console.log(`[publish] Notes: ${args.notesFile}`);
+else console.log('[publish] Notes: generated short body (use --notes-file to override)');
 
 const title = args.title ?? `${manifest.title} ${version}`;
 
@@ -178,7 +187,7 @@ const plan = [
   `manifest : ${stamped.manifest}`,
   `download : ${stamped.download}`,
   '',
-  '--- release notes ---',
+  '--- release body ---',
   notes.trim(),
 ];
 console.log('\n' + plan.join('\n') + '\n');
@@ -203,7 +212,7 @@ try {
   process.exit(1);
 }
 
-const notesTmp = join(ROOT, 'dist', 'release-notes.md');
+const notesTmp = join(ROOT, 'dist', 'release-body.md');
 writeFileSync(notesTmp, notes, 'utf8');
 
 console.log('[publish] Creating release...');

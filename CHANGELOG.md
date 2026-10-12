@@ -5,44 +5,6 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
-
-Moves the target from dnd5e 5.3.3 to dnd5e 6.x, and fixes a hook that meant the
-recorded-runs loop never ran at all.
-
-### Fixed
-
-- **the recorder was bound to a hook that does not exist.** `dnd5e.useActivity` appears in no version of dnd5e, midi-qol, DAE, CAT or Chris's Premades — only in this module, where it was a garbled memory of `dnd5e.preUseActivity`. `Hooks.on` accepts any string, so nothing complained and the recorder was never called: building worked, the item was marked for testing, and nothing was ever recorded. It now binds dnd5e's real activity lifecycle — `preUseActivity` for the before-snapshot (concentration and resource consumption happen right after it), `preCreateUsageMessage` to start recording only once the use is genuinely going ahead, `postCreateUsageMessage` to capture the usage card directly, and `postUseActivity` to note completion. All four are identical in dnd5e 5.3.3 and 6.0.6, so this is version-independent.
-
-### Changed
-
-- **target moved to dnd5e 6.x** (verified 6.0.6). Requires Foundry 14.367+. The ecosystem had caught up: midi-qol v14.6.0, DAE v14.6.0, CAT 0.1.2 and CPR 2.1.2 all declare 6.0.0–6.999, with CAT and CPR shipping their 6.x lines on the same day. The 5.x line was frozen — midi-qol and DAE had gone 6-only and were not backporting.
-- the write path needed **no change**: `Item.createActivity` / `updateActivity` / `deleteActivity` and `ActivitiesField extends MappingField` are byte-identical between 5.3.3 and 6.0.6.
-- vocabularies verified against 6.0.6 by diffing `CONFIG`: only two additions, `teleport` (activity type) and `ring` (area target type). Abilities, damage types, activation types, duration units, use periods, recovery types and the movement/range units are all identical. A vocabulary that looked different was a subset this module chooses, not a system change.
-- `reference/dnd5e-5.3.3-fields.md` becomes `reference/dnd5e-6.0-fields.md`, with a new section on the 6.x bonus redirects (`system.bonuses.<mwak|msak|rwak|rsak>.attack` → `system.rolls.attack.<ability>.bonus`, and friends, read out of dnd5e's own `ActiveEffect5e.SHIM_FIELDS`) and one on DAE's per-change **Replacement** setting, which decides whether an effect's `@` references resolve against the caster or the target. Old bonus keys are auto-redirected with a compatibility warning until 6.2, so existing effects keep working for now.
-- DAE v14.6.0 also stops a duration on a transfer effect working at all, converts `ATL.*` keys to `token.*`, and deprecates `dae.roll()`. Noted in the reference and the cheatsheet.
-
-### Added
-
-- `tests/unit/ability-recorder.test.mjs`, which asserts the recorder binds the hooks dnd5e actually carries and specifically not `dnd5e.useActivity`. A unit test cannot prove a hook fires in a world, but it can prove the names are real — which was the entire bug.
-- `resources/refresh-extracts.mjs` and `resources/EXTRACTS.json` in the workspace, which refresh the curated module extracts from pinned tags, follow files that moved upstream, remove files that are gone, and record a hash per file so clone drift is visible. The extracts are curated subsets rather than mirrors, so a recursive copy would either destroy the curation or silently keep code that no longer exists.
-
-## [0.1.1] - 2026-10-12
-
-Fixes a build that reported success and produced an item with no activities and
-no effects.
-
-### Fixed
-
-- **activities are written where dnd5e reads them.** dnd5e stores them inside the item's system data as `system.activities`, keyed by id (`ActivitiesField extends MappingField`). The builder was writing a top-level `activities` key as a plain array. Foundry accepts that update and ignores it, so the write succeeded, the array stayed empty, and nothing reported it. Activities are now added with dnd5e's own `item.createActivity(type, data)`, which builds the right class per type, assigns the id and sets sort — and which throws `"<type> not found in CONFIG.DND5E.activityTypes"` for an unknown type, the only loud failure available in this area. Removal uses the `system.activities.-=<id>` form dnd5e itself uses.
-- **a build that lands nothing now fails instead of reporting ok.** An authored region that comes back empty returns `ACTIVITIES_NOT_WRITTEN`, naming what was wanted and what landed. An item that looks built and does nothing was previously indistinguishable from a successful build.
-- per-activity failures are collected into `activityErrors` and reported, rather than aborting the build: one bad activity should not cost the good ones.
-
-### Changed
-
-- `reference/` is now tracked. Upstream's `.gitignore` excluded it as "reference materials, not part of project", which was right for upstream and wrong here: the release builder ships the directory and `module.json` advertises the dnd5e guide by name, because the agent reads it at runtime. The file was present in the working tree, shipped in every archive, and in no commit.
-- `reference/dnd5e-5.3.3-fields.md` documents where activities and effects actually live, the two ways an activity write fails silently, and the document methods to use instead.
-
 ## [0.1.0] - 2026-10-12
 
 First release of the Ebonhawk automation-builder fork. Upstream's generalist
@@ -61,25 +23,42 @@ belong on the other end of the conversation.
 
 - **editable spec preview**: `preview_spec` returns the parsed ability as a form, drawn from a closed vocabulary (text, number, select, checkbox, group) so a misreading is corrected before any document is written. The form is data, never markup, and `showIf` is evaluated without `eval`. Edited values never round-trip through the model: the spec is stashed under a single-use token and the builder reads it verbatim.
 - **`build_ability`**: a write tool. The agent authors the activities and effects as dnd5e data and hands them over; the tool enforces the three properties that are fiddly to get right and get wrong the same way every time — identity by `system.identifier` so a rebuild updates rather than duplicates, wholesale replacement of the authored regions so a narrowing rebuild cannot leave a stale activity behind, and pass-through of spec keys the tool has never heard of so a field the agent knows about is not silently dropped. The item is then marked as needing testing.
-- **the testing loop**, which runs in the live world rather than in a harness: `ability-recorder.js` watches a flagged item's use through core document hooks (chat output and its rolls, hit point and condition changes on the actor and its targets, errors) and writes what it saw to the item's own flags. `read_ability_runs` returns it for comparison against the stated intent. `confirm_ability` stops the recording. The recorder never judges: it reports facts and says plainly what it could not see.
-- **`read_reference`**: the agent's route to material explaining how these modules and this system work — the dnd5e 5.3.3 field guide shipped with this module, and the documentation belonging to modules installed in this world (midi-qol's flag reference and macro guide, DAE, CAT). Read over Foundry's own route rather than from disk, so the answer matches the installed version and works under a sub-path deployment.
-- **`reference/dnd5e-5.3.3-fields.md`**, written by hand against 5.3.3: activity-type and payload pairing, the fact that a save DC is computed from the activity's `range` and never its `target`, a fixed DC as `dc.formula` with an empty `calculation`, effects landing on failures by default, where the ecosystem's conventions live, and an explicit list of what was not confirmed.
+- **the testing loop**, which runs in the live world rather than in a harness: `ability-recorder.js` watches a flagged item's use through dnd5e's activity lifecycle hooks (chat output and its rolls, hit point and condition changes on the actor and its targets, errors) and writes what it saw to the item's own flags. `read_ability_runs` returns it for comparison against the stated intent. `confirm_ability` stops the recording. The recorder never judges: it reports facts and says plainly what it could not see.
+- **`read_reference`**: the agent's route to material explaining how these modules and this system work — the dnd5e 6.x field guide shipped with this module, and the documentation belonging to modules installed in this world (midi-qol's flag reference and macro guide, DAE, CAT). Read over Foundry's own route rather than from disk, so the answer matches the installed version and works under a sub-path deployment.
+- **`reference/dnd5e-6.0-fields.md`**, written by hand against dnd5e 6.x: activity-type and payload pairing, where activities and effects actually live, the fact that a save DC is computed from the activity's `range` and never its `target`, a fixed DC as `dc.formula` with an empty `calculation`, effects landing on failures by default, which bonus paths moved in 6.x, DAE's per-change Replacement setting, where the ecosystem's conventions live, and an explicit list of what was not confirmed.
 - `preview_spec`, `build_ability` and `confirm_ability` as permission-gated destructive tools, so "Always Allow" is available after first use.
 - shared spec contract (`automation-spec.js`) accepting both flat and nested specs, with correction-guidance errors and warnings for unrecognised keys.
-- `scripts/core/dnd5e/` holds the field shapes and 5.3.3 details that are easy to get wrong silently, in one place rather than rediscovered per request.
+- `scripts/core/dnd5e/` holds the field shapes and the version-specific details that are easy to get wrong silently, in one place rather than rediscovered per request.
 
 ### Changed
 
+- **target is dnd5e 6.x** (verified 6.0.6), requiring Foundry 14.367+.
 - system prompt replaced with automation-domain blocks (identity, rules, domain model, protocol, feedback, communication); the generalist prompt is retained as a fallback behind the `automationMode` setting. The domain model ends by naming the tools to consult before a field is written.
+- provider layer reduced to OpenRouter only.
 - packaging rewritten to be dependency-free: the release is built by `tools/build-release.mjs` instead of shelling out to the `zip` binary, which is absent on Windows.
 
 ### Fixed
 
+- **activities are written where dnd5e reads them.** dnd5e stores them inside the item's system data as `system.activities`, keyed by id (`ActivitiesField extends MappingField`). The builder was writing a top-level `activities` key as a plain array. Foundry accepts that update and ignores it, so the write succeeded, the array stayed empty, and nothing reported it. Activities are now added with dnd5e's own `item.createActivity(type, data)`, which builds the right class per type, assigns the id and sets sort — and which throws `"<type> not found in CONFIG.DND5E.activityTypes"` for an unknown type, the only loud failure available in this area.
+- **a build that lands nothing now fails instead of reporting ok.** An authored region that comes back empty returns `ACTIVITIES_NOT_WRITTEN`, naming what was wanted and what landed. An item that looks built and does nothing was previously indistinguishable from a successful build.
+- **the recorder was bound to a hook that does not exist.** `dnd5e.useActivity` appears in no version of dnd5e, midi-qol, DAE, CAT or Chris's Premades — only here, where it was a garbled memory of `dnd5e.preUseActivity`. `Hooks.on` accepts any string, so nothing complained and the recorder was never called: building worked, the item was marked for testing, and nothing was ever recorded. It now binds dnd5e's real activity lifecycle — `preUseActivity` for the before-snapshot (concentration and resource consumption happen right after it), `preCreateUsageMessage` to start recording only once the use is genuinely going ahead, `postCreateUsageMessage` to capture the usage card directly, and `postUseActivity` to note completion.
 - `module.json` defined `description` twice; the first value was dead. Duplicate keys are now rejected at build time.
+- `module.json`'s readme, changelog and license URLs pointed at `blob/main`, which is the pristine upstream tracking branch, so they showed upstream's documents rather than this fork's.
+- `reference/` was excluded by upstream's `.gitignore` as "reference materials, not part of project". That was right for upstream and wrong here: the release ships the directory and `module.json` advertises the guide by name, so the file was present in the working tree, shipped in every archive, and in no commit.
 - a release could be tagged with an archive built before its own changelog was edited. `publish-release.mjs` now refuses to tag when the archive disagrees with the working tree.
 - the `package` test tier failed on any machine without `unzip`. It now reads the archive with the bundled reader and verifies the module contract directly.
 
-## [Unreleased] - 2026-09-14
+---
+
+## Upstream history
+
+Everything below this line is inherited from
+[Daxiongmao87/simulacrum-foundry](https://github.com/Daxiongmao87/simulacrum-foundry),
+which this project is a fork of. It is kept because the fork is built on that work
+and the entries record what was fixed on the way here. Upstream's version numbers
+are not this project's.
+
+## [1.1.0] - 2026-06-20
 
 ### Added
 

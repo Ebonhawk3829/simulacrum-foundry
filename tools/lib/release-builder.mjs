@@ -277,6 +277,14 @@ export function directoryEntries(paths) {
  * `manifest` is left on the stable `releases/latest` URL so update checks keep
  * working; `download` is pinned to this release, so a client installs the
  * archive this manifest came from.
+ *
+ * Documentation links are NOT rewritten. They used to be forced to `blob/main`,
+ * which is correct for a project whose default branch holds its work — and wrong
+ * here, where `main` tracks upstream and the released content is on another
+ * branch. The result was a module whose README and changelog links showed the
+ * upstream project's documents. The repository manifest names its own branch, so
+ * it is left to do that, and a link is only synthesised when the manifest does
+ * not supply one.
  * @param {object} manifest - The repository manifest
  * @param {object} options
  * @param {string} options.version
@@ -290,9 +298,9 @@ export function stampManifest(manifest, { version, repoUrl }) {
     version,
     url: base,
     bugs: `${base}/issues`,
-    changelog: `${base}/blob/main/CHANGELOG.md`,
-    readme: `${base}/blob/main/README.md`,
-    license: `${base}/blob/main/LICENSE`,
+    changelog: manifest.changelog ?? `${base}/blob/main/CHANGELOG.md`,
+    readme: manifest.readme ?? `${base}/blob/main/README.md`,
+    license: manifest.license ?? `${base}/blob/main/LICENSE`,
     manifest: `${base}/releases/latest/download/module.json`,
     download: `${base}/releases/download/${version}/${manifest.id}.zip`,
   };
