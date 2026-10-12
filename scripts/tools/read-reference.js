@@ -81,7 +81,7 @@ export class ReadReferenceTool extends BaseTool {
   constructor() {
     super(
       'read_reference',
-      'List or search the reference material available for writing these automations: the dnd5e 6.x field guide shipped with this module, and the documentation belonging to the modules installed in this world (midi-qol\'s flag reference and macro guide, DAE, CAT, and the Chris\'s Premades docs). Use this BEFORE authoring an activity or setting a flag, so the field names and shapes come from the actual system rather than from memory. Read-only.'
+      'List or search the reference material available for writing these automations: the dnd5e 6.x field guide shipped with this module, the CAT macro flag shapes, the CPR generic settings (every generic and every setting it accepts, with defaults), and the DAE effect expiry vocabulary. Use this BEFORE authoring an activity or setting a flag, so the field names and shapes come from the actual system rather than from memory. Read-only.'
     );
     this.requiresConfirmation = false; // read-only
     this._index = null; // in-memory only, for the life of the page

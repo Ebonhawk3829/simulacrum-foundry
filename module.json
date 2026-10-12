@@ -91,6 +91,7 @@
       "reference": [
         "dnd5e-6.0-fields.md",
         "cat-macro-flags.md",
+        "cpr-generic-config.md",
         "dae-effect-expiry.md"
       ]
     }

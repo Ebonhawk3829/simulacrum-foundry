@@ -411,9 +411,11 @@ discard `duration.value`.
 
 Recorded so they are not mistaken for facts:
 
-- The full list of `flags.cat.*` config keys per generic. The `genericConfig` shape
-  is known (`cat-macro-flags.md`) but the settings each generic accepts are not —
-  read the generic's own source or a working example.
+- The full list of `flags.cat.*` config keys per generic. Every generic's settings
+  and their defaults are in `cpr-generic-config.md`, but the **options** for a
+  `select`-typed setting (the condition list, damage types, creature types) are
+  deliberately not copied — they are read at run time from CPR's own `constants`, and
+  a stale copy would fail quietly.
 - Whether `enchant`, `summon`, `transform` and `teleport` payloads need additional
   required fields beyond their block. `teleport` is new in 6.x and is not
   exercised here.

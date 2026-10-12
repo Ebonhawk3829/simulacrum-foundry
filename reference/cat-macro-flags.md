@@ -93,6 +93,10 @@ Seen on a real item (`Awakened Mind` from CPR's 2024 features pack):
 | `genericConfig` | configuration for a generic macro, e.g. which conditions it uses |
 | `automation` | marks the document as supplied by an automation, for the Cat Kit |
 
+**Every generic's settings are listed in `cpr-generic-config.md`** — all 51 of them,
+with the type, the default, and CPR's own description of each. Read that rather than
+guessing a setting name.
+
 `genericConfig` was the interesting one for the item that exposed this file. Its
 shape is `{ [source]: { [identifier]: { ...settings } } }`:
 
@@ -142,6 +146,9 @@ registered by CPR and configured per-item through `genericConfig`.
 
 ## 6. What this file is not
 
+- **The settings are in another file.** This covers attaching a macro; what each
+  generic accepts once attached is `cpr-generic-config.md`, generated from CPR's own
+  declarations.
 - **Not a pass reference.** Which passes exist per event, and in what order they fire,
   is in CAT's Events wiki page — not reproduced here, because a pass list copied out
   of the source is exactly the kind of thing that goes stale silently.
