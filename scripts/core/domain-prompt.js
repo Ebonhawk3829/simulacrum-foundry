@@ -63,15 +63,19 @@ export const AUTOMATION_PROTOCOL = `PROTOCOL - work through these steps in order
 
 2. PREVIEW. Call preview_spec with the parsed spec and a form definition covering every field a human might want to correct. The user will edit and return it. Include an "actor" field with control "actor" so the user picks the actor in the form.
 
-3. BUILD. Call the matching builder tool. When the build came from a preview, pass previewToken instead of the spec: the user's edited values are read from it verbatim, which is both exact and cheaper than restating them.
+3. BUILD. Call build_ability with the data you author: a spec, the activity data, any effects, and the item type. When the build came from a preview, pass previewToken instead of the spec: the user's edited values are read from it verbatim, which is both exact and cheaper than restating them.
+
+   Include "intent" - one or two plain sentences on what the ability should do. It is stored with the item and read back later, so it is the yardstick the recorded runs are compared against.
 
    The builder is idempotent. It looks up the item by system.identifier and updates it in place, so rebuilding after a correction is an update, not a duplicate. Rebuild freely.
 
-4. TEST. Call test_ability with the itemUuid the build returned. It runs the ability twice against the token the user has TARGETED, with the save forced to fail and then to succeed, and restores everything it changed. Nothing depends on dice.
+4. HAND OFF FOR TESTING. The build marks the item as needing testing, which turns on recording. Tell the user it is built and marked for testing, and ask them to use it in play the way they normally would. Do NOT try to run it yourself and do NOT reason about whether it works yet - a synthetic run cannot reproduce a real situation, and the user doing it is the point.
 
-   The token is the user's choice, never one you create - creating a dummy would change what the test proves. If nothing is targeted the tool says so; ask the user to target a token and continue when they confirm. That is a normal pause.
+   Wait. This is a normal pause, not a failure.
 
-5. REPORT. State what was built, which claims the test confirmed, and anything that could not be automated or verified.`;
+5. READ AND RECONCILE. Once the user says they have used it, call read_ability_runs. Compare three things: what you intended, what the record shows actually happened, and what the user says they saw. The user's account matters most where it disagrees with the record - they saw the game, the log saw the data, and either can be the one that is wrong.
+
+6. CORRECT OR CONFIRM. If it misbehaved, work out which field is responsible, rebuild, and go back to step 4. If the user is satisfied, call confirm_ability, which stops recording and removes the debug output.`;
 
 export const AUTOMATION_FEEDBACK = `READING RESULTS AND RECOVERING FROM ERRORS:
 
@@ -83,16 +87,18 @@ Every tool returns structured JSON. Always read the fields before deciding what 
 
 NEVER GUESS A MECHANIC. If the description does not say which ability, what DC, how many targets or how long, that is a question, not a default. Say what is missing and stop. Two exceptions, both narrow: if a rule is implied by the system rather than the creature (an attack roll uses the ability the description names), you may infer it and say you did. If a value is genuinely absent and the ability cannot work without it, ask.
 
-The test report is a checklist, one entry per claim from the spec:
-  { claim: "A failed save gives the target \\"restrained\\"", expected: "\\"restrained\\" on the target", actual: "prone", pass: false }
+WHAT read_ability_runs RETURNS is a record, not a verdict. Per use you get: the chat output with roll formulas, totals and individual die faces; hit point, condition and effect changes on the actor and on each target; any errors; and a caveat when something could not be observed. The module does not decide whether the ability is correct. You do.
 
-Compare it against the spec and act on mismatches:
-- All claims pass -> report success.
-- A claim fails -> the entry names what was expected and what was observed. That mismatch usually identifies the field at fault: fix that field and rebuild.
-- A claim is untested (pass is null) -> it was NOT verified. Report it as unverified, never as passing. The note says why.
-- The same claim fails a second time -> STOP. Do not attempt a third build. Tell the user what you tried, what the test observed, and what you suspect is wrong, then wait.
+How to read it:
+- A change you did not expect means the ability did something you did not intend. Find the field behind it.
+- An expectation with no corresponding change means it did not happen. Find the field behind it.
+- A caveat - no chat output captured, a target that could not be re-read - means the record is INCOMPLETE, not that nothing happened. Say so rather than concluding either way.
+- Numbers that look wrong are worth checking against the dice, not just the total: a total of 3 from 1d20+5 and a total of 3 from 4d6 are different problems.
+- Compare against what the user reports seeing. Where they disagree, trust neither immediately - ask what they observed in more detail.
 
-If test_ability reports that no token is targeted, ask the user to target one and retry. That is a pause, not a failure.`;
+If read_ability_runs says nothing has been recorded, the ability has not been used yet. Ask the user to use it. Do not infer anything about whether it works.
+
+If the same problem survives two rebuilds, STOP. Do not attempt a third. Tell the user what you tried, what the record showed, and what you suspect, then wait.`;
 
 export const AUTOMATION_FORM_VOCABULARY = `PREVIEW FORM VOCABULARY - the preview tool returns {spec, form}. The form is a flat-or-nested array of field descriptors drawn only from this vocabulary. Emit data, never markup or code.
 

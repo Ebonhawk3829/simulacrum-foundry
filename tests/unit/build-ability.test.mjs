@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
 import { BuildAbilityTool } from '../../scripts/tools/build-ability.js';
+import { ReadAbilityRunsTool } from '../../scripts/tools/read-ability-runs.js';
+import { ConfirmAbilityTool } from '../../scripts/tools/confirm-ability.js';
+import { getVerificationState } from '../../scripts/core/verification-state.js';
 import { stashSpec, clearSpecs } from '../../scripts/core/spec-store.js';
 
 /**
@@ -49,7 +52,21 @@ function makeItem(id, data, actor) {
       activities: { contents: activities },
     },
     effects: { contents: effects },
+    flags: {},
     _updates: [],
+    // Foundry document flag access. The verification mark lives here, so the
+    // fixture needs the real methods rather than a plain object.
+    getFlag(scope, key) {
+      return this.flags?.[scope]?.[key];
+    },
+    async setFlag(scope, key, value) {
+      this.flags = { ...this.flags, [scope]: { ...(this.flags?.[scope] ?? {}), [key]: value } };
+      return this;
+    },
+    async unsetFlag(scope, key) {
+      if (this.flags?.[scope]) delete this.flags[scope][key];
+      return this;
+    },
     async update(changes) {
       this._updates.push(changes);
       if (changes.name) this.name = changes.name;
@@ -72,7 +89,16 @@ function makeItem(id, data, actor) {
   return item;
 }
 
-/** Install the Foundry globals the builder reads, and restore them afterwards. */
+/** Find an embedded item by uuid across the fixture actors. */
+function findItemByUuid(actors, uuid) {
+  for (const actor of actors) {
+    const found = actor.items.contents.find(i => i.uuid === uuid);
+    if (found) return found;
+  }
+  return null;
+}
+
+/** Install the Foundry globals the tools read, and restore them afterwards. */
 function withFoundry(actors, run) {
   const previous = {
     game: globalThis.game,
@@ -80,12 +106,15 @@ function withFoundry(actors, run) {
   };
 
   globalThis.game = {
-    user: { isGM: true },
+    user: { id: 'gm1', isGM: true },
     actors: { contents: actors },
   };
   globalThis.foundry = {
     utils: {
       randomID: () => `rnd${Math.random().toString(16).slice(2, 14)}`,
+      // The read/confirm tools resolve items by uuid; the builder does not, but
+      // the shared fixture serves both.
+      fromUuidSync: uuid => findItemByUuid(actors, uuid),
     },
   };
 
@@ -449,7 +478,8 @@ test('returns the ids the next step needs', async () => {
   assert.equal(body.activities.length, 1);
   assert.equal(body.activities[0].type, 'save');
   assert.equal(body.effects.length, 1);
-  assert.match(body.next, /test_ability/);
+  assert.match(body.next, /read_ability_runs/);
+  assert.match(body.next, /use it in play/, 'the agent is told to hand off, not to test it itself');
 });
 
 test('derives the identifier from the name when none is given', async () => {
@@ -616,6 +646,242 @@ test('refuses to build for a non-GM', async () => {
   globalThis.game = { user: { isGM: false }, actors: { contents: [actor] }, settings: { get: () => true } };
   try {
     const result = await tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id }, ...ACTIVITY });
+    assert.equal(result.error.type, 'PERMISSION_DENIED');
+  } finally {
+    globalThis.game = previous;
+  }
+});
+
+// --- verification lifecycle ------------------------------------------------
+
+test('a build marks the ability as needing testing', async () => {
+  const actor = fakeActor();
+  const tool = new BuildAbilityTool();
+
+  await withFoundry([actor], () =>
+    tool.execute({ spec: { ...TANGLEFOOT, actor: actor.id }, ...ACTIVITY })
+  );
+
+  const state = getVerificationState(actor.items.contents[0]);
+  assert.equal(state.status, 'pending', 'recording is on for a fresh build');
+  assert.equal(state.identifier, 'tanglefoot');
+  assert.deepEqual(state.runs, []);
+});
+
+test('the build records what the agent intended, as the yardstick for later', async () => {
+  const actor = fakeActor();
+  const tool = new BuildAbilityTool();
+
+  await withFoundry([actor], () =>
+    tool.execute({
+      spec: { ...TANGLEFOOT, actor: actor.id },
+      ...ACTIVITY,
+      intent: 'Target is restrained on a failed save, and re-saves at end of turn.',
+      expect: { 'gains restrained': true },
+    })
+  );
+
+  const state = getVerificationState(actor.items.contents[0]);
+  assert.match(state.intent, /restrained on a failed save/);
+  assert.deepEqual(state.expect, { 'gains restrained': true });
+});
+
+test('a rebuild marks it for testing again, so confirming is never a dead end', async () => {
+  const actor = fakeActor();
+  const build = new BuildAbilityTool();
+  const confirm = new ConfirmAbilityTool();
+
+  await withFoundry([actor], () =>
+    build.execute({ spec: { ...TANGLEFOOT, actor: actor.id }, ...ACTIVITY })
+  );
+  const item = actor.items.contents[0];
+
+  await withFoundry([actor], () => confirm.execute({ itemUuid: item.uuid }));
+  assert.equal(getVerificationState(item).status, 'confirmed');
+
+  await withFoundry([actor], () =>
+    build.execute({ spec: { ...TANGLEFOOT, actor: actor.id }, ...ACTIVITY })
+  );
+  assert.equal(getVerificationState(item).status, 'pending', 'a rebuild reopens testing');
+});
+
+test('reading runs reports that nothing has been recorded yet', async () => {
+  const actor = fakeActor();
+  const build = new BuildAbilityTool();
+  const read = new ReadAbilityRunsTool();
+
+  await withFoundry([actor], () =>
+    build.execute({ spec: { ...TANGLEFOOT, actor: actor.id }, ...ACTIVITY })
+  );
+  const item = actor.items.contents[0];
+
+  const result = await withFoundry([actor], () => read.execute({ itemUuid: item.uuid }));
+  const body = JSON.parse(result.content);
+
+  assert.equal(body.ok, true);
+  assert.equal(body.runCount, 0);
+  assert.deepEqual(body.runs, []);
+  // The instruction matters more than the empty list: the agent must not infer
+  // anything about correctness from the absence of evidence.
+  assert.match(body.next, /has not been used/);
+  assert.match(body.next, /Do not guess/);
+});
+
+test('reading runs returns them with the intent they are judged against', async () => {
+  const actor = fakeActor();
+  const build = new BuildAbilityTool();
+  const read = new ReadAbilityRunsTool();
+
+  await withFoundry([actor], () =>
+    build.execute({
+      spec: { ...TANGLEFOOT, actor: actor.id },
+      ...ACTIVITY,
+      intent: 'Restrains on a failed save.',
+    })
+  );
+  const item = actor.items.contents[0];
+
+  // Stand in for a recorded use.
+  const { recordRun } = await import('../../scripts/core/verification-state.js');
+  await recordRun(item, {
+    at: '2026-10-12T10:00:00.000Z',
+    chat: [{ text: 'Tanglefoot: DC 14 Strength save', rolls: [{ formula: '1d20+2', total: 9, dice: [7] }] }],
+    targets: [{ name: 'Goblin', changes: { conditionsGained: ['restrained'] } }],
+  });
+
+  const result = await withFoundry([actor], () => read.execute({ itemUuid: item.uuid }));
+  const body = JSON.parse(result.content);
+
+  assert.equal(body.runCount, 1);
+  assert.match(body.intent, /Restrains/);
+  assert.equal(body.runs[0].targets[0].changes.conditionsGained[0], 'restrained');
+  assert.equal(body.runs[0].chat[0].rolls[0].dice[0], 7, 'die faces are kept, not just the total');
+  assert.match(body.next, /Compare these runs against your intent/);
+});
+
+test('reading runs can be limited to the most recent', async () => {
+  const actor = fakeActor();
+  const build = new BuildAbilityTool();
+  const read = new ReadAbilityRunsTool();
+
+  await withFoundry([actor], () =>
+    build.execute({ spec: { ...TANGLEFOOT, actor: actor.id }, ...ACTIVITY })
+  );
+  const item = actor.items.contents[0];
+
+  const { recordRun } = await import('../../scripts/core/verification-state.js');
+  for (let i = 1; i <= 4; i++) await recordRun(item, { at: `run-${i}` });
+
+  const result = await withFoundry([actor], () => read.execute({ itemUuid: item.uuid, limit: 2 }));
+  const body = JSON.parse(result.content);
+
+  assert.equal(body.runCount, 4, 'the total is still reported');
+  assert.equal(body.runs.length, 2);
+  assert.equal(body.runs[1].at, 'run-4', 'the newest are returned');
+});
+
+test('confirming stops recording and keeps the history by default', async () => {
+  const actor = fakeActor();
+  const build = new BuildAbilityTool();
+  const confirm = new ConfirmAbilityTool();
+
+  await withFoundry([actor], () =>
+    build.execute({ spec: { ...TANGLEFOOT, actor: actor.id }, ...ACTIVITY })
+  );
+  const item = actor.items.contents[0];
+
+  const { recordRun } = await import('../../scripts/core/verification-state.js');
+  await recordRun(item, { at: 'a-run' });
+
+  const result = await withFoundry([actor], () =>
+    confirm.execute({ itemUuid: item.uuid, summary: 'Used on a goblin; restrained applied.' })
+  );
+  const body = JSON.parse(result.content);
+  const state = getVerificationState(item);
+
+  assert.equal(body.ok, true);
+  assert.equal(state.status, 'confirmed');
+  assert.equal(state.runs.length, 1, 'the evidence behind the decision is kept');
+  assert.match(state.summary, /restrained applied/);
+  assert.match(body.next, /recording has stopped/);
+});
+
+test('confirming can discard the history when asked', async () => {
+  const actor = fakeActor();
+  const build = new BuildAbilityTool();
+  const confirm = new ConfirmAbilityTool();
+
+  await withFoundry([actor], () =>
+    build.execute({ spec: { ...TANGLEFOOT, actor: actor.id }, ...ACTIVITY })
+  );
+  const item = actor.items.contents[0];
+
+  const { recordRun } = await import('../../scripts/core/verification-state.js');
+  await recordRun(item, { at: 'a-run' });
+
+  await withFoundry([actor], () =>
+    confirm.execute({ itemUuid: item.uuid, discardRuns: true })
+  );
+
+  assert.equal(getVerificationState(item).runs.length, 0);
+});
+
+test('confirming twice is a no-op rather than an error', async () => {
+  const actor = fakeActor();
+  const build = new BuildAbilityTool();
+  const confirm = new ConfirmAbilityTool();
+
+  await withFoundry([actor], () =>
+    build.execute({ spec: { ...TANGLEFOOT, actor: actor.id }, ...ACTIVITY })
+  );
+  const item = actor.items.contents[0];
+
+  await withFoundry([actor], () => confirm.execute({ itemUuid: item.uuid }));
+  const again = await withFoundry([actor], () => confirm.execute({ itemUuid: item.uuid }));
+  const body = JSON.parse(again.content);
+
+  // The agent may reasonably lose track across a long conversation, so repeating
+  // a confirmation is not a mistake worth an error.
+  assert.equal(body.ok, true);
+  assert.equal(body.alreadyConfirmed, true);
+});
+
+test('reading runs on an untracked item says so instead of returning an empty list', async () => {
+  const actor = fakeActor();
+  const read = new ReadAbilityRunsTool();
+
+  await withFoundry([actor], () =>
+    actor.createEmbeddedDocuments('Item', [{ name: 'Hand-made', type: 'feat', system: {} }])
+  );
+  const item = actor.items.contents[0];
+
+  const result = await withFoundry([actor], () => read.execute({ itemUuid: item.uuid }));
+  assert.equal(result.error.type, 'NOT_TRACKED');
+  assert.match(JSON.parse(result.content).error, /not built by this module/);
+});
+
+test('reading runs rejects a uuid that does not resolve', async () => {
+  const read = new ReadAbilityRunsTool();
+  const result = await withFoundry([fakeActor()], () =>
+    read.execute({ itemUuid: 'Actor.x.Item.y' })
+  );
+  assert.equal(result.error.type, 'ITEM_NOT_FOUND');
+});
+
+test('confirming refuses for a non-GM', async () => {
+  const actor = fakeActor();
+  const build = new BuildAbilityTool();
+  const confirm = new ConfirmAbilityTool();
+
+  await withFoundry([actor], () =>
+    build.execute({ spec: { ...TANGLEFOOT, actor: actor.id }, ...ACTIVITY })
+  );
+  const item = actor.items.contents[0];
+
+  const previous = globalThis.game;
+  globalThis.game = { user: { isGM: false }, actors: { contents: [actor] } };
+  try {
+    const result = await confirm.execute({ itemUuid: item.uuid });
     assert.equal(result.error.type, 'PERMISSION_DENIED');
   } finally {
     globalThis.game = previous;

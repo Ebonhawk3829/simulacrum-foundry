@@ -23,6 +23,7 @@ try {
   /* dev mode */
 }
 import { InteractionLogDownloader } from './core/interaction-logger.js';
+import { registerAbilityRecorder } from './core/ability-recorder.js';
 import { assetIndexService } from './core/asset-index-service.js';
 import { modelService } from './core/model-service.js';
 import { OPENROUTER_BASE_URL } from './core/ai-client.js';
@@ -276,7 +277,10 @@ function registerAPISettings() {
 
 Hooks.once('init', async () => {
   logger.info(`Initializing ${MODULE_NAME}`);
-
+    // Records what happens when a built ability is used in play, so the agent can
+    // reason about real outcomes instead of a synthetic run. Writes nothing until
+    // an ability has been marked as needing testing.
+    registerAbilityRecorder();
   // Register module settings (no redundant enable toggle)
   registerAPISettings();
   registerAdvancedSettings();

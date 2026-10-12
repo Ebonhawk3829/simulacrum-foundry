@@ -61,6 +61,10 @@ export const INCLUDED_PATHS = Object.freeze([
   'lang',
   'assets',
   'packs',
+  // The dnd5e field reference the agent reads at runtime. Small enough to ship,
+  // and shipping it means it cannot drift out of sync with the version that was
+  // actually tested against this code.
+  'reference',
 ]);
 
 /**

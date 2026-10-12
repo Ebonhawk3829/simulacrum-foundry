@@ -56,9 +56,14 @@ set_document_ownership: {
     explainer: 'SIMULACRUM.ToolExplainer.BuildAbility',
     defaultState: PermissionState.ASK,
   },
-  test_ability: {
-    displayName: 'SIMULACRUM.Tools.test_ability',
-    explainer: 'SIMULACRUM.ToolExplainer.TestAbility',
+  read_ability_runs: {
+    displayName: 'SIMULACRUM.Tools.read_ability_runs',
+    explainer: 'SIMULACRUM.ToolExplainer.ReadAbilityRuns',
+    defaultState: PermissionState.ALLOW,
+  },
+  confirm_ability: {
+    displayName: 'SIMULACRUM.Tools.confirm_ability',
+    explainer: 'SIMULACRUM.ToolExplainer.ConfirmAbility',
     defaultState: PermissionState.ASK,
   },
 };

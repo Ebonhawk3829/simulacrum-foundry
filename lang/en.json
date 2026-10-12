@@ -90,7 +90,8 @@
       "end_loop": "End Loop",
       "preview_spec": "Preview Ability",
       "build_ability": "Build Ability",
-      "test_ability": "Test Ability"
+      "read_ability_runs": "Read Ability Runs",
+      "confirm_ability": "Confirm Ability",
     },
     "ToolStatus": {
       "Creating": "Creating",
@@ -138,7 +139,8 @@
       "MacroGeneric": "Allows the AI to execute this macro, which may contain arbitrary code.",
       "SetDocumentOwnership": "Allows the AI to change who can view or edit documents by modifying their ownership permissions.",
       "BuildAbility": "Creates or updates a Feature item on an actor from a spec: its activities, applied effects and module automation flags. The archetype decides what kind of ability is built. Rebuilding the same ability updates the existing item rather than creating a duplicate.",
-      "TestAbility": "Runs a built ability against the token you have targeted, using forced roll outcomes, and reports whether the result matched the ability description. It changes nothing permanent but does roll dice and post results."
+      "ReadAbilityRuns": "Reads what was recorded when a built ability was used in play: the chat output and its rolls, hit point and condition changes on the actor and its targets, and any errors. Read-only, and changes nothing.",
+      "ConfirmAbility": "Marks a built ability as confirmed working, which stops recording its uses and removes the debug output. The recorded runs are kept as history. Rebuilding the ability starts recording again."
     },
     "ModelSelector": {
       "Placeholder": "Select model..."

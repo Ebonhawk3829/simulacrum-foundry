@@ -42,6 +42,7 @@ import { getSpecString, deriveIdentifier, resolveActor } from '../core/automatio
 import { takeSpec } from '../core/spec-store.js';
 import { buildItemSystem } from '../core/dnd5e/item-builders.js';
 import { inferActivityType } from '../core/dnd5e/activity-builders.js';
+import { markNeedsTesting } from '../core/verification-state.js';
 
 /**
  * Document types an ability is normally written as, and what each is for.
@@ -104,6 +105,16 @@ export class BuildAbilityTool extends BaseTool {
           description:
             "Whether to replace the item's existing activities. Defaults to true, which is what a rebuild wants. Set false to ADD activities to an item that already has some, such as giving an existing weapon an extra attack.",
         },
+        intent: {
+          type: 'string',
+          description:
+            'One or two sentences on what the ability is supposed to do, in plain terms. Recorded with the item and shown back when the recorded runs are read, so you can compare what happened against what you meant.',
+        },
+        expect: {
+          type: 'object',
+          description:
+            'Free-form expectations to check the first runs against, e.g. { "target gains restrained": true, "damage is 4d6 fire": true }. Nothing is validated against a fixed set; this is your own yardstick, stored beside the recorded runs.',
+        },
       },
     };
   }
@@ -149,6 +160,15 @@ export class BuildAbilityTool extends BaseTool {
         effects,
         replace,
       });
+
+      // The build is a hypothesis until it has been used in play. Marking it here
+      // is what turns the recorder on for this item, and clearing the mark later
+      // is what turns it off again.
+      await markNeedsTesting(result.item, {
+        intent: params.intent ?? getSpecString(spec, 'notes') ?? null,
+        expect: params.expect ?? null,
+      });
+
       return this._success({ result, actor, identifier, itemType, replace });
     } catch (err) {
       this.logger.error('build_ability failed', err);
@@ -326,13 +346,14 @@ export class BuildAbilityTool extends BaseTool {
           actorUuid: actor.uuid,
           identifier,
           replacedActivities: replace,
+          needsTesting: true,
           activities: (item.system.activities?.contents ?? []).map(a => ({
             id: a.id,
             type: a.type,
             name: a.name,
           })),
           effects: (item.effects?.contents ?? []).map(e => ({ id: e.id, name: e.name })),
-          next: `Run test_ability with itemUuid "${item.uuid}" to run it against the token you have targeted, or read it back with document_read to confirm what landed.`,
+          next: `Tell the user the ability is built and marked for testing, and ask them to use it in play the way they normally would. Everything that happens will be recorded. Once they have used it and told you what they saw, call read_ability_runs with itemUuid "${item.uuid}" to see the record, and compare it against what you intended. When the user confirms it behaves correctly, call confirm_ability to stop recording.`,
         },
         null,
         2

@@ -430,50 +430,6 @@ function _flattenSpec(spec, prefix = '') {
 }
 
 /**
- * Identify the token the user currently has targeted, for the self-test.
- * Reads the live target set rather than creating anything, because the user
- * decides what the ability is tested against.
- * @returns {{ok: boolean, actor?: object, token?: object, error?: string, guidance?: string}}
- */
-export function resolveTargetedActor() {
-  const targeted = typeof game !== 'undefined' ? game?.user?.targets : null;
-  if (!targeted) {
-    return {
-      ok: false,
-      error: 'no-targeting-unavailable',
-      guidance: 'Targeting is not available in this environment.',
-    };
-  }
-
-  const tokens = Array.from(targeted);
-  if (tokens.length === 0) {
-    return {
-      ok: false,
-      error: 'no-target',
-      guidance:
-        'No token is targeted. Ask the user to target the token to test against on the active scene, then call test_ability again. This is a normal pause, not a failure.',
-    };
-  }
-
-  const token = tokens[0];
-  if (!token.actor) {
-    return {
-      ok: false,
-      error: 'target-has-no-actor',
-      guidance:
-        'The targeted token has no actor (it may be a tile or a token whose actor was deleted). Ask the user to target a token with an actor.',
-    };
-  }
-
-  return {
-    ok: true,
-    actor: token.actor,
-    token,
-    extraTargets: tokens.length - 1,
-  };
-}
-
-/**
  * Resolve the actor an automation should be written to.
  *
  * The actor is chosen by the user in the preview panel, so this accepts an id, a

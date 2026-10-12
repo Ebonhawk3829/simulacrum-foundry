@@ -27,7 +27,8 @@ import { DocumentOwnershipTool } from '../tools/document-ownership.js';
 import { NotifyUserTool } from '../tools/notify-user.js';
 import { PreviewSpecTool } from '../tools/preview-spec.js';
 import { BuildAbilityTool } from '../tools/build-ability.js';
-import { TestAbilityTool } from '../tools/test-ability.js';
+import { ReadAbilityRunsTool } from '../tools/read-ability-runs.js';
+import { ConfirmAbilityTool } from '../tools/confirm-ability.js';
 import { DocumentAPI } from './document-api.js';
 
 /**
@@ -89,7 +90,8 @@ export class ToolRegistry {
         new NotifyUserTool(),
         new PreviewSpecTool(),
         new BuildAbilityTool(),
-        new TestAbilityTool(),
+        new ReadAbilityRunsTool(),
+        new ConfirmAbilityTool(),
       ];
 
       for (const t of tools) {
