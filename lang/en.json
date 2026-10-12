@@ -91,7 +91,8 @@
       "preview_spec": "Preview Ability",
       "build_ability": "Build Ability",
       "read_ability_runs": "Read Ability Runs",
-      "confirm_ability": "Confirm Ability",
+      "read_reference": "Read Reference",
+      "confirm_ability": "Confirm Ability"
     },
     "ToolStatus": {
       "Creating": "Creating",
@@ -138,9 +139,10 @@
       "RunJavascript": "Allows the AI to execute any JavaScript code with full access to your game session.",
       "MacroGeneric": "Allows the AI to execute this macro, which may contain arbitrary code.",
       "SetDocumentOwnership": "Allows the AI to change who can view or edit documents by modifying their ownership permissions.",
-      "BuildAbility": "Creates or updates a Feature item on an actor from a spec: its activities, applied effects and module automation flags. The archetype decides what kind of ability is built. Rebuilding the same ability updates the existing item rather than creating a duplicate.",
+      "BuildAbility": "Creates or updates a Feature item on an actor from a spec: its activities, applied effects and module automation flags. Rebuilding the same ability updates the existing item rather than creating a duplicate.",
       "ReadAbilityRuns": "Reads what was recorded when a built ability was used in play: the chat output and its rolls, hit point and condition changes on the actor and its targets, and any errors. Read-only, and changes nothing.",
-      "ConfirmAbility": "Marks a built ability as confirmed working, which stops recording its uses and removes the debug output. The recorded runs are kept as history. Rebuilding the ability starts recording again."
+      "ConfirmAbility": "Marks a built ability as confirmed working, which stops recording its uses and removes the debug output. The recorded runs are kept as history. Rebuilding the ability starts recording again.",
+      "ReadReference": "Reads documentation that explains how these automations work: the dnd5e 5.3.3 field guide shipped with this module, and the documentation belonging to modules installed in this world, such as midi-qol's flag reference and macro guide. Read-only, and changes nothing."
     },
     "ModelSelector": {
       "Placeholder": "Select model..."

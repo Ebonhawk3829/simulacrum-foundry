@@ -9,24 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 First release of the Ebonhawk automation-builder fork. Upstream's generalist
 campaign-assistant prompt is replaced with an automation-builder domain prompt,
-the provider layer is reduced to OpenRouter, and three tools are added.
+the provider layer is reduced to OpenRouter, and the ability tools are added.
+
+The design is deliberately thin. The module does not know what an ability is. It
+writes the documents it is given, records what happens when they are used, and
+leaves every judgement about correctness to the agent and the person at the
+table. An earlier version enumerated ability shapes — a registry of seventeen
+"archetypes", a spec vocabulary, and a scoring layer over eleven claim types —
+and all of it is gone, because all of it was the module making decisions that
+belong on the other end of the conversation.
 
 ### Added
 
 - **editable spec preview**: `preview_spec` returns the parsed ability as a form, drawn from a closed vocabulary (text, number, select, checkbox, group) so a misreading is corrected before any document is written. The form is data, never markup, and `showIf` is evaluated without `eval`. Edited values never round-trip through the model: the spec is stashed under a single-use token and the builder reads it verbatim.
-- **`build_save_ability`**: writes a save-based automation as a dnd5e Feature with its save activity, damage, applied effect, DAE changes and midi-qol flags. Idempotent by `system.identifier`, so rebuilding corrects rather than duplicates.
-- **`test_ability`**: runs the built ability twice against the token the user has targeted, forcing the save to fail and then to succeed, and reports one checklist entry per claim. Claims that could not be observed report as untested rather than passed. Teardown is unconditional.
+- **`build_ability`**: a write tool. The agent authors the activities and effects as dnd5e data and hands them over; the tool enforces the three properties that are fiddly to get right and get wrong the same way every time — identity by `system.identifier` so a rebuild updates rather than duplicates, wholesale replacement of the authored regions so a narrowing rebuild cannot leave a stale activity behind, and pass-through of spec keys the tool has never heard of so a field the agent knows about is not silently dropped. The item is then marked as needing testing.
+- **the testing loop**, which runs in the live world rather than in a harness: `ability-recorder.js` watches a flagged item's use through core document hooks (chat output and its rolls, hit point and condition changes on the actor and its targets, errors) and writes what it saw to the item's own flags. `read_ability_runs` returns it for comparison against the stated intent. `confirm_ability` stops the recording. The recorder never judges: it reports facts and says plainly what it could not see.
+- **`read_reference`**: the agent's route to material explaining how these modules and this system work — the dnd5e 5.3.3 field guide shipped with this module, and the documentation belonging to modules installed in this world (midi-qol's flag reference and macro guide, DAE, CAT). Read over Foundry's own route rather than from disk, so the answer matches the installed version and works under a sub-path deployment.
+- **`reference/dnd5e-5.3.3-fields.md`**, written by hand against 5.3.3: activity-type and payload pairing, the fact that a save DC is computed from the activity's `range` and never its `target`, a fixed DC as `dc.formula` with an empty `calculation`, effects landing on failures by default, where the ecosystem's conventions live, and an explicit list of what was not confirmed.
+- `preview_spec`, `build_ability` and `confirm_ability` as permission-gated destructive tools, so "Always Allow" is available after first use.
 - shared spec contract (`automation-spec.js`) accepting both flat and nested specs, with correction-guidance errors and warnings for unrecognised keys.
-- `preview_spec` and the builder tools as permission-gated destructive tools, so "Always Allow" is available after first use.
+- `scripts/core/dnd5e/` holds the field shapes and 5.3.3 details that are easy to get wrong silently, in one place rather than rediscovered per request.
 
 ### Changed
 
-- system prompt replaced with automation-domain blocks (identity, rules, domain model, protocol, feedback, form vocabulary, communication); the generalist prompt is retained as a fallback behind the `automationMode` setting.
+- system prompt replaced with automation-domain blocks (identity, rules, domain model, protocol, feedback, communication); the generalist prompt is retained as a fallback behind the `automationMode` setting. The domain model ends by naming the tools to consult before a field is written.
 - packaging rewritten to be dependency-free: the release is built by `tools/build-release.mjs` instead of shelling out to the `zip` binary, which is absent on Windows.
 
 ### Fixed
 
 - `module.json` defined `description` twice; the first value was dead. Duplicate keys are now rejected at build time.
+- a release could be tagged with an archive built before its own changelog was edited. `publish-release.mjs` now refuses to tag when the archive disagrees with the working tree.
 - the `package` test tier failed on any machine without `unzip`. It now reads the archive with the bundled reader and verifies the module contract directly.
 
 ## [Unreleased] - 2026-09-14

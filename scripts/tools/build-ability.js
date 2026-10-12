@@ -62,6 +62,58 @@ const ITEM_TYPES = Object.freeze([
   'container',
 ]);
 
+/**
+ * What the agent is asked for.
+ *
+ * Held here rather than inline so the constructor stays short and the parameter
+ * contract reads as one block.
+ */
+const ABILITY_PARAMS = Object.freeze({
+  spec: {
+    type: 'object',
+    description:
+      'The ability data. Recognised keys: "actor", "name", "identifier", "itemType", "notes", "uses" (max/period/recovery/rechargeMin). Any other key is passed through to the item\'s system data unchanged, so dnd5e fields and module flags you author are not lost.',
+  },
+  activities: {
+    type: 'array',
+    description:
+      'Activity data to author, one object per activity, keyed by dnd5e\'s activity field names ("type", "name", "activation", "range", "target", "duration", "consumption", "damage", "healing", "save", "attack", "effects", ...). Pass these through in full; nothing here is validated against a fixed shape, because you know the ability and this tool does not.',
+    items: { type: 'object' },
+  },
+  effects: {
+    type: 'array',
+    description:
+      'ActiveEffect data to author on the item. Use "flags" for module configuration (midi-qol, dae, cat) and "system.changes" for DAE change keys such as macro.StatusEffect. Effects are replaced wholesale on rebuild, so include every one the ability needs.',
+    items: { type: 'object' },
+  },
+  itemType: {
+    type: 'string',
+    description:
+      'The dnd5e item type to create. Defaults to "feat". Use "weapon" for an attack that belongs on a weapon, "consumable" for a potion, "spell" for a cast activity, "equipment" for something worn.',
+    enum: ITEM_TYPES,
+  },
+  previewToken: {
+    type: 'string',
+    description:
+      "A token from preview_spec carrying the user's edited values. Supply this or spec, never both, and never re-ask the user for values the preview already collected.",
+  },
+  replaceActivities: {
+    type: 'boolean',
+    description:
+      "Whether to replace the item's existing activities. Defaults to true, which is what a rebuild wants. Set false to ADD activities to an item that already has some, such as giving an existing weapon an extra attack.",
+  },
+  intent: {
+    type: 'string',
+    description:
+      'One or two sentences on what the ability is supposed to do, in plain terms. Recorded with the item and shown back when the recorded runs are read, so you can compare what happened against what you meant.',
+  },
+  expect: {
+    type: 'object',
+    description:
+      'Free-form expectations to check the first runs against, e.g. { "target gains restrained": true, "damage is 4d6 fire": true }. Nothing is validated against a fixed set; this is your own yardstick, stored beside the recorded runs.',
+  },
+});
+
 export class BuildAbilityTool extends BaseTool {
   constructor() {
     super(
@@ -69,54 +121,7 @@ export class BuildAbilityTool extends BaseTool {
       'Create or update an ability on an actor from document data you author yourself. Give the activity data and any effects; this tool handles identity, replacement and the dnd5e system fields. Rebuilding the same identifier updates the existing item instead of duplicating it. Prefer calling preview_spec first and passing the previewToken so the user\'s edited values are used verbatim. To copy an existing automation instead of authoring one, read it with document_read first.'
     );
     this.requiresConfirmation = true;
-    this.schema = {
-      type: 'object',
-      properties: {
-        spec: {
-          type: 'object',
-          description:
-            'The ability data. Recognised keys: "actor", "name", "identifier", "itemType", "notes", "uses" (max/period/recovery/rechargeMin). Any other key is passed through to the item\'s system data unchanged, so dnd5e fields and module flags you author are not lost.',
-        },
-        activities: {
-          type: 'array',
-          description:
-            'Activity data to author, one object per activity, keyed by dnd5e\'s activity field names ("type", "name", "activation", "range", "target", "duration", "consumption", "damage", "healing", "save", "attack", "effects", ...). Pass these through in full; nothing here is validated against a fixed shape, because you know the ability and this tool does not.',
-          items: { type: 'object' },
-        },
-        effects: {
-          type: 'array',
-          description:
-            'ActiveEffect data to author on the item. Use "flags" for module configuration (midi-qol, dae, cat) and "system.changes" for DAE change keys such as macro.StatusEffect. Effects are replaced wholesale on rebuild, so include every one the ability needs.',
-          items: { type: 'object' },
-        },
-        itemType: {
-          type: 'string',
-          description:
-            'The dnd5e item type to create. Defaults to "feat". Use "weapon" for an attack that belongs on a weapon, "consumable" for a potion, "spell" for a cast activity, "equipment" for something worn.',
-          enum: ITEM_TYPES,
-        },
-        previewToken: {
-          type: 'string',
-          description:
-            "A token from preview_spec carrying the user's edited values. Supply this or spec, never both, and never re-ask the user for values the preview already collected.",
-        },
-        replaceActivities: {
-          type: 'boolean',
-          description:
-            "Whether to replace the item's existing activities. Defaults to true, which is what a rebuild wants. Set false to ADD activities to an item that already has some, such as giving an existing weapon an extra attack.",
-        },
-        intent: {
-          type: 'string',
-          description:
-            'One or two sentences on what the ability is supposed to do, in plain terms. Recorded with the item and shown back when the recorded runs are read, so you can compare what happened against what you meant.',
-        },
-        expect: {
-          type: 'object',
-          description:
-            'Free-form expectations to check the first runs against, e.g. { "target gains restrained": true, "damage is 4d6 fire": true }. Nothing is validated against a fixed set; this is your own yardstick, stored beside the recorded runs.',
-        },
-      },
-    };
+    this.schema = { type: 'object', properties: ABILITY_PARAMS };
   }
 
   getParameterSchema() {
@@ -215,12 +220,25 @@ export class BuildAbilityTool extends BaseTool {
       };
     }
 
+    return this._assemble(params, spec, actorResult.actor, name);
+  }
+
+  /**
+   * Everything the write needs, with defaults applied.
+   *
+   * Identity is the identifier, never the name: the name is what the user sees
+   * and may change, and a rename must not orphan the automation.
+   * @param {object} params
+   * @param {object} spec
+   * @param {object} actor
+   * @param {string} name
+   * @returns {object}
+   */
+  _assemble(params, spec, actor, name) {
     return {
       spec,
-      actor: actorResult.actor,
+      actor,
       name,
-      // Identity is the identifier, never the name: the name is what the user
-      // sees and may change, and a rename must not orphan the automation.
       identifier: getSpecString(spec, 'identifier') || deriveIdentifier(name),
       itemType: params.itemType ?? getSpecString(spec, 'itemType') ?? 'feat',
       activities: this._normaliseActivities(params.activities ?? spec.activities ?? []),

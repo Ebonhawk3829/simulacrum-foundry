@@ -29,6 +29,7 @@ import { PreviewSpecTool } from '../tools/preview-spec.js';
 import { BuildAbilityTool } from '../tools/build-ability.js';
 import { ReadAbilityRunsTool } from '../tools/read-ability-runs.js';
 import { ConfirmAbilityTool } from '../tools/confirm-ability.js';
+import { ReadReferenceTool } from '../tools/read-reference.js';
 import { DocumentAPI } from './document-api.js';
 
 /**
@@ -92,6 +93,7 @@ export class ToolRegistry {
         new BuildAbilityTool(),
         new ReadAbilityRunsTool(),
         new ConfirmAbilityTool(),
+        new ReadReferenceTool(),
       ];
 
       for (const t of tools) {

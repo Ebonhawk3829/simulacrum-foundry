@@ -90,26 +90,7 @@ export class ConfirmAbilityTool extends BaseTool {
       );
     }
 
-    if (state.status === 'confirmed') {
-      // Idempotent: confirming twice is a no-op rather than an error, because the
-      // agent may reasonably lose track across a long conversation.
-      return {
-        content: JSON.stringify(
-          {
-            ok: true,
-            alreadyConfirmed: true,
-            itemUuid: item.uuid,
-            itemName: item.name,
-            confirmedAt: state.confirmedAt,
-            runCount: (state.runs ?? []).length,
-            next: 'This ability was already confirmed. Nothing changed.',
-          },
-          null,
-          2
-        ),
-        display: `**Already confirmed:** ${item.name}`,
-      };
-    }
+    if (state.status === 'confirmed') return this._alreadyConfirmed(item, state);
 
     const runCount = (state.runs ?? []).length;
     await clearNeedsTesting(item, { keepRuns: !params.discardRuns, summary: params.summary });
@@ -129,6 +110,33 @@ export class ConfirmAbilityTool extends BaseTool {
         2
       ),
       display: `**Confirmed:** ${item.name} — recording stopped`,
+    };
+  }
+
+  /**
+   * Confirming twice is a no-op rather than an error, because the agent may
+   * reasonably lose track of this across a long conversation and "already done"
+   * is more useful than a failure.
+   * @param {object} item
+   * @param {object} state
+   * @returns {object}
+   */
+  _alreadyConfirmed(item, state) {
+    return {
+      content: JSON.stringify(
+        {
+          ok: true,
+          alreadyConfirmed: true,
+          itemUuid: item.uuid,
+          itemName: item.name,
+          confirmedAt: state.confirmedAt,
+          runCount: (state.runs ?? []).length,
+          next: 'This ability was already confirmed. Nothing changed.',
+        },
+        null,
+        2
+      ),
+      display: `**Already confirmed:** ${item.name}`,
     };
   }
 

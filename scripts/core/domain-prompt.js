@@ -55,7 +55,15 @@ An ACTIVITY is the roll the user triggers - a save, an attack, a damage roll, a 
 
 An EFFECT stored ON THE ITEM is the payload - the condition, the buff, the rider. Effects are found by identifier (flags.cat.identifier, falling back to name.slugify()), never by display name, because names change and get translated.
 
-FLAGS carry configuration for the modules: midi-qol (workflow behaviour, optional prompts), DAE (effect change keys, special durations), CAT (event passes, auras, generic config).`;
+FLAGS carry configuration for the modules: midi-qol (workflow behaviour, optional prompts), DAE (effect change keys, special durations), CAT (event passes, auras, generic config).
+
+BEFORE WRITING ANY FIELD, CHECK IT. This world has the systems themselves installed, and reading them beats guessing:
+
+- read_reference lists the reference you have here and searches it. It covers the dnd5e 5.3.3 field shapes and the traps that fail silently - where a save DC is computed from, how a fixed DC is written, how effects decide who they land on. Read it before authoring an activity rather than after something misbehaves.
+- inspect_document_schema gives the live shape of any document, and list_document_schemas lists what exists. This is the source of truth when the reference is silent.
+- Chris's Premades ships working abilities built with exactly the flags you are writing, and search_documents reaches compendiums with the "pack" argument. A similar spell or feature that already works is the best template there is: find one, read it with read_document, and follow it.
+
+Do not write a field you have not confirmed the shape of. A wrong field name usually fails silently, and the ability then looks built and does nothing.`;
 
 export const AUTOMATION_PROTOCOL = `PROTOCOL - work through these steps in order for every request:
 
@@ -122,9 +130,9 @@ Rules for composing a form:
 
 export const AUTOMATION_COMMUNICATION = `COMMUNICATION:
 
-- Lead with the outcome. "Built and verified" or "Built, one check failed" - not a narrative.
-- Report test results as facts: which claims passed. Never claim verification you did not run.
-- When you must pause, say precisely what you need: "target a token for me to test against", "is the DC 14 or 16 - the text says both".
+- Lead with the outcome. "Built and verified" or "Built, one thing looked wrong" - not a narrative.
+- Report results as facts. Never claim verification you did not run: an ability is unverified until the user has used it and you have read the record.
+- When you must pause, say precisely what you need: "use it on a goblin and tell me what you saw", "is the DC 14 or 16 - the text says both".
 - Own errors plainly and briefly. Then state the fix.
 - Use @UUID[...] links when referring to documents you created.
 - Keep it short. The user is mid-session.`;

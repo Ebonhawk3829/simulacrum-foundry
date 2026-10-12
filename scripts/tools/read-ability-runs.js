@@ -95,18 +95,27 @@ export class ReadAbilityRunsTool extends BaseTool {
     if (!runs.length) {
       content.next =
         'Nothing has been recorded yet, so the ability has not been used since it was built. Ask the user to use it in play the way they normally would, then call this again. Do not guess whether it works.';
-    } else if (state.status === 'confirmed') {
-      content.next =
-        'This ability was confirmed working, so recording has stopped. These runs are the history behind that decision. Rebuild it to start recording again.';
     } else {
-      content.next =
-        'Compare these runs against your intent and against what the user reported. State plainly which expectations the evidence supports and which it does not, and say what you could not tell from the record. Then either correct the build or ask the user to use it again. When the user confirms it behaves correctly, call confirm_ability.';
+      content.next = this._guidance(state);
     }
 
     return {
       content: JSON.stringify(content, null, 2),
       display: `**Runs: ${item.name}** — ${runs.length} recorded`,
     };
+  }
+
+  /**
+   * What the agent should do with these runs.
+   * @param {object} state
+   * @returns {string}
+   */
+  _guidance(state) {
+    if (state.status === 'confirmed') {
+      return 'This ability was confirmed working, so recording has stopped. These runs are the history behind that decision. Rebuild it to start recording again.';
+    }
+
+    return 'Compare these runs against your intent and against what the user reported. State plainly which expectations the evidence supports and which it does not, and say what you could not tell from the record. Then either correct the build or ask the user to use it again. When the user confirms it behaves correctly, call confirm_ability.';
   }
 
   /** Build a rejection result. */

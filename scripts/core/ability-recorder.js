@@ -102,26 +102,28 @@ function diffActor(before, after) {
 }
 
 /**
- * Resolve the actor the recorder should watch for a given chat message.
+ * Describe the use being recorded.
  *
- * Uses the message's speaker, which is where Foundry already records who acted.
- * An unlinked token's actor is preferred over the base actor because an unlinked
- * token's changes do not touch the base actor and would otherwise look like
- * nothing happened.
- * @param {ChatMessage} message
- * @returns {object|null}
+ * Split out of the hook so the hook body stays legible and its branching stays
+ * small; this is a description, not a decision.
+ * @param {object} activity
+ * @param {object} [usageConfig]
+ * @returns {object}
  */
-function speakerActor(message) {
-  const speaker = message?.speaker;
-  if (!speaker) return null;
-
-  if (speaker.token && speaker.scene) {
-    const scene = game.scenes?.get(speaker.scene);
-    const token = scene?.tokens?.get(speaker.token);
-    if (token?.actor) return token.actor;
-  }
-
-  return game.actors?.get(speaker.actor) ?? null;
+function describeUse(activity, usageConfig) {
+  const item = activity?.item ?? {};
+  return {
+    activityType: activity?.type ?? null,
+    activityName: activity?.name ?? null,
+    itemType: item.type ?? null,
+    actorId: item.actor?.id ?? null,
+    actorUuid: item.actor?.uuid ?? null,
+    tokenId: item.actor?.token?.id ?? null,
+    // Whether something was targeted changes what the result means, so it is
+    // part of the record rather than an assumption.
+    targeted: game.user?.targets?.size ?? 0,
+    consumeResources: usageConfig?.consumeResources ?? null,
+  };
 }
 
 /**
@@ -217,7 +219,9 @@ async function finish() {
     at: run.startedAt,
     // Who and what, so a record is readable without cross-referencing ids.
     item: { uuid: run.itemUuid, name: run.itemName },
-    actor: run.actor ? { name: run.actor.name, changes: diffActor(run.actor, actorAfter ?? run.actor) } : null,
+    actor: run.actor
+      ? { name: run.actor.name, changes: diffActor(run.actor, actorAfter ?? run.actor) }
+      : null,
     targets: run.targets.map(before => {
       const after = resolveTarget(before.uuid);
       return {
@@ -264,22 +268,11 @@ function resolveTarget(uuid) {
 export function registerAbilityRecorder() {
   // dnd5e fires this for a roll initiated from a sheet. midi-qol routes item uses
   // through the same activity path, so this catches both entry points.
-  Hooks.on('dnd5e.useActivity', (activity, usageConfig, dialogConfig, messageConfig) => {
+  Hooks.on('dnd5e.useActivity', (activity, usageConfig, _dialogConfig, _messageConfig) => {
     const item = activity?.item;
     if (!item || !shouldRecord(item)) return;
 
-    begin(item, {
-      activityType: activity?.type ?? null,
-      activityName: activity?.name ?? null,
-      itemType: item.type ?? null,
-      actorId: item.actor?.id ?? null,
-      actorUuid: item.actor?.uuid ?? null,
-      tokenId: item.actor?.token?.id ?? null,
-      // Whether the user had something targeted changes what the result means,
-      // so it is part of the record rather than an assumption.
-      targeted: game.user?.targets?.size ?? 0,
-      consumeResources: usageConfig?.consumeResources ?? null,
-    });
+    begin(item, describeUse(activity, usageConfig));
 
     // The settle window exists because effects are applied asynchronously and a
     // record read immediately would show nothing. Its length is a guess tuned for

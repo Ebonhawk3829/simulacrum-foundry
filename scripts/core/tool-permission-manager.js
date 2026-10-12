@@ -61,6 +61,11 @@ set_document_ownership: {
     explainer: 'SIMULACRUM.ToolExplainer.ReadAbilityRuns',
     defaultState: PermissionState.ALLOW,
   },
+  read_reference: {
+    displayName: 'SIMULACRUM.Tools.read_reference',
+    explainer: 'SIMULACRUM.ToolExplainer.ReadReference',
+    defaultState: PermissionState.ALLOW,
+  },
   confirm_ability: {
     displayName: 'SIMULACRUM.Tools.confirm_ability',
     explainer: 'SIMULACRUM.ToolExplainer.ConfirmAbility',
