@@ -67,15 +67,6 @@ export const INCLUDED_PATHS = Object.freeze([
   'reference',
 ]);
 
-/**
- * Files that are present in the working tree but are not shippable.
- *
- * The demo GIF is withdrawn: it accounts for roughly 12 MB of a release whose
- * actual code is a fraction of that, and it is only referenced by this
- * repository's README, which is not part of the runtime module.
- */
-export const WITHDRAWN_FILES = Object.freeze(['assets/simulacrum-demo.gif']);
-
 /** Paths the archive must contain for the module to load at all. */
 export const REQUIRED_FILES = Object.freeze([
   'module.json',
@@ -164,7 +155,7 @@ function toRelative(root, absolute) {
  * @returns {Array<{path: string, data: Buffer}>} Sorted by path
  */
 export function collectFiles(root, { exclude = [] } = {}) {
-  const excluded = new Set([...WITHDRAWN_FILES, ...exclude]);
+  const excluded = new Set([...(exclude ?? [])]);
   const files = [];
 
   const walk = absoluteDir => {

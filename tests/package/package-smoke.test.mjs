@@ -12,7 +12,6 @@ import {
   findDuplicateTopLevelKeys,
   EXCLUDED_ROOTS,
   REQUIRED_FILES,
-  WITHDRAWN_FILES,
 } from '../../tools/lib/release-builder.mjs';
 import { readZip, createZip } from '../../tools/lib/zip.mjs';
 
@@ -64,12 +63,6 @@ test('development paths never reach the archive', () => {
     assert.deepEqual(leaked, [], `${excluded}/ leaked into the release`);
   }
   assert.equal(files.some(name => name.startsWith('simulacrum/packs/_source/')), false);
-});
-
-test('the withdrawn demo asset is not shipped', () => {
-  for (const withdrawn of WITHDRAWN_FILES) {
-    assert.equal(files.includes(`simulacrum/${withdrawn}`), false, `${withdrawn} should be withdrawn`);
-  }
 });
 
 test('no stray secrets or environment files are shipped', () => {
