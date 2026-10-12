@@ -40,10 +40,10 @@
 import { BaseTool } from './base-tool.js';
 import { getSpecString, deriveIdentifier, resolveActor } from '../core/automation-spec.js';
 import { takeSpec } from '../core/spec-store.js';
-import { buildItemSystem } from '../core/dnd5e/item-builders.js';
+import { buildItemSystem, buildItemFlags } from '../core/dnd5e/item-builders.js';
+import { buildEmbeddedMacros } from '../core/dnd5e/script-authoring.js';
 import { inferActivityType } from '../core/dnd5e/activity-builders.js';
 import { markNeedsTesting } from '../core/verification-state.js';
-
 /**
  * Document types an ability is normally written as, and what each is for.
  *
@@ -63,6 +63,32 @@ const ITEM_TYPES = Object.freeze([
 ]);
 
 /**
+ * The activity clause of a confirmation summary.
+ * @param {string[]} kinds
+ * @returns {string}
+ */
+function describeActivities(kinds) {
+  return kinds.length ? ` with ${kinds.length} activity (${kinds.join(', ')})` : '';
+}
+
+/**
+ * The script clause of a confirmation summary.
+ *
+ * Scripts are named because approving a build that stores code is a different
+ * decision from approving one that sets flags, and the user is the one deciding.
+ * @param {object[]} [scripts]
+ * @returns {string}
+ */
+function describeScripts(scripts) {
+  const list = Array.isArray(scripts) ? scripts : [];
+  if (!list.length) return '';
+
+  const points = list.map(s => `${s?.event ?? '?'}/${s?.pass ?? '?'}`).join(', ');
+  const plural = list.length === 1 ? '' : 's';
+  return `. Includes ${list.length} script${plural} (${points}) stored as embedded macros`;
+}
+
+/**
  * What the agent is asked for.
  *
  * Held here rather than inline so the constructor stays short and the parameter
@@ -72,7 +98,34 @@ const ABILITY_PARAMS = Object.freeze({
   spec: {
     type: 'object',
     description:
-      'The ability data. Recognised keys: "actor", "name", "identifier", "itemType", "notes", "uses" (max/period/recovery/rechargeMin). Any other key is passed through to the item\'s system data unchanged, so dnd5e fields and module flags you author are not lost.',
+      'The ability data. Recognised keys: "actor", "name", "identifier", "itemType", "notes", "uses" (max/period/recovery/rechargeMin), "flags" (written at the item\'s top level). Any other key is passed through to the item\'s system data unchanged, so dnd5e fields you author are not lost.',
+  },
+  flags: {
+    type: 'object',
+    description:
+      'Module flags to write at the item\'s TOP LEVEL, keyed by scope: `{ "midi-qol": {...}, dae: {...}, cat: {...}, dnd5e: {...} }`. Use this for behaviour the modules act on rather than anything the item\'s system data holds. `cat.macros` is how an automation is attached (see cat-macro-flags.md), and the generic settings for it are in cpr-generic-config.md.',
+  },
+  scripts: {
+    type: 'array',
+    description:
+      'JavaScript automations to store ON the item, as CAT embedded macros (flags.cat.embeddedMacros). Use this when the ability needs logic that flags cannot express — reading game state, branching, or calling midi/CPR utilities. Each entry needs "event" and "pass"; see cat-embedded-macros.md for the shape and the rules. Every script is syntax-checked before it is written.',
+    items: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Unique on this item. Used in console errors, so name it after the ability.' },
+        event: {
+          type: 'string',
+          description: 'When the script runs. CAT events: roll, save, effect, move, combat, rest, time, aura, summon, check, skill, tool, hitDie, region, token, actor.',
+        },
+        pass: {
+          type: 'string',
+          description: 'The point within the event, e.g. "itemRollFinished", "actorTurnStart", "actorMoved". The pass decides what the script can change and what is already decided.',
+        },
+        macro: { type: 'string', description: 'The script body. Runs as an async function body: `await` works, and `return` is ignored. Variables are provided by scope (see cat-embedded-macros.md). The script may read anything, call utilities, and change the documents in play. Only collection-level writes (Actor.updateDocuments and the like) are refused.' },
+        priority: { type: 'number', description: 'Order among scripts on the same pass. Default 0; lower runs first.' },
+      },
+      required: ['event', 'pass', 'macro'],
+    },
   },
   activities: {
     type: 'array',
@@ -135,12 +188,45 @@ export class BuildAbilityTool extends BaseTool {
     const type = params.itemType ?? spec.itemType ?? 'feat';
     const list = Array.isArray(params.activities) ? params.activities : [];
     const kinds = list.map(a => a?.type).filter(Boolean);
+
     return {
       type: 'build',
       title: `Build: ${name}`,
-      details: `Creates or updates a ${type} item${
-        kinds.length ? ` with ${kinds.length} activity (${kinds.join(', ')})` : ''
-      }.`,
+      details: `Creates or updates a ${type} item${describeActivities(kinds)}${describeScripts(params.scripts)}.`,
+    };
+  }
+
+  /** @param {object} params */
+  /**
+   * Validate the scripts before anything is written.
+   *
+   * Kept ahead of the write so a build that cannot be authored in full does not
+   * half-land: a broken script is a mistake in the source the agent just produced,
+   * and reporting it now costs one retry rather than leaving it on a live item.
+   * @param {object[]} scripts
+   * @param {string} name
+   * @param {string} identifier
+   * @returns {{entries: object[], error?: object}}
+   */
+  _authorScripts(scripts, name, identifier) {
+    const authored = buildEmbeddedMacros(scripts, name, identifier);
+    if (!authored.errors.length) return { entries: authored.entries };
+
+    return {
+      entries: [],
+      error: this._reject(
+        {
+          ok: false,
+          error: `The scripts could not be written:\n${authored.errors.map(e => `  - ${e}`).join('\n')}`,
+          received: scripts.length,
+          hint:
+            'Fix the script and retry. A syntax error means the code does not parse; an unsafe-write error means it '
+            + 'used a collection-level write. See cat-embedded-macros.md for the shape, the scope variables, and what '
+            + 'a script may change.',
+        },
+        `Script rejected: ${authored.errors[0]}`,
+        'SCRIPT_INVALID'
+      ),
     };
   }
 
@@ -153,38 +239,37 @@ export class BuildAbilityTool extends BaseTool {
     const prepared = this._prepare(params);
     if (prepared.error) return prepared.error;
 
-    const { spec, actor, name, identifier, itemType, activities, effects, replace } = prepared;
+    const authored = this._authorScripts(prepared.scripts, prepared.name, prepared.identifier);
+    if (authored.error) return authored.error;
 
     try {
-      const result = await this._write(actor, {
-        identifier,
-        name,
-        itemType,
-        spec,
-        activities,
-        effects,
-        replace,
+      const result = await this._write(prepared.actor, {
+        ...prepared,
+        scripts: authored.entries,
       });
 
       // A write that silently accomplished nothing is worse than a failure: the
       // item looks built and does nothing, and the reason is invisible.
-      const empty = this._emptyWrite(result, { activities, effects });
+      const empty = this._emptyWrite(result, {
+        activities: prepared.activities,
+        effects: prepared.effects,
+      });
       if (empty) return empty;
 
       // The build is a hypothesis until it has been used in play. Marking it here
       // is what turns the recorder on for this item, and clearing the mark later
       // is what turns it off again.
       await markNeedsTesting(result.item, {
-        intent: params.intent ?? getSpecString(spec, 'notes') ?? null,
+        intent: params.intent ?? getSpecString(prepared.spec, 'notes') ?? null,
         expect: params.expect ?? null,
       });
 
       return this._success({
         result,
-        actor,
-        identifier,
-        itemType,
-        replace,
+        actor: prepared.actor,
+        identifier: prepared.identifier,
+        itemType: prepared.itemType,
+        replace: prepared.replace,
         activityErrors: result.activityErrors,
       });
     } catch (err) {
@@ -282,14 +367,22 @@ export class BuildAbilityTool extends BaseTool {
    * @returns {object}
    */
   _assemble(params, spec, actor, name) {
+    // Each `??` chain is one branch, and there are enough of them to cross the
+    // complexity cap. Reading them as a block is clearer anyway: this is the list of
+    // what the write needs, and every entry has the same "parameter, then spec,
+    // then default" shape.
+    const firstOf = (...values) => values.find(v => v !== undefined && v !== null);
+
     return {
       spec,
       actor,
       name,
       identifier: getSpecString(spec, 'identifier') || deriveIdentifier(name),
-      itemType: params.itemType ?? getSpecString(spec, 'itemType') ?? 'feat',
-      activities: this._normaliseActivities(params.activities ?? spec.activities ?? []),
-      effects: params.effects ?? spec.effects ?? [],
+      itemType: firstOf(params.itemType, getSpecString(spec, 'itemType')) ?? 'feat',
+      activities: this._normaliseActivities(firstOf(params.activities, spec.activities) ?? []),
+      effects: firstOf(params.effects, spec.effects) ?? [],
+      scripts: firstOf(params.scripts, spec.scripts) ?? [],
+      flags: params.flags,
       replace: params.replaceActivities ?? true,
     };
   }
@@ -376,22 +469,56 @@ export class BuildAbilityTool extends BaseTool {
    * @param {object} payload
    * @returns {Promise<{created: boolean, item: object, activityErrors: string[]}>}
    */
-  async _write(actor, { identifier, name, itemType, spec, activities, effects, replace }) {
+  /**
+   * The item-level `flags` to write, or null.
+   *
+   * Flags belong at the ITEM's top level, not inside `system`. Writing them into
+   * system data is how a `flags` key in the spec used to disappear: the document
+   * saved, and nothing in midi-qol, DAE or CAT ever saw it.
+   * @param {object} spec
+   * @param {object} [flags]
+   * @param {object[]} [scripts]
+   * @returns {object|null}
+   */
+  _itemFlags(spec, flags, scripts) {
+    const out = buildItemFlags(spec, flags) ?? {};
+
+    // Embedded scripts are a flag, so they are merged rather than assigned: a caller
+    // passing both `flags.cat` and `scripts` must not have one erase the other.
+    if (scripts?.length) out.cat = { ...(out.cat ?? {}), embeddedMacros: scripts };
+    return Object.keys(out).length ? out : null;
+  }
+
+  /**
+   * Clear the parts of an existing item that are being rewritten.
+   *
+   * Removing by key is how dnd5e deletes an activity: `-=${id}` for the pre-v14 path,
+   * the delete sentinel on 14+, and `updateActivity` is the only supported way to
+   * change one.
+   * @param {object} existing
+   * @param {object} update
+   */
+  _clearForRebuild(existing, update) {
+    for (const activity of existing.system?.activities?.contents ?? []) {
+      update[`system.activities.-=${activity.id}`] = null;
+    }
+    update.effects = [];
+  }
+
+  async _write(actor, payload) {
+    const { identifier, name, itemType, spec, activities, effects, scripts, flags, replace } =
+      payload;
+
     const existing = actor.items.find(
       i => i.system?.identifier === identifier && i.type === itemType
     );
 
     const update = { name, system: buildItemSystem(spec, identifier) };
 
-    if (existing && replace) {
-      // Removing by key is how dnd5e deletes an activity: `-=${id}` for the
-      // pre-v14 path, the delete sentinel on 14+, and `updateActivity` itself is
-      // the only supported way to change one.
-      for (const activity of existing.system?.activities?.contents ?? []) {
-        update[`system.activities.-=${activity.id}`] = null;
-      }
-      if (replace) update.effects = [];
-    }
+    const itemFlags = this._itemFlags(spec, flags, scripts);
+    if (itemFlags) update.flags = itemFlags;
+
+    if (existing && replace) this._clearForRebuild(existing, update);
 
     let item;
     if (existing) {

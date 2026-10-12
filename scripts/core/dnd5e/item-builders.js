@@ -17,6 +17,12 @@ import { getSpecString, getSpecNumber } from '../automation-spec.js';
  * Pass-through is the point: the caller may know a field this module has never
  * heard of, and discarding it would produce an item that looks built but is
  * missing the part that mattered.
+ *
+ * `flags` is listed because it must NOT pass through to `system`. It is written at
+ * the item's top level by `buildItemUpdate`, and before that was handled a
+ * `flags` key in the spec landed in `system.flags` — where nothing reads it. The
+ * build reported success and the automation did nothing, which is the exact
+ * failure this whole pass-through arrangement exists to prevent.
  */
 const CONSUMED_KEYS = new Set([
   'actor',
@@ -30,7 +36,32 @@ const CONSUMED_KEYS = new Set([
   'uses.rechargeMin',
   'activities',
   'effects',
+  'flags',
 ]);
+
+/**
+ * The item-level flags to write, from either the spec or an explicit parameter.
+ *
+ * Merged shallowly by scope rather than written whole, so a rebuild that supplies
+ * only `cat` does not erase `midi-qol` set earlier. Merging one level deep is the
+ * right depth because flags are namespaced by module: the scopes are independent,
+ * and anything deeper would have to guess at a module's internal shape.
+ * @param {object} spec
+ * @param {object} [explicit]
+ * @returns {object|null}
+ */
+export function buildItemFlags(spec, explicit) {
+  const fromSpec = spec?.flags && typeof spec.flags === 'object' ? spec.flags : null;
+  const source = explicit ?? fromSpec;
+  if (!source || typeof source !== 'object') return null;
+
+  const out = {};
+  for (const [scope, value] of Object.entries(source)) {
+    if (value === undefined || value === null) continue;
+    out[scope] = value;
+  }
+  return Object.keys(out).length ? out : null;
+}
 
 /**
  * Build the item's `system` block.
