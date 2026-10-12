@@ -386,11 +386,11 @@ This module deliberately does not define ability-shape conventions, because two
 installed modules already do and they are the ones that will actually act on the
 flags:
 
-- **CAT** (Coven's Automation Toolkit, module id `cat`) is the substrate. Its
-  generic macros are selected by an activity flag:
-  `flags.cat.macros.roll[].identifier`. Generic names include `attackRider`,
-  `extraAttack`, `contestedCheck`, `conditionAutoSave`, `choiceRemoveCondition`,
-  `additionalTargets`, `banish`, `bladeSpell`, `damageBonusToOneRoll`.
+- **CAT** (Coven's Automation Toolkit, module id `cat`) is the substrate. A macro is
+  attached with `flags.cat.macros`, an object **keyed by event** whose values are
+  arrays of `{ source, identifier, rules }` references. The full shape, the required
+  fields, and the `genericConfig` side are in `cat-macro-flags.md` — read that
+  before attaching anything, because the shape is not the obvious one.
 - **CPR** (Chris's Premades) is a library of *configured* CAT generics — its items
   use the same `midi-qol`, `midiProperties`, `dnd5e` and `cat` flag scopes.
 
@@ -399,14 +399,21 @@ example: search CPR's compendiums for a similar ability with `document_search`
 and read it with `document_read`. That is live data from what this world has
 installed, so it cannot go stale the way a snapshot would.
 
+**Expiry is the exception, and it has its own file.** When an effect should end —
+on a turn, on a rest, when the bearer is attacked — the vocabulary is in
+`dae-effect-expiry.md`. Two things there are easy to get wrong: `duration.expiry`
+is the field, not `flags.dae.specialDuration`, and several expiry values silently
+discard `duration.value`.
+
 ---
 
 ## 12. Things not confirmed here
 
 Recorded so they are not mistaken for facts:
 
-- The full list of `flags.cat.*` config keys per generic. Read from the installed
-  CAT module or a working example.
+- The full list of `flags.cat.*` config keys per generic. The `genericConfig` shape
+  is known (`cat-macro-flags.md`) but the settings each generic accepts are not —
+  read the generic's own source or a working example.
 - Whether `enchant`, `summon`, `transform` and `teleport` payloads need additional
   required fields beyond their block. `teleport` is new in 6.x and is not
   exercised here.

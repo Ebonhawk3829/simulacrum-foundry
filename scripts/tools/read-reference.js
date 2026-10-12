@@ -34,15 +34,24 @@ import { BaseTool } from './base-tool.js';
 /**
  * Documentation to look for inside an installed module, by module id.
  *
- * Documentation only. A module's source tree is mostly code, and searching code
- * is a different job with different output. A trailing slash means "probe a set
- * of plausible documentation filenames in that directory".
+ * Every entry here was checked against the modules actually installed in this
+ * world, because the previous list described files that no release ships any more:
+ * midi-qol's `FLAGS.md` and `MACROS.md` were dropped after v13, `chris-premades`
+ * has no `docs/`, and DAE ships no local documentation at all. A listed file that
+ * cannot be read is worse than an unlisted one — the agent spends turns on it and
+ * then reports that the material is unavailable, which is evidence of this tool's
+ * mistake rather than of a gap in the documentation.
+ *
+ * Documentation only. A module's source tree is mostly code, and searching code is
+ * a different job with different output.
  */
 const MODULE_DOCS = Object.freeze({
-  'midi-qol': ['FLAGS.md', 'MACROS.md', 'Getting Started.md', 'README.md'],
-  dae: ['Readme.md', 'README.md', 'Changelog.md'],
-  cat: ['README.md', 'CHANGELOG.MD', 'wiki/'],
-  'chris-premades': ['docs/'],
+  'midi-qol': ['README.md', 'Changelog.md'],
+  // DAE is deliberately absent rather than listed empty: it ships no readable file,
+  // so its documentation is bundled in this module's own reference instead. Listing
+  // a module with nothing behind it would advertise material that does not exist.
+  cat: ['README.md'],
+  'chris-premades': ['CHANGELOG.md'],
 });
 
 /** Extensions worth treating as readable text. */
@@ -435,11 +444,20 @@ export class ReadReferenceTool extends BaseTool {
    *
    * Accepts the path a listing returned, or a bare filename, because the agent
    * will reasonably do either.
+   *
+   * The comparison is case-insensitive because the agent should not have to
+   * reproduce a path's capitalisation, but the ROUTE built from a name that was not
+   * found in the index uses the caller's own spelling. Lower-casing it first would
+   * send `cat/README.md` to `modules/cat/readme.md`, which is a 404 on any
+   * case-sensitive filesystem — Linux, which is where this world is deployed. It
+   * happened to work on Windows and failed in the world, which is the worst way for
+   * a bug like this to behave.
    * @param {string} wanted
    * @returns {Promise<object>}
    */
   async _readOneFile(wanted) {
-    const key = String(wanted).toLowerCase().trim();
+    const wantedPath = String(wanted).trim();
+    const key = wantedPath.toLowerCase();
 
     const known = (this._index ?? []).find(
       f => f.path.toLowerCase() === key || f.path.toLowerCase().endsWith(key)
@@ -455,12 +473,14 @@ export class ReadReferenceTool extends BaseTool {
       };
     }
 
-    // Not indexed yet, so treat it as a route and try directly.
+    // Not indexed yet, so treat it as a route and try directly. The original
+    // spelling is kept for the path itself; only the prefix matches are lowered,
+    // because the directory names on disk are lower-case by convention.
     const route = key.startsWith('module/')
-      ? `modules/simulacrum/reference/${key.replace(/^module\//, '')}`
-      : key.includes('/')
-        ? `modules/${key}`
-        : key;
+      ? `modules/simulacrum/reference/${wantedPath.replace(/^module\//i, '')}`
+      : wantedPath.includes('/')
+        ? `modules/${wantedPath}`
+        : wantedPath;
 
     const text = await this._fetchText(route);
     if (text === null) {

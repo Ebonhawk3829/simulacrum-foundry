@@ -89,7 +89,9 @@
   "flags": {
     "simulacrum": {
       "reference": [
-        "dnd5e-6.0-fields.md"
+        "dnd5e-6.0-fields.md",
+        "cat-macro-flags.md",
+        "dae-effect-expiry.md"
       ]
     }
   },

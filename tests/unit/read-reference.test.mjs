@@ -43,7 +43,7 @@ test('lists the reference it can reach', async () => {
       'modules/simulacrum/module.json': SIMULACRUM_MANIFEST,
       'modules/simulacrum/reference/dnd5e-6.0-fields.md': '# Fields\n\nsave.dc is a formula.',
       'modules/midi-qol/module.json': MANIFEST,
-      'modules/midi-qol/FLAGS.md': '# Flags\n\nfail.all fails every roll.',
+      'modules/midi-qol/README.md': '# Flags\n\nfail.all fails every roll.',
     },
     () => tool.execute({})
   );
@@ -150,7 +150,7 @@ test('a source filter narrows the probe', async () => {
       'modules/simulacrum/module.json': SIMULACRUM_MANIFEST,
       'modules/simulacrum/reference/dnd5e-6.0-fields.md': '# Fields',
       'modules/midi-qol/module.json': MANIFEST,
-      'modules/midi-qol/FLAGS.md': '# Flags',
+      'modules/midi-qol/README.md': '# Flags',
     },
     () => tool.execute({ source: 'module' })
   );
@@ -169,6 +169,36 @@ test('a path from a listing can be read back without re-probing', async () => {
 
   await withFetch(files, () => tool.execute({ source: 'module' }));
   const result = await withFetch(files, () => tool.execute({ file: 'module/dnd5e-6.0-fields.md' }));
+
+  assert.equal(JSON.parse(result.content).ok, true);
+});
+
+test('a file name is not lower-cased into a route that does not exist', async () => {
+  // The bug this exists for: a file that was not in the index had its path
+  // lower-cased before a route was built from it, so `cat/README.md` was requested
+  // as `modules/cat/readme.md`. Windows resolves that anyway and Linux does not,
+  // which is exactly how it shipped: fine in development, broken in the world.
+  const tool = new ReadReferenceTool();
+  const result = await withFetch(
+    { 'modules/cat/README.md': '# Coven automation toolkit' },
+    () => tool.execute({ file: 'cat/README.md' })
+  );
+
+  assert.equal(JSON.parse(result.content).ok, true);
+  assert.match(result.display, /README\.md/, 'the path is reported as it exists on disk');
+});
+
+test('a file named in mixed case still resolves', async () => {
+  // The counterpart: the agent should not have to reproduce capitalisation to be
+  // understood, so a lookup against what is already indexed stays case-insensitive.
+  const tool = new ReadReferenceTool();
+  const files = {
+    'modules/midi-qol/module.json': MANIFEST,
+    'modules/midi-qol/Changelog.md': '# Changes',
+  };
+
+  await withFetch(files, () => tool.execute({ source: 'midi-qol' }));
+  const result = await withFetch(files, () => tool.execute({ file: 'MIDI-QOL/CHANGELOG.MD' }));
 
   assert.equal(JSON.parse(result.content).ok, true);
 });
