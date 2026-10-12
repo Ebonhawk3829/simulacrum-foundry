@@ -41,8 +41,24 @@ import { shouldRecord, recordRun } from './verification-state.js';
 
 const logger = createLogger('AbilityRecorder');
 
-/** How long to keep collecting after a use before writing the record. */
+/**
+ * How long to keep collecting after the workflow reports it has finished.
+ *
+ * Not zero, because dnd5e fires `postUseActivity` before every module has finished
+ * posting to chat, and a record taken immediately would miss the last card.
+ */
 const SETTLE_MS = 800;
+
+/**
+ * Ceiling on a recording that never reports finishing.
+ *
+ * `postUseActivity` does not fire if the workflow throws, and a template that is
+ * never placed leaves the use open indefinitely. Without a ceiling, one abandoned
+ * template would block every later recording, since only one runs at a time. This
+ * is long enough for a slow world to finish and short enough that the block is
+ * recoverable by hand.
+ */
+const MAX_WAIT_MS = 20_000;
 
 /** Cap on captured chat messages per run, so a chatty workflow cannot flood it. */
 const MAX_MESSAGES = 12;
@@ -68,8 +84,19 @@ let active = null;
  */
 let pending = null;
 
-/** Handle for the settle timer, so a superseded use cannot write late. */
+/** Handle for the pending write, so a superseded use cannot write late. */
 let settleTimer = null;
+
+/** Handle for the ceiling on a workflow that never reports finishing. */
+let maxWaitTimer = null;
+
+/** Cancel both timers, if either is running. */
+function clearTimers() {
+  if (settleTimer) clearTimeout(settleTimer);
+  if (maxWaitTimer) clearTimeout(maxWaitTimer);
+  settleTimer = null;
+  maxWaitTimer = null;
+}
 
 /**
  * Snapshot the bits of an actor a use can plausibly change.
@@ -252,10 +279,7 @@ function captureCard(card) {
 async function finish() {
   const run = active;
   active = null;
-  if (settleTimer) {
-    clearTimeout(settleTimer);
-    settleTimer = null;
-  }
+  clearTimers();
   if (!run) return null;
 
   const item = await fromUuid(run.itemUuid).catch(() => null);
@@ -370,22 +394,33 @@ export function registerAbilityRecorder() {
     begin(pending.item, pending.context, pending.startedAt);
     pending = null;
 
-    // The settle window exists because effects are applied asynchronously and a
-    // record read immediately would show nothing. Its length is a guess tuned for
-    // a normal world; a very slow workflow would under-record, which is why a
-    // missing chat record is called out in the output.
-    if (settleTimer) clearTimeout(settleTimer);
-    settleTimer = setTimeout(() => void finish(), SETTLE_MS);
+    // NOT a fixed timer from here. dnd5e creates the card, then runs
+    // `_finalizeUsage` - which places measured templates and AWAITS the user - and
+    // only then fires `postUseActivity`. So the workflow is still in progress at
+    // this point for anything with an area: the effect, the damage and the save all
+    // land after the template is placed. Recording on a timer from here captured a
+    // half-finished workflow and reported the rest as "did not report completing".
+    //
+    // The record is written when `dnd5e.postUseActivity` says the workflow is done.
+    // This timer is only the ceiling for a workflow that never reports finishing.
+    clearTimers();
+    maxWaitTimer = setTimeout(() => {
+      logger.warn(`A use of ${active?.itemName ?? 'an item'} never reported finishing; recording anyway`);
+      void finish();
+    }, MAX_WAIT_MS);
   });
 
   // The card dnd5e built for this use. Captured directly rather than scraped,
   // because it cannot be the wrong message.
   Hooks.on('dnd5e.postCreateUsageMessage', (_activity, card) => captureCard(card));
 
-  // A use that reached `preCreateUsageMessage` and then threw would otherwise keep
-  // recording until the timer ran out, attributing whatever happened next to it.
+  // The workflow finished - templates placed, effects applied. Give the remaining
+  // modules a moment to post their chat cards, then write the record.
   Hooks.on('dnd5e.postUseActivity', () => {
-    if (active) active.completed = true;
+    if (!active) return;
+    active.completed = true;
+    clearTimers();
+    settleTimer = setTimeout(() => void finish(), SETTLE_MS);
   });
 
   // Chat output during the window is the primary evidence: it holds the rolls and

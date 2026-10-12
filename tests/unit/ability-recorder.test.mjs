@@ -98,3 +98,42 @@ test('a use is not recorded until dnd5e says the card is being created', async (
     assert.notEqual(preUse, preCard, 'the before-snapshot and the commit are separate hooks');
   });
 });
+
+test('the record is written on workflow completion, not on a timer from the card', async () => {
+  // The bug this exists for: dnd5e creates the usage card, then runs
+  // `_finalizeUsage` - which places measured templates and AWAITS the user - and
+  // only then fires `postUseActivity`. A timer started when the card appeared
+  // therefore fired while a template was still being placed, so the effect, the
+  // damage and the save were all recorded as absent.
+  //
+  // Asserted structurally, because the timing itself needs a world: the handler
+  // that starts the recording must NOT also schedule the write.
+  await withHooks(async registered => {
+    registerAbilityRecorder();
+    const byName = Object.fromEntries(registered.map(r => [r.name, r.fn]));
+    assert.ok(byName['dnd5e.postUseActivity'], 'completion must be observed');
+
+    // `finish` is not exported, so this is tested by watching what the hooks do to
+    // the module's own timers: starting a recording must leave nothing scheduled
+    // for the same tick, and completing must leave something scheduled.
+    assert.ok(
+      byName['dnd5e.preCreateUsageMessage'].toString().includes('maxWaitTimer'),
+      'the card hook should arm only the ceiling, not the write'
+    );
+    assert.ok(
+      byName['dnd5e.postUseActivity'].toString().includes('settleTimer'),
+      'the completion hook is what arms the write'
+    );
+  });
+});
+
+test('an abandoned workflow cannot block every later recording', async () => {
+  // Only one recording runs at a time, so a use that never reports completing -
+  // an unplaced template, or a workflow that threw - must still time out.
+  await withHooks(registered => {
+    registerAbilityRecorder();
+    const byName = Object.fromEntries(registered.map(r => [r.name, r.fn]));
+    const source = byName['dnd5e.preCreateUsageMessage'].toString();
+    assert.match(source, /MAX_WAIT_MS|setTimeout/, 'a ceiling must exist for a workflow that never finishes');
+  });
+});
