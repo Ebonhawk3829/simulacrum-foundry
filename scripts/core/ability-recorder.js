@@ -345,13 +345,28 @@ function caveatsFor(run) {
 }
 
 /**
- * Re-read a target actor by uuid, for the after-snapshot.
+ * Re-read an actor by uuid, for the after-snapshot.
+ *
+ * Deliberately a uuid search rather than `fromUuid`, so the after-snapshot never
+ * awaits: the ability has finished, and a promise resolved later would compare
+ * against a state that has moved on. `game.actors` alone is not enough, though -
+ * an unlinked token's actor is a synthetic actor that is not in that collection,
+ * so every unlinked target would have been reported as "could not be re-read".
+ * The scene's tokens are searched for those, which is the same rule the
+ * before-snapshot uses when it prefers a token's actor over the base actor.
  * @param {string} uuid
  * @returns {object|null}
  */
 function resolveTarget(uuid) {
-  const actor = globalThis.game?.actors?.contents?.find(a => a.uuid === uuid);
-  return actor ? snapshotActor(actor) : null;
+  const direct = globalThis.game?.actors?.contents?.find(a => a.uuid === uuid);
+  if (direct) return snapshotActor(direct);
+
+  for (const scene of globalThis.game?.scenes?.contents ?? []) {
+    const token = scene.tokens?.contents?.find(t => t.actor?.uuid === uuid);
+    if (token?.actor) return snapshotActor(token.actor);
+  }
+
+  return null;
 }
 
 /**
