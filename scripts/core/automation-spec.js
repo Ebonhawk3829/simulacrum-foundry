@@ -112,6 +112,28 @@ export const CONDITIONS = Object.freeze([
 /** How a save DC is determined. */
 export const DC_MODES = Object.freeze(['fixed', 'formula', 'spellcasting', 'initial']);
 
+/** Movement directions dnd5e's forced-movement helper understands. */
+export const MOVEMENT_DIRECTIONS = Object.freeze(['push', 'pull', 'away', 'toward', 'up', 'down']);
+
+/** What a triggered ability reacts to. */
+export const TRIGGER_CONDITIONS = Object.freeze([
+  'damage-taken',
+  'attacked',
+  'hit-by-attack',
+  'fails-save',
+  'turn-start',
+  'turn-end',
+  'enter-area',
+  'leaves-area',
+  'reduced-to-zero',
+]);
+
+/** What fires a marked target's extra damage. */
+export const MARK_TRIGGERS = Object.freeze(['hit', 'any-attack', 'when-moved']);
+
+/** Who controls a summoned creature. */
+export const SUMMON_CONTROLS = Object.freeze(['source', 'gm', 'none']);
+
 /** Extra damage applied when a save fails by this much or more. */
 export const FAILS_BY_CONDITIONS = Object.freeze([
   'dazed',
@@ -121,66 +143,6 @@ export const FAILS_BY_CONDITIONS = Object.freeze([
   'incapacitated',
 ]);
 
-/**
- * Spec keys build_ability understands, with the type each expects. An
- * unknown key is a warning rather than an error: the description may carry a
- * nuance we have no field for, and silently dropping it would lose information.
- */
-export const SAVE_ABILITY_SPEC = Object.freeze({
-  // targeting and identity
-  'actor': 'string',
-  'name': 'string',
-  'identifier': 'string',
-  'archetype': 'string',
-  'notes': 'string',
-
-  // activation
-  'activation.type': 'enum:ACTIVATION_TYPES',
-  'activation.value': 'number',
-  'activation.condition': 'string',
-
-  // the save
-  'save.ability': 'enum:ABILITIES',
-  'save.dc': 'number',
-  'save.dcMode': 'enum:DC_MODES',
-  'save.dcFormula': 'string',
-
-  // damage
-  'damage.formula': 'string',
-  'damage.type': 'enum:DAMAGE_TYPES',
-  'damage.onSave': 'enum:none|half|full',
-  'damage.failsBy': 'number',
-  'damage.failsByCondition': 'enum:FAILS_BY_CONDITIONS',
-
-  // range and area
-  'range.units': 'enum:RANGE_UNITS',
-  'range.value': 'number',
-  'target.count': 'number',
-  'target.type': 'enum:TEMPLATE_TYPES',
-  'target.size': 'number',
-  'target.width': 'number',
-  'target.units': 'enum:RANGE_UNITS',
-
-  // the condition imposed on failure
-  'condition': 'enumOrString:CONDITIONS',
-  'conditionOverlay': 'boolean',
-  'conditionLevel': 'number',
-
-  // repeating save, implemented via midi-qol OverTime
-  'repeatSave': 'boolean',
-  'repeatSaveTurn': 'enum:start|end',
-  'repeatSaveAbility': 'enum:ABILITIES',
-  'repeatSaveDc': 'number',
-  'repeatSaveRemoveOnSuccess': 'boolean',
-
-  // duration and uses
-  'duration.units': 'enum:DURATION_UNITS',
-  'duration.value': 'number',
-  'duration.concentration': 'boolean',
-  'uses.max': 'number',
-  'uses.period': 'enum:USE_PERIODS',
-  'uses.recovery': 'enum:RECOVERY_TYPES',
-});
 
 /** Vocabulary registries referenced by the spec types above. */
 export const VOCABULARIES = Object.freeze({
@@ -195,6 +157,10 @@ export const VOCABULARIES = Object.freeze({
   CONDITIONS,
   DC_MODES,
   FAILS_BY_CONDITIONS,
+  MOVEMENT_DIRECTIONS,
+  TRIGGER_CONDITIONS,
+  MARK_TRIGGERS,
+  SUMMON_CONTROLS,
 });
 
 /** Dotted spec ids must stay safe to use as keys and as form field ids. */
@@ -360,7 +326,7 @@ function _checkScalar(path, value, type) {
 function _checkEntry(path, value, ctx) {
   if (!Object.prototype.hasOwnProperty.call(ctx.contract, path)) {
     ctx.warnings.push(
-      `"${path}" is not part of this archetype's spec. It was ignored. If it describes a real mechanic, note it in "notes" or tell the user it is not automated.`
+      `"${path}" is not part of the contract this data was checked against. It was ignored. If it describes a real mechanic, note it in "notes" or tell the user it is not automated.`
     );
     return;
   }
@@ -400,7 +366,7 @@ export function validateSpec(spec, contract, { required = [] } = {}) {
   for (const path of required) {
     const value = getSpecValue(spec, path);
     if (value === undefined || value === null || value === '') {
-      errors.push(`"${path}" is required for this archetype and was not supplied`);
+      errors.push(`"${path}" is required by the contract this data was checked against and was not supplied`);
     }
   }
 

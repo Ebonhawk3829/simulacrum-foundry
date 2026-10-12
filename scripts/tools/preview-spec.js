@@ -11,13 +11,12 @@
  * Flow:
  *   preview_spec(spec, form) -> { previewToken, spec, form, ok }
  *   sidebar renders form -> user edits -> emits the edited spec
- *   build_<archetype>({ previewToken, spec? }) -> uses stashed spec verbatim
+ *   build_ability({ previewToken, spec? }) -> uses stashed spec verbatim
  */
 
 import { BaseTool } from './base-tool.js';
 import { validateForm } from '../core/form-descriptors.js';
 import { stashSpec } from '../core/spec-store.js';
-import { archetypeIds, listArchetypes } from '../core/archetypes/registry.js';
 
 const SCHEMA = {
   type: 'object',
@@ -25,7 +24,7 @@ const SCHEMA = {
     spec: {
       type: 'object',
       description:
-        'The parsed ability as a spec object. Keys are the shared contract between this spec, the form you emit, and the builder tool that consumes it. Key paths must match field ids exactly. Include everything the builder needs; include only what the description justifies.',
+        'The ability data, authored by you. Keys are the contract between this spec, the form you emit, and the builder that consumes it. Key paths must match field ids exactly. Include everything the builder needs; include only what the description justifies.',
     },
     form: {
       type: 'array',
@@ -38,23 +37,13 @@ const SCHEMA = {
       description:
         'The ability name as written, e.g. "Tanglefoot". Used for the preview header and to derive the identifier if the spec does not carry one.',
     },
-    archetype: {
-      type: 'string',
-      // Generated from the registry. The model can therefore only choose an
-      // archetype that has a builder behind it, which is the guard against the
-      // shipped-then-broken release where four were named and none existed.
-      enum: archetypeIds(),
-      description: `Which builder handles this. One of: ${listArchetypes()
-        .map(a => `${a.id} (${a.label})`)
-        .join(', ')}. Determines which builder tool to call next.`,
-    },
     summary: {
       type: 'string',
       description:
         'One or two sentences describing what you understood the ability to do, shown above the form so the user can judge your reading before editing.',
     },
   },
-  required: ['spec', 'form', 'abilityName', 'archetype'],
+  required: ['spec', 'form', 'abilityName'],
 };
 
 export class PreviewSpecTool extends BaseTool {
@@ -157,27 +146,22 @@ export class PreviewSpecTool extends BaseTool {
    * @returns {Promise<object>} Structured preview payload
    */
   async execute(params) {
-    const { spec, form, abilityName, archetype, summary } = params;
+    const { spec, form, abilityName, summary } = params;
 
     const check = this._validateParams(params);
     if (check.rejection) return check.rejection;
     const { fieldCount } = check;
 
-    // The archetype is stamped into the spec as well as stored alongside it.
-    // The builder may be handed only the token, and it resolves the archetype
-    // by the same lookup the rest of the system uses.
-    const stashed = { ...spec, archetype };
-    const previewToken = stashSpec(stashed, { form, abilityName, archetype, summary });
+    const previewToken = stashSpec(spec, { form, abilityName, summary });
 
     return {
       content: JSON.stringify(
         {
           ok: true,
           message:
-            'Preview shown. Wait for the user to edit and press Build; do not call a builder tool until you receive the returned spec or its token.',
+            'Preview shown. Wait for the user to edit and press Build; do not call build_ability until you receive the returned spec or its token.',
           previewToken,
           abilityName,
-          archetype,
           fieldCount,
         },
         null,
@@ -187,10 +171,9 @@ export class PreviewSpecTool extends BaseTool {
       // Consumed by the sidebar to render the editable form. Not shown as text.
       preview: {
         token: previewToken,
-        spec: stashed,
+        spec,
         form,
         abilityName,
-        archetype,
         summary: summary || '',
       },
     };

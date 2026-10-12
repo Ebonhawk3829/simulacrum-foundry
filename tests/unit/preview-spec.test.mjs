@@ -33,21 +33,18 @@ test('preview_spec returns a token and stashes the spec', async () => {
     spec: VALID_SPEC,
     form: VALID_FORM,
     abilityName: 'Tanglefoot',
-    archetype: 'save',
   });
 
   const payload = parseResult(result);
   assert.equal(payload.ok, true);
   assert.equal(payload.abilityName, 'Tanglefoot');
-  assert.equal(payload.archetype, 'save');
   assert.ok(payload.previewToken, 'a token is returned');
   assert.equal(payload.fieldCount, 2);
 
-  // The token must resolve to the exact spec we passed in, plus the archetype.
-  // The archetype is stamped in because the builder may be handed only the token
-  // and resolves the archetype from the spec, the same way everything else does.
+  // The token must resolve to the exact spec that was passed in — this is what
+  // makes the user's edits lossless, and nothing is added to it on the way.
   const stashed = peekSpec(payload.previewToken);
-  assert.deepEqual(stashed.spec, { ...VALID_SPEC, archetype: 'save' });
+  assert.deepEqual(stashed.spec, VALID_SPEC);
 });
 
 test('preview_spec attaches the render payload for the sidebar', async () => {
@@ -56,7 +53,6 @@ test('preview_spec attaches the render payload for the sidebar', async () => {
     spec: VALID_SPEC,
     form: VALID_FORM,
     abilityName: 'Tanglefoot',
-    archetype: 'save',
     summary: 'A sticky bag that restrains.',
   });
 
@@ -76,7 +72,6 @@ test('preview_spec rejects a malformed form and reports every error', async () =
       { id: 'b', label: 'B', type: 'select', value: 'x' },
     ],
     abilityName: 'Tanglefoot',
-    archetype: 'save',
   });
 
   const payload = parseResult(result);
@@ -95,7 +90,6 @@ test('preview_spec rejects a non-object spec', async () => {
     spec: 'Tanglefoot',
     form: VALID_FORM,
     abilityName: 'Tanglefoot',
-    archetype: 'save',
   });
   assert.equal(parseResult(result).ok, false);
   assert.match(parseResult(result).error, /must be a plain object/);
@@ -106,7 +100,6 @@ test('preview_spec rejects a missing abilityName', async () => {
   const result = await tool.execute({
     spec: VALID_SPEC,
     form: VALID_FORM,
-    archetype: 'save',
   });
   assert.equal(parseResult(result).ok, false);
   assert.match(parseResult(result).error, /abilityName/);
@@ -120,7 +113,6 @@ test('preview_spec preserves unknown spec keys', async () => {
     spec,
     form: VALID_FORM,
     abilityName: 'Tanglefoot',
-    archetype: 'save',
   });
   const stashed = peekSpec(parseResult(result).previewToken);
   assert.equal(stashed.spec.notes, 'Fails by 5 or more -> also dazed');

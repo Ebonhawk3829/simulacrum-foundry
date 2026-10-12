@@ -202,7 +202,7 @@ test('tests against the targeted token, not a created one', async () => {
   assert.equal(body.targetUuid, target.actor.uuid);
 });
 
-test('reports every claim from the spec as a checklist entry', async () => {
+test('returns evidence for both forced outcomes rather than a verdict', async () => {
   const target = fakeTarget();
   const item = fakeItem();
   const tool = fastTool();
@@ -210,19 +210,24 @@ test('reports every claim from the spec as a checklist entry', async () => {
   const result = await withFoundry({
     item,
     targets: [target],
-    run: () => tool.execute({ itemUuid: item.uuid, spec: SPEC }),
+    run: () => tool.execute({ itemUuid: item.uuid }),
   });
   const body = JSON.parse(result.content);
 
-  assert.ok(Array.isArray(body.checklist));
-  assert.ok(body.checklist.length >= 6);
-  for (const entry of body.checklist) {
-    assert.equal(typeof entry.claim, 'string');
-    assert.ok('pass' in entry, 'every entry states pass, fail or untested');
-  }
+  // The tool reports what happened. It must not hand back a pass/fail judgement,
+  // because a closed set of checks would report anything it did not foresee as
+  // untested — which penalises the caller for thinking of a better check.
+  assert.ok(body.runs, 'both runs are reported');
+  assert.ok(body.runs.forcedFail, 'the forced-failure run is reported');
+  assert.ok(body.runs.forcedSuccess, 'the forced-success run is reported');
+  assert.equal(body.checklist, undefined, 'no checklist of verdicts');
+  assert.equal(body.verdict, undefined, 'no overall verdict');
+  assert.equal(body.ok, undefined, 'the tool does not declare success or failure');
 });
 
-test('a correct build passes its claims', async () => {
+test('states whether the forcing was actually observed', async () => {
+  // The fact that makes the evidence usable: if the forcing did not apply, the
+  // run was an ordinary roll and "nothing happened" means nothing at all.
   const target = fakeTarget();
   const item = fakeItem();
   const tool = fastTool();
@@ -230,28 +235,103 @@ test('a correct build passes its claims', async () => {
   const result = await withFoundry({
     item,
     targets: [target],
-    run: () => tool.execute({ itemUuid: item.uuid, spec: SPEC }),
+    run: () => tool.execute({ itemUuid: item.uuid }),
   });
   const body = JSON.parse(result.content);
 
-  const failed = body.checklist.filter(c => c.pass === false);
-  assert.deepEqual(failed, [], JSON.stringify(failed, null, 2));
-  assert.equal(body.summary.passed, body.summary.total);
+  assert.equal(body.runs.forcedFail.forced, 'fail');
+  assert.equal(body.runs.forcedFail.forcingApplied, true, 'the flag was read back off the actor');
+  assert.equal(body.runs.forcedSuccess.forced, 'success');
+  assert.equal(body.runs.forcedSuccess.forcingApplied, true);
 });
 
-test('the failing-save run actually had the failure forced', async () => {
+test('warns when the outcome could not be forced', async () => {
+  // A target that strips the flags stands in for any reason forcing fails to
+  // apply. The report must say so rather than letting an unforced result be read
+  // as a broken ability.
+  const target = fakeTarget();
+  const actor = target.actor;
+  const realUpdate = actor.update.bind(actor);
+  actor.update = async changes => {
+    // Accept the update but never let the forcing flag stick.
+    if (changes['flags.midi-qol.fail.all'] !== undefined) return actor;
+    return realUpdate(changes);
+  };
+
+  const item = fakeItem();
+  const tool = fastTool();
+
+  const result = await withFoundry({
+    item,
+    targets: [target],
+    run: () => tool.execute({ itemUuid: item.uuid }),
+  });
+  const body = JSON.parse(result.content);
+
+  assert.equal(body.runs.forcedFail.forcingApplied, false);
+  assert.match(body.caveat, /NOT forced/);
+  assert.match(body.caveat, /ordinary dice rolls/);
+});
+
+test('reports effects and conditions the run applied', async () => {
   const target = fakeTarget();
   const item = fakeItem();
   const tool = fastTool();
 
-  await withFoundry({
+  const result = await withFoundry({
     item,
     targets: [target],
-    run: () => tool.execute({ itemUuid: item.uuid, spec: SPEC }),
+    run: () => tool.execute({ itemUuid: item.uuid }),
   });
+  const body = JSON.parse(result.content);
 
-  const forced = target._state.updates.filter(u => u['flags.midi-qol.fail.all'] !== undefined);
-  assert.ok(forced.length >= 1, 'the test must force the outcome or it depends on dice');
+  // The fake adds "restrained" when the forced failure lands, which is what DAE
+  // does on a failed save. That is the observable outcome of the ability.
+  assert.deepEqual(body.runs.forcedFail.statusesGained, ['restrained']);
+  // The succeeding run must NOT gain the condition, and cannot be observed to
+  // remove one either, because the restore between runs already cleared it.
+  assert.equal(body.runs.forcedSuccess.statusesGained, undefined);
+});
+
+test('reports the item shape so the evidence stands alone', async () => {
+  const target = fakeTarget();
+  const item = fakeItem();
+  const tool = fastTool();
+
+  const result = await withFoundry({
+    item,
+    targets: [target],
+    run: () => tool.execute({ itemUuid: item.uuid }),
+  });
+  const body = JSON.parse(result.content);
+
+  assert.equal(body.item.type, 'save');
+  assert.deepEqual(body.item.saveAbility, ['str']);
+  assert.equal(body.item.dc, 14);
+  assert.equal(body.effectsOnItem.length, 1);
+  assert.equal(body.effectsOnItem[0].changes[0].key, 'macro.StatusEffect');
+});
+
+test('records what the caller expected beside the evidence, without judging it', async () => {
+  const target = fakeTarget();
+  const item = fakeItem();
+  const tool = fastTool();
+
+  const result = await withFoundry({
+    item,
+    targets: [target],
+    run: () =>
+      tool.execute({
+        itemUuid: item.uuid,
+        expect: { 'target gains restrained': true, 'damage is dealt': 14 },
+      }),
+  });
+  const body = JSON.parse(result.content);
+
+  // Free-form and echoed back verbatim: the caller's own expectations are its
+  // business, and validating them against a fixed schema would be the same
+  // closed-vocabulary mistake in a different place.
+  assert.deepEqual(body.expect, { 'target gains restrained': true, 'damage is dealt': 14 });
 });
 
 test('restores the target afterwards, leaving nothing changed', async () => {
@@ -259,51 +339,54 @@ test('restores the target afterwards, leaving nothing changed', async () => {
   const item = fakeItem();
   const tool = fastTool();
 
-  await withFoundry({
+  const result = await withFoundry({
     item,
     targets: [target],
-    run: () => tool.execute({ itemUuid: item.uuid, spec: SPEC }),
+    run: () => tool.execute({ itemUuid: item.uuid }),
   });
 
-  // The last update must clear the forcing flags.
   const last = target._state.updates[target._state.updates.length - 1];
-  assert.equal(last['flags.midi-qol.-=fail'], null);
+  assert.equal(last['flags.midi-qol.-=fail'], null, 'the forcing is cleared');
   assert.equal(last['flags.midi-qol.-=success'], null);
   assert.equal(target._state.hp, 30, 'hit points are restored');
-
-  const stillRestrained = target._state.updates.some(
-    u => u['system.attributes.hp.value'] === 30
-  );
-  assert.ok(stillRestrained, 'hp is written back');
+  assert.equal(JSON.parse(result.content).teardownFailed, undefined, 'teardown succeeded');
 });
 
-test('restores the target even when the ability use throws', async () => {
-  const target = fakeTarget();
-  const item = fakeItem({
-    system: {
-      identifier: 'tanglefoot',
-      uses: { max: '1' },
-      activities: {
-        contents: [
-          {
-            id: 'act1',
-            type: 'save',
-            save: { ability: { first: () => 'str' }, dc: { formula: '14' } },
-            range: { value: '30', units: 'ft' },
-          },
-        ],
-      },
-    },
+test('reports a failed teardown instead of hiding it', async () => {
+  // A test that leaves the world altered is worse than no test, so a teardown
+  // failure has to surface even though the run itself succeeded.
+  const target = fakeTarget({ hp: 30 });
+  const actor = target.actor;
+  actor.update = async changes => {
+    if (changes['flags.midi-qol.-=fail'] !== undefined) throw new Error('update refused');
+    return actor;
+  };
+
+  const item = fakeItem();
+  const tool = fastTool();
+
+  const result = await withFoundry({
+    item,
+    targets: [target],
+    run: () => tool.execute({ itemUuid: item.uuid }),
   });
+  const body = JSON.parse(result.content);
+
+  assert.equal(body.teardownFailed, 'update refused');
+  assert.match(body.caveat, /could NOT be fully restored/);
+});
+
+test('reports a use that errored rather than treating it as no effect', async () => {
+  const target = fakeTarget();
+  const item = fakeItem();
   const tool = fastTool();
 
   const previous = globalThis.CAT;
   try {
-    await withFoundry({
+    const result = await withFoundry({
       item,
       targets: [target],
       run: async () => {
-        // Break the use path, then act as if it had thrown mid-test.
         globalThis.CAT = {
           api: {
             workflowUtils: {
@@ -313,69 +396,17 @@ test('restores the target even when the ability use throws', async () => {
             },
           },
         };
-        return tool.execute({ itemUuid: item.uuid, spec: SPEC });
+        return tool.execute({ itemUuid: item.uuid });
       },
     });
+    const body = JSON.parse(result.content);
+    assert.equal(body.runs.forcedFail.useFailed, 'workflow exploded');
   } finally {
     globalThis.CAT = previous;
   }
-
-  const last = target._state.updates[target._state.updates.length - 1];
-  assert.equal(last['flags.midi-qol.-=fail'], null, 'teardown is unconditional');
 });
 
-test('half damage is untested when the successful save cost nothing but the failure never landed either', async () => {
-  const target = fakeTarget();
-  const item = fakeItem();
-  const tool = fastTool();
-
-  // The spec claims damage but the built item deals none, so neither run spends
-  // hit points and the comparison cannot be made.
-  const result = await withFoundry({
-    item,
-    targets: [target],
-    run: () =>
-      tool.execute({
-        itemUuid: item.uuid,
-        spec: {
-          ...SPEC,
-          'damage.formula': '3d6',
-          'damage.type': 'bludgeoning',
-          'damage.onSave': 'half',
-        },
-      }),
-  });
-  const body = JSON.parse(result.content);
-
-  const damageClaim = body.checklist.find(c => c.claim.includes('fewer'));
-  assert.ok(damageClaim, 'the half-damage claim should be present');
-  assert.equal(damageClaim.pass, null, 'unverified must never read as passing');
-  assert.ok(damageClaim.note);
-});
-
-test('damage taken on a failed save is measured against the target hit points', async () => {
-  const target = fakeTarget({ hp: 30 });
-  const item = fakeItem();
-  const tool = fastTool();
-
-  const result = await withFoundry({
-    item,
-    targets: [target],
-    run: () =>
-      tool.execute({
-        itemUuid: item.uuid,
-        spec: { ...SPEC, 'damage.formula': '3d6', 'damage.type': 'bludgeoning' },
-      }),
-  });
-  const body = JSON.parse(result.content);
-
-  const damageClaim = body.checklist.find(c => c.claim.includes('costs the target hit points'));
-  assert.ok(damageClaim);
-  assert.equal(damageClaim.pass, false, 'the built ability deals no damage, so the claim fails');
-  assert.equal(damageClaim.actual, 'none lost');
-});
-
-test('a failed claim tells the agent to fix the spec and retry once', async () => {
+test('tells the caller to compare the evidence and ask the user', async () => {
   const target = fakeTarget();
   const item = fakeItem();
   const tool = fastTool();
@@ -383,37 +414,12 @@ test('a failed claim tells the agent to fix the spec and retry once', async () =
   const result = await withFoundry({
     item,
     targets: [target],
-    run: () => tool.execute({ itemUuid: item.uuid, spec: { ...SPEC, 'save.dc': 20 } }),
+    run: () => tool.execute({ itemUuid: item.uuid }),
   });
   const body = JSON.parse(result.content);
 
-  assert.equal(body.ok, false);
-  assert.ok(body.failingClaims.length >= 1);
-  const dcClaim = body.failingClaims.find(c => c.claim.includes('DC'));
-  assert.equal(dcClaim.expected, '20');
-  assert.equal(dcClaim.actual, '14');
-  assert.match(body.next, /build_ability again/);
-  assert.match(body.next, /same claim fails twice/, 'the two-attempt rule is restated');
-});
-
-test('a build with a missing activity fails that claim rather than throwing', async () => {
-  const target = fakeTarget();
-  const item = fakeItem({
-    system: { identifier: 'tanglefoot', activities: { contents: [] } },
-  });
-  const tool = fastTool();
-
-  const result = await withFoundry({
-    item,
-    targets: [target],
-    run: () => tool.execute({ itemUuid: item.uuid, spec: SPEC }),
-  });
-  const body = JSON.parse(result.content);
-
-  const claim = body.checklist.find(c => c.claim.includes('save activity'));
-  assert.ok(claim, 'the activity claim should be present');
-  assert.equal(claim.pass, false);
-  assert.match(claim.actual, /no activity/);
+  assert.match(body.next, /what you intended/);
+  assert.match(body.next, /what they observed/, 'the user perception is part of the loop');
 });
 
 test('rejects a uuid that does not resolve', async () => {
@@ -424,7 +430,7 @@ test('rejects a uuid that does not resolve', async () => {
   const result = await withFoundry({
     item,
     targets: [target],
-    run: () => tool.execute({ itemUuid: 'Actor.x.Item.y', spec: SPEC }),
+    run: () => tool.execute({ itemUuid: 'Actor.x.Item.y' }),
   });
 
   assert.equal(result.error.type, 'ITEM_NOT_FOUND');
@@ -439,89 +445,10 @@ test('rejects a missing uuid before doing anything else', async () => {
   const result = await withFoundry({
     item,
     targets: [target],
-    run: () => tool.execute({ spec: SPEC }),
+    run: () => tool.execute({}),
   });
 
   assert.equal(result.error.type, 'VALIDATION_ERROR');
-});
-
-test('recovers the spec from a preview token so claims match what was confirmed', async () => {
-  const target = fakeTarget();
-  const item = fakeItem();
-  const tool = fastTool();
-  clearSpecs();
-
-  // What the user confirmed differs from the item as built, so the DC claim fails.
-  const token = stashSpec({ ...SPEC, 'save.dc': 22 });
-
-  const result = await withFoundry({
-    item,
-    targets: [target],
-    run: () => tool.execute({ itemUuid: item.uuid, previewToken: token }),
-  });
-  const body = JSON.parse(result.content);
-
-  const dcClaim = body.checklist.find(c => c.claim.includes('DC'));
-  assert.equal(dcClaim.expected, '22');
-  assert.equal(dcClaim.pass, false);
-});
-
-test('the preview token survives a test, because the builder still needs it', async () => {
-  const target = fakeTarget();
-  const item = fakeItem();
-  const tool = fastTool();
-
-  const token = stashSpec({ ...SPEC, 'save.dc': 22 });
-
-  const first = await withFoundry({
-    item,
-    targets: [target],
-    run: () => tool.execute({ itemUuid: item.uuid, previewToken: token }),
-  });
-  const second = await withFoundry({
-    item,
-    targets: [target],
-    run: () => tool.execute({ itemUuid: item.uuid, previewToken: token }),
-  });
-
-  const firstBody = JSON.parse(first.content);
-  const secondBody = JSON.parse(second.content);
-  assert.equal(firstBody.checklist.length, secondBody.checklist.length);
-  const dcClaim = secondBody.checklist.find(c => c.claim.includes('DC'));
-  assert.equal(dcClaim.expected, '22', 'peeking does not consume the token');
-});
-
-test('falls back to the item itself when no spec is supplied', async () => {
-  const target = fakeTarget();
-  const item = fakeItem();
-  const tool = fastTool();
-
-  const result = await withFoundry({
-    item,
-    targets: [target],
-    run: () => tool.execute({ itemUuid: item.uuid }),
-  });
-  const body = JSON.parse(result.content);
-
-  assert.ok(body.checklist.length > 0, 'a test is still useful without the original spec');
-  assert.ok(body.checklist.some(c => c.claim.includes('str')), 'the ability is read off the item');
-  assert.ok(body.checklist.some(c => c.claim.includes('restrained')), 'the condition is read off the effect');
-});
-
-test('the report names the next step for the agent', async () => {
-  const target = fakeTarget();
-  const item = fakeItem();
-  const tool = fastTool();
-
-  const result = await withFoundry({
-    item,
-    targets: [target],
-    run: () => tool.execute({ itemUuid: item.uuid, spec: SPEC }),
-  });
-  const body = JSON.parse(result.content);
-
-  assert.ok(body.next, 'every report tells the agent what to do next');
-  assert.ok(body.verdict);
 });
 
 test('refuses to run for a non-GM', async () => {
@@ -532,7 +459,7 @@ test('refuses to run for a non-GM', async () => {
   const previous = globalThis.game;
   globalThis.game = { user: { isGM: false, targets: new Set([target]) } };
   try {
-    const result = await tool.execute({ itemUuid: item.uuid, spec: SPEC });
+    const result = await tool.execute({ itemUuid: item.uuid });
     assert.equal(result.error.type, 'PERMISSION_DENIED');
   } finally {
     globalThis.game = previous;

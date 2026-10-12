@@ -1248,12 +1248,11 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
    */
   async _onSpecPreviewBuild(preview, values, fields, token) {
     const abilityName = preview?.abilityName || 'the ability';
-    const archetype = preview?.archetype || 'save';
 
     const message = [
       `The user reviewed and built the preview for ${abilityName}.`,
       '',
-      `Call build_ability with archetype "${archetype}" and previewToken "${token}", and no spec argument; the user's edited values are already stored under that token. Do not ask for the values again.`,
+      `Call build_ability with previewToken "${token}" and no spec argument; the user's edited values are already stored under that token. Do not ask for the values again.`,
       '',
       'Then run the self-test and report the result.',
     ].join('\n');

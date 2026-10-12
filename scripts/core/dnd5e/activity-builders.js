@@ -1,11 +1,11 @@
 /**
- * Activity Builders — the pieces every archetype assembles from.
+ * Activity Builders — the pieces an ability's activities are assembled from.
  *
  * An "activity" in dnd5e is the roll the user triggers: a save, an attack, a
- * heal, a damage roll. Archetypes differ in WHICH activity they produce and in
- * what the payload is; they barely differ in how a range, a target, a duration or
- * an applied effect is written. Those shared pieces live here so there is one
- * implementation of each, and one place to be right about dnd5e 5.3.3.
+ * heal, a damage roll. Different abilities choose different activities and
+ * different payloads, but they assemble them from the same parts, so those parts
+ * live here: one implementation of each, and one place to be right about dnd5e
+ * 5.3.3.
  *
  * The comments that matter most are the ones explaining a field that is easy to
  * get wrong, because those mistakes are silent: the item still saves and still
@@ -17,6 +17,32 @@ import {
   getSpecNumber,
   getSpecBoolean,
 } from '../automation-spec.js';
+
+/**
+ * Infer an activity type from the payload that is present.
+ *
+ * dnd5e requires `type` on every activity, and an activity authored without one
+ * throws a validation error that does not name which activity was at fault. The
+ * blocks are mutually exclusive in practice — a `save` block means a save, an
+ * `attack` block means an attack — so inferring is unambiguous rather than a
+ * guess about what the ability does.
+ *
+ * `utility` is the fallback because it is the one dnd5e type that rolls nothing
+ * and expects no particular payload, so an activity with only activation and
+ * description data lands as a usable button rather than an error.
+ * @param {object} activity
+ * @returns {string}
+ */
+export function inferActivityType(activity) {
+  if (!activity || typeof activity !== 'object') return 'utility';
+  if (activity.save) return 'save';
+  if (activity.attack) return 'attack';
+  if (activity.healing) return 'heal';
+  if (activity.damage) return 'damage';
+  if (activity.check) return 'check';
+  if (activity.spell) return 'cast';
+  return 'utility';
+}
 
 /**
  * Build the activity's `range`, which is ALSO where dnd5e reads the ability's
@@ -130,11 +156,9 @@ export function buildConsumption(spec) {
  * @param {string} typePath - Spec path holding the damage type
  * @returns {object|null}
  */
-function buildDamagePart(spec, path, typePath) {
-  const formula = getSpecString(spec, path);
+export function buildDamagePart(formula, type) {
   if (!formula) return null;
 
-  const type = getSpecString(spec, typePath);
   return {
     number: null,
     denomination: null,
@@ -154,7 +178,10 @@ function buildDamagePart(spec, path, typePath) {
  * @returns {object}
  */
 export function buildActivityDamage(spec) {
-  const part = buildDamagePart(spec, 'damage.formula', 'damage.type');
+  const part = buildDamagePart(
+    getSpecString(spec, 'damage.formula'),
+    getSpecString(spec, 'damage.type')
+  );
   if (!part) return { onSave: getSpecString(spec, 'damage.onSave') ?? 'none', parts: [] };
 
   return {
@@ -169,7 +196,10 @@ export function buildActivityDamage(spec) {
  * @returns {object}
  */
 export function buildActivityHealing(spec) {
-  const part = buildDamagePart(spec, 'heal.formula', 'heal.type');
+  const part = buildDamagePart(
+    getSpecString(spec, 'heal.formula'),
+    getSpecString(spec, 'heal.type')
+  );
   if (!part) return { types: [], custom: { enabled: false, formula: '' } };
 
   return { types: part.types, custom: { enabled: false, formula: '' }, bonus: part.bonus };
