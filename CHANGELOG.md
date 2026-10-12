@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-10-12
+
+Fixes a build that reported success and produced an item with no activities and
+no effects.
+
+### Fixed
+
+- **activities are written where dnd5e reads them.** dnd5e stores them inside the item's system data as `system.activities`, keyed by id (`ActivitiesField extends MappingField`). The builder was writing a top-level `activities` key as a plain array. Foundry accepts that update and ignores it, so the write succeeded, the array stayed empty, and nothing reported it. Activities are now added with dnd5e's own `item.createActivity(type, data)`, which builds the right class per type, assigns the id and sets sort — and which throws `"<type> not found in CONFIG.DND5E.activityTypes"` for an unknown type, the only loud failure available in this area. Removal uses the `system.activities.-=<id>` form dnd5e itself uses.
+- **a build that lands nothing now fails instead of reporting ok.** An authored region that comes back empty returns `ACTIVITIES_NOT_WRITTEN`, naming what was wanted and what landed. An item that looks built and does nothing was previously indistinguishable from a successful build.
+- per-activity failures are collected into `activityErrors` and reported, rather than aborting the build: one bad activity should not cost the good ones.
+
+### Changed
+
+- `reference/` is now tracked. Upstream's `.gitignore` excluded it as "reference materials, not part of project", which was right for upstream and wrong here: the release builder ships the directory and `module.json` advertises the dnd5e guide by name, because the agent reads it at runtime. The file was present in the working tree, shipped in every archive, and in no commit.
+- `reference/dnd5e-5.3.3-fields.md` documents where activities and effects actually live, the two ways an activity write fails silently, and the document methods to use instead.
+
 ## [0.1.0] - 2026-10-12
 
 First release of the Ebonhawk automation-builder fork. Upstream's generalist
