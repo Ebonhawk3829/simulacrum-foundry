@@ -177,6 +177,41 @@ function describeUse(activity, usageConfig) {
 }
 
 /**
+ * The speaker identities a chat message may carry for this use.
+ *
+ * Built once at the start, from the actor and everything targeted, so the chat
+ * filter is a set membership test rather than a comparison against one actor. A
+ * target needs to be in here because its save is posted as the target.
+ *
+ * Takes the document layer (token, then actor) rather than the actors alone: the
+ * ids a message speaker carries are the *token's* ids, and a synthetic actor has
+ * no single token to read them from. The token is also what knows its actor, so
+ * one argument covers both.
+ * @param {object[]} subjects - The acting token (if any) and every targeted token
+ * @returns {{actors: Set<string>, actorIds: Set<string>, tokenIds: Set<string>}}
+ */
+function speakerKeysFor(subjects) {
+  const keys = { actors: new Set(), actorIds: new Set(), tokenIds: new Set() };
+
+  for (const subject of subjects) {
+    if (!subject) continue;
+
+    // A TokenDocument knows its actor; a plain Actor does not know a token.
+    const actor = subject.actor ?? subject;
+    if (actor?.uuid) keys.actors.add(actor.uuid);
+    // Both ids are added deliberately. A speaker on an unlinked token records the
+    // synthetic actor's id, while other paths record the world actor's - and
+    // several of dnd5e's own speaker-building paths disagree about which.
+    if (actor?.id) keys.actorIds.add(actor.id);
+    if (actor?.parent?.id) keys.actorIds.add(actor.parent.id);
+    if (subject.id) keys.tokenIds.add(subject.id);
+    if (subject.document?.id) keys.tokenIds.add(subject.document.id);
+  }
+
+  return keys;
+}
+
+/**
  * Begin recording a use.
  * @param {object} item
  * @param {object} context - Whatever is already known about the use
@@ -184,9 +219,14 @@ function describeUse(activity, usageConfig) {
  */
 function begin(item, context, startedAt) {
   const actor = item.actor ?? null;
-  const targets = Array.from(game.user?.targets ?? [])
-    .map(t => t.actor)
-    .filter(Boolean);
+
+  // Targets are collected at the document layer and kept there. Two different
+  // consumers want two different views of the same thing: the snapshot wants the
+  // actor documents, and the chat filter wants the tokens, for their ids. Deriving
+  // one from the other loses information - an actor document cannot tell you which
+  // token on the canvas was clicked.
+  const tokens = Array.from(game.user?.targets ?? []);
+  const targets = tokens.map(t => t.actor).filter(Boolean);
 
   active = {
     itemUuid: item.uuid,
@@ -195,7 +235,7 @@ function begin(item, context, startedAt) {
     // rather than when the card happened to be created.
     startedAt: startedAt ?? new Date().toISOString(),
     completed: false,
-    context,
+    context: { ...context, speakerKeys: speakerKeysFor([item.actor?.token, ...tokens]) },
     actor: actor ? snapshotActor(actor) : null,
     targets: targets.map(snapshotActor),
     targetNames: targets.map(t => t.name),
@@ -205,21 +245,48 @@ function begin(item, context, startedAt) {
 }
 
 /**
+ * Whether a chat message belongs to this use.
+ *
+ * Split out because the test is three set lookups and putting them inline pushed
+ * `captureMessage` over the complexity cap, which is a reasonable signal: "is this
+ * message ours" is a question that deserves a name.
+ * @param {object} message
+ * @returns {boolean}
+ */
+function messageBelongsToUse(message) {
+  const speakers = active?.context?.speakerKeys;
+  if (!speakers) return false;
+
+  if (message.actor?.uuid && speakers.actors.has(message.actor.uuid)) return true;
+
+  const speaker = message.speaker ?? {};
+  return (
+    (Boolean(speaker.actor) && speakers.actorIds.has(speaker.actor)) ||
+    (Boolean(speaker.token) && speakers.tokenIds.has(speaker.token))
+  );
+}
+
+/**
  * Attach a chat message to the in-flight recording.
  *
- * Only messages from the acting actor's speaker are kept, so unrelated table
- * chatter that happens during the settle window does not end up attributed to the
- * ability.
+ * Kept if it belongs to the acting actor OR to anything the user had targeted.
+ * Both halves matter, and the target half was missing:
+ *
+ * - The acting actor's own messages carry the attack roll, the damage, the usage
+ *   card, and the wording the user will describe back.
+ * - A target's messages carry ITS save. In dnd5e the save is rolled and posted as
+ *   the target, so filtering to the caster silently discarded the single most
+ *   important piece of evidence for any save-based ability - whether the target
+ *   passed or failed. The record would have shown damage but not the roll that
+ *   decided it.
+ *
+ * Unrelated table chatter is still excluded, which is the point of filtering at
+ * all rather than capturing everything in the window.
  * @param {ChatMessage} message
  */
 function captureMessage(message) {
   if (active.messages.length >= MAX_MESSAGES) return;
-
-  const speaker = message.speaker ?? {};
-  const sameActor = (message.actor?.uuid ?? '') === active.context.actorUuid;
-  const sameSpeaker =
-    speaker.actor === active.context.actorId || speaker.token === active.context.tokenId;
-  if (!sameActor && !sameSpeaker) return;
+  if (!messageBelongsToUse(message)) return;
 
   active.messages.push({
     speaker: message.speaker?.alias ?? null,

@@ -11,6 +11,7 @@
  */
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { registerAbilityRecorder } from '../../scripts/core/ability-recorder.js';
@@ -136,4 +137,26 @@ test('an abandoned workflow cannot block every later recording', async () => {
     const source = byName['dnd5e.preCreateUsageMessage'].toString();
     assert.match(source, /MAX_WAIT_MS|setTimeout/, 'a ceiling must exist for a workflow that never finishes');
   });
+});
+
+test('a target is a speaker this use expects chat from', async () => {
+  // The save is rolled and posted as the TARGET, so a filter that only accepted
+  // the caster's messages would throw away the roll that decided the ability.
+  // Asserted against the source of `begin`, because the sets are private and the
+  // filter needs a world to exercise.
+  const src = readFileSync(new URL('../../scripts/core/ability-recorder.js', import.meta.url), 'utf8');
+
+  assert.match(src, /function speakerKeysFor/, 'speaker identities are collected knowingly');
+  assert.match(
+    src,
+    /speakerKeysFor\(\[item\.actor\?\.token, \.\.\.tokens\]\)/,
+    'the acting token and every targeted token must contribute speaker identities'
+  );
+  // The ids a message speaker carries are the token's, and a synthetic actor has
+  // no token of its own, so the tokens are what has to be collected.
+  assert.match(
+    src,
+    /const tokens = Array\.from\(game\.user\?\.targets \?\? \[\]\)/,
+    'targets must be collected as tokens, not flattened to actors before filtering'
+  );
 });
