@@ -1,5 +1,11 @@
-# Reference materials (not part of project)
-reference/
+# Reference materials -- upstream excluded these as "not part of project".
+# This fork ships them: tools/lib/release-builder.mjs includes `reference/`, and
+# module.json advertises the dnd5e field guide by name, because the agent reads it
+# at runtime. Ignoring it meant the file existed in a working tree and in no
+# commit, so a fresh clone built a module that declared a document it did not
+# contain. Tracked deliberately; the doc is part of the module now.
+!reference/
+!reference/**
 
 # Development guidance files (local only)
 CLAUDE.md

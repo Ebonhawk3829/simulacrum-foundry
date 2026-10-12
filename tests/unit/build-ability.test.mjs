@@ -12,7 +12,18 @@ import { stashSpec, clearSpecs } from '../../scripts/core/spec-store.js';
  * `foundry.utils.randomID` and the actor's embedded collections, so a small
  * stand-in lets the whole build path run in plain Node. That matters: the
  * validation and the data assembly are where the bugs live, not the write.
+ *
+ * The fixture deliberately mirrors two things that are easy to get wrong and
+ * that a lenient fake would hide: activities live inside `system.activities` as
+ * an id-keyed object, and `createActivity` rejects a type dnd5e does not know.
  */
+
+/** dnd5e's activity types, as `CONFIG.DND5E.activityTypes` lists them. */
+const ACTIVITY_TYPES = new Set([
+  'attack', 'cast', 'check', 'damage', 'enchant', 'forward', 'heal',
+  'order', 'save', 'summon', 'transform', 'utility',
+]);
+
 function fakeActor(id = 'actor0000000001', name = 'Goblin Boss') {
   const items = [];
   const actor = {
@@ -33,14 +44,12 @@ function fakeActor(id = 'actor0000000001', name = 'Goblin Boss') {
 }
 
 function makeItem(id, data, actor) {
-  const activities = (data.activities ?? []).map((a, i) => ({
-    id: `act${i}${'0'.repeat(12)}`,
-    ...a,
-  }));
-  const effects = (data.effects ?? []).map((e, i) => ({
-    ...e,
-    id: e._id ?? `eff${i}${'0'.repeat(12)}`,
-  }));
+  // dnd5e keeps activities INSIDE the system data, as an id-keyed object
+  // (`ActivitiesField extends MappingField`). The fixture has to match, or it
+  // will happily confirm a write that Foundry silently ignores - which is how a
+  // top-level `activities` key passed every test and did nothing in a world.
+  const activities = new Map();
+  const effects = [];
 
   const item = {
     id,
@@ -49,7 +58,16 @@ function makeItem(id, data, actor) {
     type: data.type,
     system: {
       ...data.system,
-      activities: { contents: activities },
+      activities: {
+        contents: [],
+        get size() {
+          return activities.size;
+        },
+        get: key => activities.get(key),
+        has: key => activities.has(key),
+        map: fn => [...activities.values()].map(fn),
+        [Symbol.iterator]: () => activities.values(),
+      },
     },
     effects: { contents: effects },
     flags: {},
@@ -71,19 +89,42 @@ function makeItem(id, data, actor) {
       this._updates.push(changes);
       if (changes.name) this.name = changes.name;
       if (changes.system) this.system = { ...this.system, ...changes.system };
-      if (changes.activities) {
-        this.system.activities.contents = changes.activities.map((a, i) => ({
-          id: `act${i}${'0'.repeat(12)}`,
-          ...a,
-        }));
+
+      // Only `system.activities.<id>` is real; a top-level `activities` key is
+      // deliberately NOT handled here, so a regression is caught rather than
+      // absorbed.
+      for (const [key, value] of Object.entries(changes)) {
+        const match = key.match(/^system\.activities\.(?:-=)?([A-Za-z0-9]+)$/);
+        if (!match) continue;
+        const [, actId] = match;
+        if (key.includes('-=')) activities.delete(actId);
+        else activities.set(actId, { ...value, id: actId });
       }
+      this.system.activities.contents = [...activities.values()];
+
       if (changes.effects) {
-        this.effects.contents = changes.effects.map((e, i) => ({
-          ...e,
-          id: e._id ?? `eff${i}${'0'.repeat(12)}`,
-        }));
+        effects.length = 0;
+        this.effects.contents = effects;
       }
       return this;
+    },
+    // The supported way to add an activity, mirroring Item5e.createActivity:
+    // it constructs by type and writes `system.activities.<generated id>`.
+    async createActivity(type, activityData = {}) {
+      // dnd5e throws when the type is not in CONFIG.DND5E.activityTypes, and the
+      // message it throws is what lets the builder name the offending activity.
+      if (!ACTIVITY_TYPES.has(type)) {
+        throw new Error(`${type} not found in CONFIG.DND5E.activityTypes`);
+      }
+      const actId = `act${activities.size.toString().padStart(2, '0')}${'0'.repeat(12)}`;
+      activities.set(actId, { ...activityData, type, id: actId });
+      this.system.activities.contents = [...activities.values()];
+      return this.system.activities.get(actId);
+    },
+    async createEmbeddedDocuments(type, list) {
+      const made = list.map((e, i) => ({ ...e, id: e._id ?? `eff${i}${'0'.repeat(12)}` }));
+      if (type === 'ActiveEffect') effects.push(...made);
+      return made;
     },
   };
   return item;
@@ -248,6 +289,76 @@ test('replaceActivities false adds to the existing activities instead', async ()
 
   const names = actor.items.contents[0].system.activities.contents.map(a => a.name);
   assert.deepEqual(names, ['Slash', 'Bonus']);
+});
+
+test('activities are written into system.activities, not a top-level key', async () => {
+  // The bug this test exists for: `activities` at the top level of an update is
+  // accepted and then ignored, because dnd5e reads them from `system.activities`
+  // as an id-keyed object. A build reported ok:true twice in a live world and the
+  // item stayed inert, because nothing here was checking where the data landed.
+  const actor = fakeActor();
+  const tool = new BuildAbilityTool();
+
+  await withFoundry([actor], () =>
+    tool.execute({
+      spec: { ...TANGLEFOOT, actor: actor.id },
+      activities: [{ type: 'save', name: 'Snare' }],
+    })
+  );
+
+  const item = actor.items.contents[0];
+  for (const change of item._updates) {
+    assert.ok(
+      !('activities' in change),
+      'never write a top-level activities key; dnd5e does not read one'
+    );
+  }
+
+  const written = item.system.activities.contents;
+  assert.equal(written.length, 1);
+  assert.equal(written[0].type, 'save');
+  assert.ok(written[0].id, 'each activity carries its own id, as a MappingField requires');
+});
+
+test('an empty write reports failure instead of a silent success', async () => {
+  // A build that accomplished nothing must not look like a build that worked.
+  const actor = fakeActor();
+  const tool = new BuildAbilityTool();
+
+  // An unknown type is what dnd5e itself rejects, so this is the realistic shape
+  // of a write that lands nothing.
+  const result = await withFoundry([actor], () =>
+    tool.execute({
+      spec: { ...TANGLEFOOT, actor: actor.id },
+      activities: [{ type: 'nonsense', name: 'Bad' }],
+    })
+  );
+
+  assert.equal(result.error.type, 'ACTIVITIES_NOT_WRITTEN');
+  const body = JSON.parse(result.content);
+  assert.ok(body.wanted.activities.length, 'says what was asked for');
+  assert.ok(Array.isArray(body.landed.activityIds), 'says what actually landed');
+});
+
+test('an activity that fails to construct is named in the result', async () => {
+  const actor = fakeActor();
+  const tool = new BuildAbilityTool();
+
+  const result = await withFoundry([actor], () =>
+    tool.execute({
+      spec: { ...TANGLEFOOT, actor: actor.id },
+      activities: [
+        { type: 'save', name: 'Good' },
+        { type: 'nonsense', name: 'Bad' },
+      ],
+    })
+  );
+
+  // One good and one bad: the good one is written, the bad one is reported.
+  const body = JSON.parse(result.content);
+  assert.ok(body.activityErrors?.length, 'the failure is reported, not swallowed');
+  assert.equal(actor.items.contents[0].system.activities.contents.length, 1);
+  assert.match(body.activityErrors[0], /nonsense/);
 });
 
 test('passes activity data through unchanged, whatever it contains', async () => {

@@ -166,6 +166,11 @@ export class BuildAbilityTool extends BaseTool {
         replace,
       });
 
+      // A write that silently accomplished nothing is worse than a failure: the
+      // item looks built and does nothing, and the reason is invisible.
+      const empty = this._emptyWrite(result, { activities, effects });
+      if (empty) return empty;
+
       // The build is a hypothesis until it has been used in play. Marking it here
       // is what turns the recorder on for this item, and clearing the mark later
       // is what turns it off again.
@@ -174,7 +179,14 @@ export class BuildAbilityTool extends BaseTool {
         expect: params.expect ?? null,
       });
 
-      return this._success({ result, actor, identifier, itemType, replace });
+      return this._success({
+        result,
+        actor,
+        identifier,
+        itemType,
+        replace,
+        activityErrors: result.activityErrors,
+      });
     } catch (err) {
       this.logger.error('build_ability failed', err);
       return this._reject(
@@ -188,6 +200,41 @@ export class BuildAbilityTool extends BaseTool {
         'WRITE_FAILED'
       );
     }
+  }
+
+  /**
+   * Detect a write that reported success but landed nothing.
+   *
+   * This exists because it happened. Two builds in a live world returned `ok`
+   * with an empty activities array, and the reason was that the data was going
+   * somewhere dnd5e does not read. An authored region that comes back empty is
+   * now a failure with an explanation rather than a success with a zero in it.
+   * @param {object} result
+   * @param {object} authored - What the caller asked for
+   * @returns {object|null} A rejection, or null when the write landed
+   */
+  _emptyWrite(result, { activities, effects }) {
+    const written = result.item.system?.activities?.contents ?? [];
+    const writtenEffects = result.item.effects?.contents ?? [];
+    if (!(activities.length && !written.length) && !(effects.length && !writtenEffects.length)) {
+      return null;
+    }
+
+    return this._reject(
+      {
+        ok: false,
+        error:
+          "The item was written but the activities or effects did not land. dnd5e stores activities inside the item's system data, keyed by id, and the effects as an embedded collection. Data placed anywhere else is accepted and then ignored.",
+        wanted: {
+          activities: activities.map(a => a.type ?? null),
+          effects: effects.map(e => e.name ?? null),
+        },
+        landed: { activityIds: written.map(a => a.id), effectIds: writtenEffects.map(e => e.id) },
+        itemUuid: result.item.uuid,
+      },
+      'Activities or effects did not land',
+      'ACTIVITIES_NOT_WRITTEN'
+    );
   }
 
   /**
@@ -310,11 +357,24 @@ export class BuildAbilityTool extends BaseTool {
   /**
    * Create or update the item.
    *
+   * WHERE THESE TWO REGIONS ACTUALLY LIVE
+   *
+   * dnd5e reads an item's activities from `system.activities`, not from a
+   * top-level `activities`. The field is `ActivitiesField extends MappingField`,
+   * so it is an id-keyed object, and dnd5e's own helpers write it the same way:
+   * `item.createActivity()` and `item.updateActivity(id)` both go through
+   * `this.update({ [`system.activities.${id}`]: ... })`. Data written to a
+   * top-level `activities` key is accepted by the update and then ignored, which
+   * is exactly how a build can report success and leave the item inert.
+   *
+   * Effects are the opposite: they are an embedded ActiveEffect collection, so
+   * they go at the top level and each needs an `_id`.
+   *
    * Only the regions being authored are replaced, so anything the caller set on
    * the item separately survives a rebuild.
    * @param {object} actor
    * @param {object} payload
-   * @returns {Promise<{created: boolean, item: object}>}
+   * @returns {Promise<{created: boolean, item: object, activityErrors: string[]}>}
    */
   async _write(actor, { identifier, name, itemType, spec, activities, effects, replace }) {
     const existing = actor.items.find(
@@ -323,22 +383,45 @@ export class BuildAbilityTool extends BaseTool {
 
     const update = { name, system: buildItemSystem(spec, identifier) };
 
-    if (activities.length) {
-      const current = existing?.system?.activities?.contents ?? [];
-      update.activities = replace ? activities : [...current, ...activities];
-    } else if (replace) {
-      update.activities = [];
+    if (existing && replace) {
+      // Removing by key is how dnd5e deletes an activity: `-=${id}` for the
+      // pre-v14 path, the delete sentinel on 14+, and `updateActivity` itself is
+      // the only supported way to change one.
+      for (const activity of existing.system?.activities?.contents ?? []) {
+        update[`system.activities.-=${activity.id}`] = null;
+      }
+      if (replace) update.effects = [];
     }
 
-    if (effects.length || replace) update.effects = effects;
-
+    let item;
     if (existing) {
       await existing.update(update);
-      return { created: false, item: existing };
+      item = existing;
+    } else {
+      [item] = await actor.createEmbeddedDocuments('Item', [{ ...update, type: itemType }]);
     }
 
-    const [created] = await actor.createEmbeddedDocuments('Item', [{ ...update, type: itemType }]);
-    return { created: true, item: created };
+    // Through the document's own API, not by reaching into the data. `createActivity`
+    // builds the right class per type and assigns sort for us, and a failure is
+    // reported per activity rather than swallowed into a silent empty result.
+    const activityErrors = [];
+    for (const activity of activities) {
+      const { type, ...data } = activity;
+      try {
+        await item.createActivity(type, data, { renderSheet: false });
+      } catch (err) {
+        activityErrors.push(`${type}: ${err.message}`);
+      }
+    }
+
+    if (effects.length) {
+      await item.createEmbeddedDocuments(
+        'ActiveEffect',
+        effects.map(e => ({ ...e, origin: e.origin ?? item.uuid }))
+      );
+    }
+
+    return { created: !existing, item, activityErrors };
   }
 
   /**
@@ -346,11 +429,12 @@ export class BuildAbilityTool extends BaseTool {
    *
    * Activity and effect ids are returned because the agent needs them to author
    * flags that reference them, and reading them back would be an extra round
-   * trip it should not have to make.
+   * trip it should not have to make. Their types and names come back too: an id
+   * on its own tells you nothing about whether the right thing landed.
    * @param {object} options
    * @returns {object}
    */
-  _success({ result, actor, identifier, itemType, replace }) {
+  _success({ result, actor, identifier, itemType, replace, activityErrors }) {
     const { created, item } = result;
 
     return {
@@ -370,7 +454,12 @@ export class BuildAbilityTool extends BaseTool {
             type: a.type,
             name: a.name,
           })),
-          effects: (item.effects?.contents ?? []).map(e => ({ id: e.id, name: e.name })),
+          effects: (item.effects?.contents ?? []).map(e => ({
+            id: e.id,
+            name: e.name,
+            disabled: e.disabled ?? false,
+          })),
+          ...(activityErrors?.length ? { activityErrors } : {}),
           next: `Tell the user the ability is built and marked for testing, and ask them to use it in play the way they normally would. Everything that happens will be recorded. Once they have used it and told you what they saw, call read_ability_runs with itemUuid "${item.uuid}" to see the record, and compare it against what you intended. When the user confirms it behaves correctly, call confirm_ability to stop recording.`,
         },
         null,

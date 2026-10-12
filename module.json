@@ -1,7 +1,7 @@
 {
   "id": "simulacrum",
   "title": "Simulacrum: AI Automation Builder (Ebonhawk fork)",
-  "description": "Private fork of Simulacrum, narrowed to one job: turn natural-language ability text (monster statblocks, class features, magic items) into working dnd5e automations. The agent parses an ability, shows an editable preview of what it understood, builds the Feature with its activity, effects and midi-qol/DAE/CAT flags, then self-tests the result against a targeted token. OpenRouter only. Not for public distribution.",
+  "description": "Private fork of Simulacrum, narrowed to one job: turn natural-language ability text (monster statblocks, class features, magic items) into working dnd5e automations. The agent parses an ability, shows an editable preview of what it understood, builds the Feature with its activities, effects and midi-qol/DAE/CAT flags, then hands it to the GM to use in play while it records what happened. OpenRouter only. Not for public distribution.",
   "authors": [
     {
       "name": "Ebonhawk",
