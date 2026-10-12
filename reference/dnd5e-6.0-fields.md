@@ -1,4 +1,4 @@
-# dnd5e 5.3.3 field shapes, and the mistakes that fail silently
+# dnd5e 6.x field shapes, and the mistakes that fail silently
 
 Reference for writing abilities as document data. Read it for the field shapes and
 for the specific traps described below.
@@ -7,11 +7,33 @@ for the specific traps described below.
 and more fields than are described here, and the system is the source of truth —
 `inspect_document_schema` and `list_document_schemas` will show the current shape
 of anything. What follows is the set of things that were found to matter while
-building abilities against **5.3.3 specifically**, most of which fail *quietly*
-rather than erroring.
+building abilities against **6.x specifically** (verified against 6.0.6), most of
+which fail *quietly* rather than erroring.
 
 Everything here was read out of the dnd5e source. Where something was inferred
 rather than confirmed, it says so.
+
+### What 6.x actually changed, for someone who knew 5.3.3
+
+Verified by diffing `module/config.mjs` between `release-5.3.3` and
+`release-6.0.6`, so this is a list of differences rather than a rewrite:
+
+- **Bonus redirects moved onto `system.rolls.*`.** Not a wholesale rename: `system.bonuses`
+  still exists and still holds `spell.dc`. What moved are the attack, damage and
+  ability-check/save/skill bonuses, which now live under `system.rolls.*`. dnd5e 6.0.6
+  ships a shim (`ActiveEffect5e.SHIM_FIELDS`) that redirects the old keys automatically
+  and logs a compatibility warning, scheduled to be removed at 6.2 — so old effects keep
+  working for now, and the warning is the signal to rewrite them. The exact mapping is in
+  section 10.
+- **Two activity types were added**: `teleport`, and `ring` as an area target type.
+  Nothing was removed. All twelve other activity types are unchanged.
+- **Effects gain a per-change Replacement setting** (Origin / Target / None) that
+  decides whose data fills an effect's `@` references when it is applied. DAE
+  follows it. See section 7 — this changes what an effect you already wrote does.
+- Everything else verified here is **identical**: abilities, damage types,
+  activation types, duration units, use periods, recovery types, movement units,
+  range types, creature types, senses, weapon types. A vocabulary that looked
+  different is a subset chosen by this module, not a change in the system.
 
 ---
 
@@ -221,6 +243,44 @@ An ActiveEffect on the item carries mechanisms, not outcomes:
 `system.changes` is where the *intent* goes. `flags` is where *module behaviour*
 goes, and each module reads its own scope.
 
+### The 6.x trap: whose values fill an effect's `@` references
+
+dnd5e 6 gives every effect change a **Replacement** setting — Origin, Target or
+None — which decides whose data fills that change's `@` references when the effect
+is applied. DAE follows it as of v14.6.0. **The default is None.**
+
+In 5.x DAE filled **every** reference from the caster at the moment of application,
+whatever the setting. So an effect written then behaves differently now, and it
+fails quietly:
+
+```js
+// Written on 5.x, meaning "use MY spell DC". On 6.x with Replacement unset this
+// resolves against the TARGET instead.
+{ key: 'system.bonuses.spell.dc', mode: 2, value: '@attributes.spell.dc' }   // 5.x
+{ key: 'system.rolls.spell.dc',   mode: 2, value: '@attributes.spell.dc' }   // 6.x path
+```
+
+Anything that reads a value from the caster — a DC, a bonus built from
+`@abilities` or `@scale`, a damage rider scaled off the origin — now needs either:
+
+- the change's **Replacement set to Origin** (the 6.x way, and the one to write), or
+- the world set to **Legacy DAE** application, or the effect's own
+  "Effect application" set to Legacy, or the item/pack marked with
+  "DAE: Effects use legacy application".
+
+**Application facts are always filled from the application**, so these still work
+with Replacement left alone: `@item`, `@activity`, `@spellLevel`, `@itemLevel`,
+`@scaling`, `@damage`, `@critical`, `@fumble`, `@itemCardUuid`, `@actorUuid`. Macro
+arguments (`macro.execute`, `macro.itemMacro`) are still filled from the caster.
+`##` still defers a reference to the target. Transfer (passive) effects are
+unaffected.
+
+Everything else DAE changed in v14.6.0, for completeness: `ATL.*` change keys are
+converted to `token.*` on save and the `atlCompatibility` setting is gone; `[[expr]]`
+now always posts its roll to chat, so use `[[[expr]]]` to roll silently; `dae.roll()`
+is deprecated; and **a duration on a transfer effect no longer runs at all** — such
+an effect has to be moved into the activity's Effects list instead.
+
 ---
 
 ## 8. Uses need two halves
@@ -268,13 +328,13 @@ item's is not.
 
 ---
 
-## 10. Vocabulary values (5.3.3)
+## 10. Vocabulary values (6.x)
 
 ```
-abilities        str dex con int wis cha
+abilities        str dex con int wis cha       (+ hon, san added by some systems)
 damage types     acid bludgeoning cold fire force lightning necrotic
                  piercing poison psychic radiant slashing thunder
-template types   cone cube cylinder line sphere square circle rect radius
+template types   circle cone cube cylinder line radius sphere square wall ring
 activation       action bonus reaction legendary lair crew special minute
                  hour day none
 duration units   inst turn round minute hour day perm spec disp
@@ -285,8 +345,38 @@ conditions       blinded charmed deafened exhaustion frightened grappled
                  restrained stunned unconscious
 ```
 
+Activity types: `attack cast check damage enchant forward heal order save summon
+teleport transform utility`. `teleport` is the 6.x addition.
+
 `exhaustion` is a **level**, not a boolean — it takes a numeric value, and
 dnd5e stores it under `system.attributes.exhaustion`.
+
+### Which bonus paths moved in 6.x
+
+Read out of `ActiveEffect5e.SHIM_FIELDS` in `module/documents/active-effect.mjs`,
+which is dnd5e's own list of old key → new key. These are the ones relevant to
+abilities:
+
+| 5.x key | 6.x key |
+|---|---|
+| `system.bonuses.mwak.attack` | `system.rolls.attack.mwak.bonus` |
+| `system.bonuses.mwak.damage` | `system.rolls.damage.mwak.bonus` |
+| `system.bonuses.abilities.check` | `system.rolls.ability.check.bonus` |
+| `system.bonuses.abilities.save` | `system.rolls.ability.save.bonus` |
+| `system.bonuses.abilities.skill` | `system.rolls.ability.skill.bonus` |
+| `system.attributes.init.bonus` | `system.attributes.init.roll.bonus` |
+| `system.attributes.concentration.bonuses.save` | `system.attributes.concentration.roll.bonus` |
+| `system.attributes.death.bonuses.save` | `system.attributes.death.roll.bonus` |
+| `system.attributes.movement.<speed>` | `system.attributes.movement.speeds.<speed>` |
+| `system.attributes.senses.<sense>` | `system.attributes.senses.ranges.<sense>` |
+| `system.rarity` | `system.rarities` |
+
+Same pattern for `msak`, `rwak` and `rsak`. **`system.bonuses.spell.dc` did NOT
+move** — it is still the spell save DC bonus, and an effect like
+`saveDC=@attributes.spell.dc` is unaffected by this change.
+
+Anything not in that table (traits, skills, tools, spells, resources, currency,
+`system.attributes.ac`, `hp`, `prof`) is unchanged.
 
 ---
 
@@ -317,8 +407,11 @@ Recorded so they are not mistaken for facts:
 
 - The full list of `flags.cat.*` config keys per generic. Read from the installed
   CAT module or a working example.
-- Whether `enchant`, `summon` and `transform` payloads need additional required
-  fields beyond their block. Not exercised.
+- Whether `enchant`, `summon`, `transform` and `teleport` payloads need additional
+  required fields beyond their block. `teleport` is new in 6.x and is not
+  exercised here.
 - Behaviour of `forward` and `order` activities. Not exercised.
-- dnd5e 6.x differs. This module targets 5.3.3 and `system.rolls.*` in particular
-  is a 6.x path; 5.3.3 uses `system.bonuses.*`.
+- What `system.rolls.*` accepts *in full*. The redirects in section 10 were read out
+  of dnd5e's own `SHIM_FIELDS`, so they are authoritative for the keys listed — but
+  `system.rolls` also holds non-persisted proficiency and roll-mode fields that are
+  not bonus targets, and those are not enumerated here.

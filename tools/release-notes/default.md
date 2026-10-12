@@ -35,7 +35,7 @@ Paste an ability description into the sidebar. The agent:
 
 ## Requirements
 
-Foundry VTT 13+ (verified on 14), and the **dnd5e** system at **5.3.3**. This release targets the 5.3.3 API specifically; it is not written against dnd5e 6.x.
+Foundry VTT 14+ (verified on 14.368), and the **dnd5e** system at **6.x** (verified on 6.0.6). This release targets the 6.x API and is not written against dnd5e 5.x.
 
 Requires `midi-qol`, `dae` and `cat`. Recommends `chris-premades` and `dfreds-convenient-effects`.
 

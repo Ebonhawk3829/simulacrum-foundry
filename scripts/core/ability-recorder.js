@@ -16,13 +16,21 @@
  *
  * WHAT IT WATCHES, AND WHY THOSE THINGS
  *
- * Core Foundry document hooks rather than midi-qol's workflow hooks. midi
- * generates its hook names from an internal state table (`pre<State>` /
- * `post<State>`, see `Workflow.stateHooks`), so binding to them couples this to
- * midi's internals and a version bump would silently stop the recording. The
- * core hooks are a stable public API and, because midi routes its results
- * through ordinary document updates, they capture what actually happened
- * regardless of which module produced it.
+ * dnd5e's own activity lifecycle hooks, plus core document hooks for the chat
+ * that results. Not midi-qol's workflow hooks: midi generates its hook names from
+ * an internal state table (`pre<State>` / `post<State>`, see `Workflow.stateHooks`),
+ * so binding to them couples this to midi's internals and a version bump would
+ * silently stop the recording. The dnd5e hooks are a stable public API and, because
+ * midi routes its results through ordinary document updates, they capture what
+ * actually happened regardless of which module produced it.
+ *
+ * All four hook names were read out of dnd5e's source rather than recalled, after
+ * an earlier version of this file bound `dnd5e.useActivity` - a hook that does not
+ * exist anywhere in dnd5e, midi-qol, DAE, CAT or Chris's Premades. It was a
+ * garbled memory of `dnd5e.preUseActivity`, and because Hooks.on happily accepts
+ * any string, nothing complained: the recorder was simply never called. The real
+ * hooks are in `module/documents/activity/mixin.mjs` and are identical in
+ * dnd5e 5.3.3 and 6.0.6.
  *
  * Nothing here decides whether an outcome is correct. It records facts and says
  * what it could not see, and the judgement happens in conversation.
@@ -47,6 +55,21 @@ const MAX_MESSAGES = 12;
  * case that does not come up in practice.
  */
 let active = null;
+
+/**
+ * A use that has been started but not yet confirmed.
+ *
+ * `dnd5e.preUseActivity` fires before the configuration dialog and before
+ * consumption, and the user can cancel either. So it is the right moment to take
+ * the before-snapshot - concentration is begun and uses are spent after it, and a
+ * snapshot taken later would miss both - but the wrong moment to commit to
+ * recording. The use is promoted to `active` once dnd5e says a usage card is
+ * being created, which only happens if the use is genuinely going ahead.
+ */
+let pending = null;
+
+/** Handle for the settle timer, so a superseded use cannot write late. */
+let settleTimer = null;
 
 /**
  * Snapshot the bits of an actor a use can plausibly change.
@@ -130,8 +153,9 @@ function describeUse(activity, usageConfig) {
  * Begin recording a use.
  * @param {object} item
  * @param {object} context - Whatever is already known about the use
+ * @param {string} [startedAt] - When the use started, from the pre-use hook
  */
-function begin(item, context) {
+function begin(item, context, startedAt) {
   const actor = item.actor ?? null;
   const targets = Array.from(game.user?.targets ?? [])
     .map(t => t.actor)
@@ -140,7 +164,10 @@ function begin(item, context) {
   active = {
     itemUuid: item.uuid,
     itemName: item.name,
-    startedAt: new Date().toISOString(),
+    // The pre-use timestamp, so the record's clock matches when the user acted
+    // rather than when the card happened to be created.
+    startedAt: startedAt ?? new Date().toISOString(),
+    completed: false,
     context,
     actor: actor ? snapshotActor(actor) : null,
     targets: targets.map(snapshotActor),
@@ -199,12 +226,36 @@ function stripHtml(html) {
 }
 
 /**
+ * Capture the usage card itself as evidence.
+ *
+ * The card is the message dnd5e built for this specific activity use, so it is
+ * stronger evidence than anything scraped from the chat log: it cannot be the
+ * wrong message, and its rolls are the ones this activity just made. Core chat
+ * capture still runs as a backstop, because a module may post additional cards
+ * that matter.
+ * @param {object} card
+ */
+function captureCard(card) {
+  if (!active || !card) return;
+  const rolls = card.rolls ?? [];
+  const text = rolls.length
+    ? rolls.map(r => `${r.formula} = ${r.total}`).join('; ')
+    : stripHtml(card.content ?? '').slice(0, 400);
+
+  active.messages.push({ speaker: card.speaker?.alias ?? null, text, rolls: [], fromCard: true });
+}
+
+/**
  * Finish the recording and write it to the item.
  * @returns {Promise<object|null>}
  */
 async function finish() {
   const run = active;
   active = null;
+  if (settleTimer) {
+    clearTimeout(settleTimer);
+    settleTimer = null;
+  }
   if (!run) return null;
 
   const item = await fromUuid(run.itemUuid).catch(() => null);
@@ -235,8 +286,7 @@ async function finish() {
     }),
     chat: run.messages,
     errors: run.errors.length ? run.errors : undefined,
-    // Stated plainly so an empty result is not mistaken for a broken ability.
-    caveat: run.messages.length ? undefined : 'no chat output was captured for this use',
+    ...caveatsFor(run),
   };
 
   try {
@@ -247,6 +297,27 @@ async function finish() {
   }
 
   return observed;
+}
+
+/**
+ * What this record could not see.
+ *
+ * Stated plainly, because an incomplete record must not be read as evidence that
+ * nothing happened. Two different gaps are worth naming separately: no chat at
+ * all, and a workflow that never reported finishing - the latter usually means it
+ * threw, or is still running on a slow world, so the after-snapshot is early.
+ * @param {object} run
+ * @returns {object}
+ */
+function caveatsFor(run) {
+  const caveats = [];
+  if (!run.messages.length) caveats.push('no chat output was captured for this use');
+  if (!run.completed) {
+    caveats.push(
+      'the use did not report completing before the record was written, so changes made after this point are missing'
+    );
+  }
+  return caveats.length ? { caveat: caveats.join('; ') } : {};
 }
 
 /**
@@ -262,23 +333,59 @@ function resolveTarget(uuid) {
 /**
  * Register the hooks that drive recording.
  *
+ * FOUR HOOKS, EACH DOING ONE JOB
+ *
+ * `preUseActivity` takes the before-snapshot, because concentration and resource
+ * consumption happen immediately after it. `preCreateUsageMessage` promotes the
+ * pending use to active, and is the point of no return: dnd5e only builds a usage
+ * card when the use is actually going ahead, so a cancelled dialog never starts a
+ * recording. `postCreateUsageMessage` captures the card as direct evidence.
+ * `postUseActivity` notes that the workflow finished, which is what lets `finish`
+ * say whether it waited or settled.
+ *
+ * `createChatMessage` and `error` remain, because a module posting an extra card
+ * or an error mid-workflow is exactly the thing a bare record would miss.
+ *
  * Called once at module load. Kept as a function rather than top-level side
  * effects so a test can load this module without wiring hooks into a world.
  */
 export function registerAbilityRecorder() {
-  // dnd5e fires this for a roll initiated from a sheet. midi-qol routes item uses
-  // through the same activity path, so this catches both entry points.
-  Hooks.on('dnd5e.useActivity', (activity, usageConfig, _dialogConfig, _messageConfig) => {
+  Hooks.on('dnd5e.preUseActivity', (activity, _usageConfig, _dialogConfig, _messageConfig) => {
     const item = activity?.item;
     if (!item || !shouldRecord(item)) return;
 
-    begin(item, describeUse(activity, usageConfig));
+    pending = {
+      item,
+      context: describeUse(activity, _usageConfig),
+      startedAt: new Date().toISOString(),
+    };
+  });
+
+  Hooks.on('dnd5e.preCreateUsageMessage', activity => {
+    const item = activity?.item;
+    // Only promote the pending use if it is this item's, so an unrelated activity
+    // firing concurrently cannot hijack the recording.
+    if (!pending || !item || pending.item.uuid !== item.uuid) return;
+
+    begin(pending.item, pending.context, pending.startedAt);
+    pending = null;
 
     // The settle window exists because effects are applied asynchronously and a
     // record read immediately would show nothing. Its length is a guess tuned for
     // a normal world; a very slow workflow would under-record, which is why a
     // missing chat record is called out in the output.
-    setTimeout(() => void finish(), SETTLE_MS);
+    if (settleTimer) clearTimeout(settleTimer);
+    settleTimer = setTimeout(() => void finish(), SETTLE_MS);
+  });
+
+  // The card dnd5e built for this use. Captured directly rather than scraped,
+  // because it cannot be the wrong message.
+  Hooks.on('dnd5e.postCreateUsageMessage', (_activity, card) => captureCard(card));
+
+  // A use that reached `preCreateUsageMessage` and then threw would otherwise keep
+  // recording until the timer ran out, attributing whatever happened next to it.
+  Hooks.on('dnd5e.postUseActivity', () => {
+    if (active) active.completed = true;
   });
 
   // Chat output during the window is the primary evidence: it holds the rolls and

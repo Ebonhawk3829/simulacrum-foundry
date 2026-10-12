@@ -7,7 +7,7 @@
  * THREE SOURCES, DELIBERATELY DIFFERENT
  *
  * 1. Documents shipped inside this module (`reference/`). Written by hand about
- *    dnd5e 5.3.3 and the module combination this world runs. Small, and versioned
+ *    dnd5e 6.x and the module combination this world runs. Small, and versioned
  *    with the code.
  * 2. Files belonging to the modules the world has INSTALLED. midi-qol alone ships
  *    a flag reference and a macro guide; Chris's Premades ships docs. Reading them
@@ -72,7 +72,7 @@ export class ReadReferenceTool extends BaseTool {
   constructor() {
     super(
       'read_reference',
-      'List or search the reference material available for writing these automations: the dnd5e 5.3.3 field guide shipped with this module, and the documentation belonging to the modules installed in this world (midi-qol\'s flag reference and macro guide, DAE, CAT, and the Chris\'s Premades docs). Use this BEFORE authoring an activity or setting a flag, so the field names and shapes come from the actual system rather than from memory. Read-only.'
+      'List or search the reference material available for writing these automations: the dnd5e 6.x field guide shipped with this module, and the documentation belonging to the modules installed in this world (midi-qol\'s flag reference and macro guide, DAE, CAT, and the Chris\'s Premades docs). Use this BEFORE authoring an activity or setting a flag, so the field names and shapes come from the actual system rather than from memory. Read-only.'
     );
     this.requiresConfirmation = false; // read-only
     this._index = null; // in-memory only, for the life of the page
@@ -100,7 +100,7 @@ export class ReadReferenceTool extends BaseTool {
         file: {
           type: 'string',
           description:
-            'Read one reference file in full, by the path a listing returned (e.g. "module/dnd5e-5.3.3-fields.md"). Use this after a search shows you which file is worth reading properly.',
+            'Read one reference file in full, by the path a listing returned (e.g. "module/dnd5e-6.0-fields.md"). Use this after a search shows you which file is worth reading properly.',
         },
       },
     };
@@ -418,7 +418,7 @@ export class ReadReferenceTool extends BaseTool {
 
     const content = { ok: true, query: params.query, matchCount: matches.length, matches };
     if (!matches.length) {
-      content.next = `Nothing matched "${params.query}". Try a shorter or different term. The dnd5e field guide reads in full with file "module/dnd5e-5.3.3-fields.md", and live field shapes are available from inspect_document_schema.`;
+      content.next = `Nothing matched "${params.query}". Try a shorter or different term. The dnd5e field guide reads in full with file "module/dnd5e-6.0-fields.md", and live field shapes are available from inspect_document_schema.`;
     } else {
       content.next =
         'Read the relevant file in full with the "file" argument before authoring anything. A match shows one passage, and the shape you need is often a little further up.';

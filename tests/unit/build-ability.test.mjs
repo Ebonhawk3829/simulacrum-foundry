@@ -178,7 +178,7 @@ const TANGLEFOOT = {
  *
  * Handed to the tool rather than derived by it, which is the whole point of the
  * current design: the tool writes documents, the caller decides what the ability
- * is. These are the dnd5e 5.3.3 fields, written the way the system reads them.
+ * is. These are the dnd5e 6.x fields, written the way the system reads them.
  */
 const ACTIVITY = {
   activities: [

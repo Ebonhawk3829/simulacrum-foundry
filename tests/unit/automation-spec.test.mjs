@@ -250,7 +250,7 @@ test('every declared vocabulary referenced by the contract exists', () => {
   }
 });
 
-test('spec vocabularies match what we verified against dnd5e 5.3.3', () => {
+test('spec vocabularies match what we verified against dnd5e 6.0.6', () => {
   assert.deepEqual(ABILITIES, ['str', 'dex', 'con', 'int', 'wis', 'cha']);
   assert.ok(DAMAGE_TYPES.includes('bludgeoning'));
   assert.ok(DAMAGE_TYPES.includes('necrotic'));

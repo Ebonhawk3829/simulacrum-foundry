@@ -5,7 +5,7 @@
  * heal, a damage roll. Different abilities choose different activities and
  * different payloads, but they assemble them from the same parts, so those parts
  * live here: one implementation of each, and one place to be right about dnd5e
- * 5.3.3.
+ * 6.x.
  *
  * The comments that matter most are the ones explaining a field that is easy to
  * get wrong, because those mistakes are silent: the item still saves and still

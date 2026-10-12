@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Moves the target from dnd5e 5.3.3 to dnd5e 6.x, and fixes a hook that meant the
+recorded-runs loop never ran at all.
+
+### Fixed
+
+- **the recorder was bound to a hook that does not exist.** `dnd5e.useActivity` appears in no version of dnd5e, midi-qol, DAE, CAT or Chris's Premades — only in this module, where it was a garbled memory of `dnd5e.preUseActivity`. `Hooks.on` accepts any string, so nothing complained and the recorder was never called: building worked, the item was marked for testing, and nothing was ever recorded. It now binds dnd5e's real activity lifecycle — `preUseActivity` for the before-snapshot (concentration and resource consumption happen right after it), `preCreateUsageMessage` to start recording only once the use is genuinely going ahead, `postCreateUsageMessage` to capture the usage card directly, and `postUseActivity` to note completion. All four are identical in dnd5e 5.3.3 and 6.0.6, so this is version-independent.
+
+### Changed
+
+- **target moved to dnd5e 6.x** (verified 6.0.6). Requires Foundry 14.367+. The ecosystem had caught up: midi-qol v14.6.0, DAE v14.6.0, CAT 0.1.2 and CPR 2.1.2 all declare 6.0.0–6.999, with CAT and CPR shipping their 6.x lines on the same day. The 5.x line was frozen — midi-qol and DAE had gone 6-only and were not backporting.
+- the write path needed **no change**: `Item.createActivity` / `updateActivity` / `deleteActivity` and `ActivitiesField extends MappingField` are byte-identical between 5.3.3 and 6.0.6.
+- vocabularies verified against 6.0.6 by diffing `CONFIG`: only two additions, `teleport` (activity type) and `ring` (area target type). Abilities, damage types, activation types, duration units, use periods, recovery types and the movement/range units are all identical. A vocabulary that looked different was a subset this module chooses, not a system change.
+- `reference/dnd5e-5.3.3-fields.md` becomes `reference/dnd5e-6.0-fields.md`, with a new section on the 6.x bonus redirects (`system.bonuses.<mwak|msak|rwak|rsak>.attack` → `system.rolls.attack.<ability>.bonus`, and friends, read out of dnd5e's own `ActiveEffect5e.SHIM_FIELDS`) and one on DAE's per-change **Replacement** setting, which decides whether an effect's `@` references resolve against the caster or the target. Old bonus keys are auto-redirected with a compatibility warning until 6.2, so existing effects keep working for now.
+- DAE v14.6.0 also stops a duration on a transfer effect working at all, converts `ATL.*` keys to `token.*`, and deprecates `dae.roll()`. Noted in the reference and the cheatsheet.
+
+### Added
+
+- `tests/unit/ability-recorder.test.mjs`, which asserts the recorder binds the hooks dnd5e actually carries and specifically not `dnd5e.useActivity`. A unit test cannot prove a hook fires in a world, but it can prove the names are real — which was the entire bug.
+- `resources/refresh-extracts.mjs` and `resources/EXTRACTS.json` in the workspace, which refresh the curated module extracts from pinned tags, follow files that moved upstream, remove files that are gone, and record a hash per file so clone drift is visible. The extracts are curated subsets rather than mirrors, so a recursive copy would either destroy the curation or silently keep code that no longer exists.
+
 ## [0.1.1] - 2026-10-12
 
 Fixes a build that reported success and produced an item with no activities and

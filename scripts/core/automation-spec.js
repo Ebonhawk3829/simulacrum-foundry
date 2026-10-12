@@ -8,17 +8,23 @@
  * agent that names fields clearly gets a correct build for free.
  *
  * Pure module: no Foundry globals, so every rule here is unit-testable. The
- * vocabulary lists mirror dnd5e 5.3.3's CONFIG, kept local so validation works
+ * vocabulary lists mirror dnd5e 6.x's CONFIG, kept local so validation works
  * in plain Node and so a system update cannot silently widen what we accept.
+ *
+ * These are SUBSETS chosen for ability authoring, not copies. A value absent here
+ * is not necessarily invalid; it means this module does not offer it. Verified
+ * against 6.0.6: abilities, damage types, activation types, duration units, use
+ * periods, recovery types and movement/range units are all unchanged from 5.3.3,
+ * so only `template types` needed a new entry (`ring`).
  */
 
-/** dnd5e 5.3.3 CONFIG.abilities */
+/** dnd5e CONFIG.abilities */
 export const ABILITIES = Object.freeze(['str', 'dex', 'con', 'int', 'wis', 'cha']);
 
-/** dnd5e 5.3.3 CONFIG.distanceUnits (the subset useful for abilities) */
+/** dnd5e CONFIG.distanceUnits (the subset useful for abilities) */
 export const RANGE_UNITS = Object.freeze(['self', 'touch', 'spec', 'ft', 'mi', 'km', 'm']);
 
-/** dnd5e 5.3.3 CONFIG.areaTargetTypes */
+/** dnd5e CONFIG.areaTargetTypes. `ring` is new in 6.x. */
 export const TEMPLATE_TYPES = Object.freeze([
   'circle',
   'cone',
@@ -26,12 +32,13 @@ export const TEMPLATE_TYPES = Object.freeze([
   'cylinder',
   'line',
   'radius',
+  'ring',
   'sphere',
   'square',
   'wall',
 ]);
 
-/** dnd5e 5.3.3 CONFIG.damageTypes */
+/** dnd5e CONFIG.damageTypes */
 export const DAMAGE_TYPES = Object.freeze([
   'acid',
   'bludgeoning',
@@ -48,7 +55,7 @@ export const DAMAGE_TYPES = Object.freeze([
   'thunder',
 ]);
 
-/** dnd5e 5.3.3 CONFIG.abilityActivationTypes */
+/** dnd5e CONFIG.abilityActivationTypes */
 export const ACTIVATION_TYPES = Object.freeze([
   'action',
   'bonus',
@@ -65,7 +72,7 @@ export const ACTIVATION_TYPES = Object.freeze([
   'none',
 ]);
 
-/** dnd5e 5.3.3 CONFIG.durationUnits */
+/** dnd5e CONFIG.durationUnits */
 export const DURATION_UNITS = Object.freeze([
   'inst',
   'turn',
@@ -80,14 +87,14 @@ export const DURATION_UNITS = Object.freeze([
   'disp',
 ]);
 
-/** dnd5e 5.3.3 CONFIG.limitedUsePeriods, restricted to what a spell-like ability uses */
+/** dnd5e CONFIG.limitedUsePeriods, restricted to what a spell-like ability uses */
 export const USE_PERIODS = Object.freeze(['lr', 'sr', 'day', 'charges', 'recharge', 'turn', 'round']);
 
-/** dnd5e 5.3.3 CONFIG.limitedUseType */
+/** dnd5e CONFIG.limitedUseType */
 export const RECOVERY_TYPES = Object.freeze(['recoverAll', 'loseAll', 'formula']);
 
 /**
- * Condition ids from dnd5e 5.3.3's status effect list. These are the ones an
+ * Condition ids from dnd5e's status effect list. These are the ones an
  * ability is likely to impose; the builder accepts others with a warning so an
  * unusual but valid id is not blocked.
  */

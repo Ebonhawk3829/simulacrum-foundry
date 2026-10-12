@@ -33,7 +33,7 @@ const MANIFEST = JSON.stringify({ id: 'midi-qol', readme: 'README.md' });
 // This module declares its reference files, so the probe needs no guessing.
 const SIMULACRUM_MANIFEST = JSON.stringify({
   id: 'simulacrum',
-  flags: { simulacrum: { reference: ['dnd5e-5.3.3-fields.md'] } },
+  flags: { simulacrum: { reference: ['dnd5e-6.0-fields.md'] } },
 });
 
 test('lists the reference it can reach', async () => {
@@ -41,7 +41,7 @@ test('lists the reference it can reach', async () => {
   const result = await withFetch(
     {
       'modules/simulacrum/module.json': SIMULACRUM_MANIFEST,
-      'modules/simulacrum/reference/dnd5e-5.3.3-fields.md': '# Fields\n\nsave.dc is a formula.',
+      'modules/simulacrum/reference/dnd5e-6.0-fields.md': '# Fields\n\nsave.dc is a formula.',
       'modules/midi-qol/module.json': MANIFEST,
       'modules/midi-qol/FLAGS.md': '# Flags\n\nfail.all fails every roll.',
     },
@@ -62,7 +62,7 @@ test('a missing module costs nothing but itself', async () => {
   const result = await withFetch(
     {
       'modules/simulacrum/module.json': SIMULACRUM_MANIFEST,
-      'modules/simulacrum/reference/dnd5e-5.3.3-fields.md': '# Fields',
+      'modules/simulacrum/reference/dnd5e-6.0-fields.md': '# Fields',
     },
     () => tool.execute({})
   );
@@ -78,7 +78,7 @@ test('search returns passages with a line number', async () => {
   const result = await withFetch(
     {
       'modules/simulacrum/module.json': SIMULACRUM_MANIFEST,
-      'modules/simulacrum/reference/dnd5e-5.3.3-fields.md':
+      'modules/simulacrum/reference/dnd5e-6.0-fields.md':
         '# Fields\n\nsome prose\n\nthe DC is computed from range, never target\n\nmore prose',
     },
     () => tool.execute({ query: 'computed from range', context: 20 })
@@ -96,7 +96,7 @@ test('a search with no match says how to look differently', async () => {
   const result = await withFetch(
     {
       'modules/simulacrum/module.json': SIMULACRUM_MANIFEST,
-      'modules/simulacrum/reference/dnd5e-5.3.3-fields.md': '# Fields',
+      'modules/simulacrum/reference/dnd5e-6.0-fields.md': '# Fields',
     },
     () => tool.execute({ query: 'nonexistent-term' })
   );
@@ -112,9 +112,9 @@ test('reading one file returns it in full', async () => {
   const result = await withFetch(
     {
       'modules/simulacrum/module.json': SIMULACRUM_MANIFEST,
-      'modules/simulacrum/reference/dnd5e-5.3.3-fields.md': text,
+      'modules/simulacrum/reference/dnd5e-6.0-fields.md': text,
     },
-    () => tool.execute({ file: 'module/dnd5e-5.3.3-fields.md' })
+    () => tool.execute({ file: 'module/dnd5e-6.0-fields.md' })
   );
 
   const body = JSON.parse(result.content);
@@ -148,7 +148,7 @@ test('a source filter narrows the probe', async () => {
   const result = await withFetch(
     {
       'modules/simulacrum/module.json': SIMULACRUM_MANIFEST,
-      'modules/simulacrum/reference/dnd5e-5.3.3-fields.md': '# Fields',
+      'modules/simulacrum/reference/dnd5e-6.0-fields.md': '# Fields',
       'modules/midi-qol/module.json': MANIFEST,
       'modules/midi-qol/FLAGS.md': '# Flags',
     },
@@ -164,11 +164,11 @@ test('a path from a listing can be read back without re-probing', async () => {
   const tool = new ReadReferenceTool();
   const files = {
     'modules/simulacrum/module.json': SIMULACRUM_MANIFEST,
-    'modules/simulacrum/reference/dnd5e-5.3.3-fields.md': '# Fields\n\nbody text',
+    'modules/simulacrum/reference/dnd5e-6.0-fields.md': '# Fields\n\nbody text',
   };
 
   await withFetch(files, () => tool.execute({ source: 'module' }));
-  const result = await withFetch(files, () => tool.execute({ file: 'module/dnd5e-5.3.3-fields.md' }));
+  const result = await withFetch(files, () => tool.execute({ file: 'module/dnd5e-6.0-fields.md' }));
 
   assert.equal(JSON.parse(result.content).ok, true);
 });
