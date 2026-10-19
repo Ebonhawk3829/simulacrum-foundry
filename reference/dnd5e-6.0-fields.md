@@ -281,6 +281,35 @@ now always posts its roll to chat, so use `[[[expr]]]` to roll silently; `dae.ro
 is deprecated; and **a duration on a transfer effect no longer runs at all** — such
 an effect has to be moved into the activity's Effects list instead.
 
+### DAE 14.6.2 rewrote effect sourcing — an applied effect's `origin` is no longer its item
+
+This is the change most likely to bite an authored effect, because it is silent. As of
+DAE 14.6.2 an applied effect's origin is the caster's **concentration effect**, or the
+**activity** if there is none — not the item. Two consequences:
+
+- Applied effects **no longer carry `flags.dae.itemData`**. `flags.dae.applicationData`
+  keeps only damage, critical and fumble. Use the accessors below instead of reaching
+  for the item off the effect.
+- The `origin` DAE and midi read is unchanged (it still lives in `system.origin`), and
+  dnd5e's Replacement setting (§7) still decides whose data fills `@` references. The
+  sourcing change is about *what the effect points at*, not *what fills `@`*.
+
+```js
+DAE.getEffectSource(effect)      // { actorUuid, itemUuid, activityUuid, controllingEffectUuid, sourceEffectUuid, messageUuid }
+DAE.getEffectItem(effect)        // live Item, or one built from data — undefined during data prep for a deleted item
+DAE.getEffectItemData(effect)    // the item's stored data; use THIS during prepareData
+DAE.getMessageItemData(message)
+DAE.getActorItemData(actor, uuid)
+DAE.effectMatchesSource(effect, uuid)
+```
+
+Also in 14.6.2: `lastArg.origin` is deprecated → **`lastArg.source`** (+ `lastArg.systemOrigin`);
+`flags.dae.legacyApplication` is renamed **`flags.dae.applicationMode`**
+(`default`/`dnd5e`/`legacy`, unset follows the world setting); a boolean
+`flags.dae.stackable` now means `false` = none / `true` = multi; `flags.dae.deleteOrigin`
+applies **only to transfer effects**; and `dae.eval(...)` now evaluates **in dnd5e
+formula fields** with that field's full roll data, not only at change-application.
+
 ---
 
 ## 8. Uses need two halves
@@ -378,6 +407,27 @@ move** — it is still the spell save DC bonus, and an effect like
 Anything not in that table (traits, skills, tools, spells, resources, currency,
 `system.attributes.ac`, `hp`, `prof`) is unchanged.
 
+### Auto-fail and auto-success moved onto the roll fields (midi-qol 14.6.3)
+
+The other half of the same idea, but midi-qol's change rather than dnd5e's. midi extends
+dnd5e's `D20RollModificationField` so every D20 roll field now has `fail` and `success`
+beside `bonus`/`min`/`max`/`mode`. The old midi flag keys are **deprecated** — DAE
+converts them and reports the deprecation, but write the field:
+
+| Deprecated (midi ≤14.6.2) | Field (14.6.3) |
+|---|---|
+| `flags.midi-qol.fail.ability.save.dex` | `system.abilities.dex.save.roll.fail` |
+| `flags.midi-qol.fail.ability.check.all` | `system.rolls.ability.check.fail` |
+| `flags.midi-qol.fail.attack.all` | `system.rolls.attack.fail` |
+| `flags.midi-qol.fail.skill.ste` | `system.skills.ste.roll.fail` |
+| `flags.midi-qol.success.*` (same shapes) | `….roll.success` |
+| `flags.midi-qol.concentrationSaveBonus` | `system.attributes.concentration.roll.bonus` |
+
+Concentration, death and initiative have their own: `system.attributes.concentration.roll.fail|success`,
+`system.attributes.death.roll.fail|success`, `system.attributes.init.roll.fail|success`.
+Also note `flags.midi-qol.optional.<name>.<rollType>` **without** the `.all` suffix is no
+longer rewritten to `.all` — write `flags.midi-qol.optional.<name>.<rollType>.all`.
+
 ---
 
 ## 11. Where the ecosystem's own conventions live
@@ -402,8 +452,9 @@ installed, so it cannot go stale the way a snapshot would.
 **Expiry is the exception, and it has its own file.** When an effect should end —
 on a turn, on a rest, when the bearer is attacked — the vocabulary is in
 `dae-effect-expiry.md`. Two things there are easy to get wrong: `duration.expiry`
-is the field, not `flags.dae.specialDuration`, and several expiry values silently
-discard `duration.value`.
+is the field, not `flags.dae.specialDuration`, and on plain dnd5e 6 several expiry
+values silently discard `duration.value` (DAE 14.6.2 restores it for source/target
+turn expiries — read the file).
 
 ---
 

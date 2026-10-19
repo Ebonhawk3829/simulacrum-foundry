@@ -4,7 +4,7 @@ For the abilities flags cannot express. Reading game state, branching on who did
 what, or calling midi-qol's workflow utilities needs code, and about 40% of the
 abilities in this world's own library need exactly that.
 
-Written from CAT's own source at v0.1.2 (`lib/embeddedMacros.mjs`, `lib/event.mjs`)
+Written from CAT's own source at v0.1.3 (`lib/embeddedMacros.mjs`, `lib/event.mjs`)
 and from Chris's Premades' macros, which are the working examples.
 
 ---
@@ -51,6 +51,12 @@ build_ability({
 
 The builder syntax-checks every script before writing anything, so a script that
 cannot parse is refused rather than stored.
+
+`embeddedMacros` lives on the **item**. As of 0.1.3 CAT collects an item's macros and
+an activity's macros of the same event and pass **separately** (an activity's are
+grouped under an `activity.` key), so they no longer replace one another — both run.
+Put a script on the item when it should apply to every use, and on a specific activity
+only when it should not.
 
 ## 2. What the script can see
 

@@ -1,7 +1,7 @@
 # CPR generic macro settings
 
 Every generic macro in Chris's Premades and the settings each accepts in
-`flags.cat.genericConfig`. Generated from CPR source at **2.1.2** by
+`flags.cat.genericConfig`. Generated from CPR source at **2.1.3** by
 `resources/generate-cpr-config.mjs` — do not hand-edit; re-run the generator.
 
 Nothing publishes this list. CPR declares it in code, on each generic's exported
@@ -37,7 +37,7 @@ Types: `checkbox` (boolean), `text`, `number`, `select`, `select-many` (array),
 `selectIdentifiers` (array of item identifiers). Default is what is used when the
 setting is absent.
 
-**51 generics, 275 settings.** A generic that takes no
+**56 generics, 297 settings.** A generic that takes no
 settings is not listed — it needs no configuration to attach.
 
 ---
@@ -70,6 +70,12 @@ settings is not listed — it needs no configuration to attach.
 | `activityId` | selectActivity | `''` | Activity |
 | `animation` | selectAnimation | `[object Object]` | Animation |
 
+## `areaAnimation`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `animation` | selectAnimation | `[object Object]` | Animation |
+
 ## `attackBonus`
 
 | Setting | Type | Default | What it does |
@@ -89,6 +95,7 @@ settings is not listed — it needs no configuration to attach.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
+| `animation` | selectAnimation | `[object Object]` | Played on the hit target when the rider is used. |
 | `bonus` | text | `''` | Extra damage added to the roll when this option is chosen. |
 | `bonusDamageType` | select | `''` | Damage type of the extra damage. Uses the attack's damage type when empty. |
 | `creatureTypeBonus` | text | `''` | Extra damage added to the bonus when every hit target is one of the Target Creature Types. |
@@ -103,7 +110,14 @@ settings is not listed — it needs no configuration to attach.
 | `suppressedBy` | selectIdentifiers | `[]` | Do not offer this option when the actor has an item with one of these identifiers. |
 | `ownTurn` | checkbox | `false` | In combat, only offer this option on the attacker's own turn. |
 | `selfAsTouch` | checkbox | `false` | When the activity's range is Self, roll it on the hit targets instead of the attacker. |
+| `riderNearbyRange` | number | `0` | The rider activity also targets creatures within this distance of the hit target. 0 targets the hit target only. |
 | `useActivityCosts` | checkbox | `false` | Use Activity Costs |
+
+## `banish`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `animation` | selectAnimation | `[object Object]` | Animation |
 
 ## `bladeSpell`
 
@@ -153,14 +167,6 @@ settings is not listed — it needs no configuration to attach.
 |---|---|---|---|
 | `conditions` | select-many | `[]` | Conditions |
 
-## `combatStartItemUses`
-
-| Setting | Type | Default | What it does |
-|---|---|---|---|
-| `identifier` | text | `''` | Identifier |
-| `minimum` | number | `1` | Minimum Item Uses |
-| `fromZeroOnly` | checkbox | `true` | Trigger From Zero Only |
-
 ## `conditionAutoSave`
 
 | Setting | Type | Default | What it does |
@@ -196,11 +202,20 @@ settings is not listed — it needs no configuration to attach.
 | `rollItem` | checkbox | `false` | Roll this item when used. |
 | `maxTargets` | number | `0` | Limit the bonus to this many targets. 0 applies it to every target. |
 | `everyRoll` | checkbox | `false` | Add this bonus to each roll of a multi-attack rather than one of them. |
+| `requireHit` | checkbox | `false` | Only apply this bonus to targets that were hit. |
+| `attackerRange` | number | `0` | Only add the bonus against targets within this many feet of the attacker. 0 ignores distance. |
 | `targetWounded` | checkbox | `false` | Only apply the bonus when the target is missing hit points. |
 | `targetEffects` | selectIdentifiers | `[]` | Only apply this bonus to hit targets that carry one of these effects created by you. |
 | `targetCreatureTypes` | select-many | `[]` | Only apply this bonus to hit targets of these creature types. |
 | `useActivityCosts` | checkbox | `false` | Use Activity Costs |
 | `allowCritical` | checkbox | `true` | Critical hit rules can be applied to this bonus. |
+
+## `endIfUnaffected`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `condition` | select | `failedSave` | End concentration on the spell when the roll has this outcome. |
+| `activityId` | selectActivity | `''` | Only check uses of this activity. Leave empty to check every activity. |
 
 ## `extraAttack`
 
@@ -230,6 +245,13 @@ settings is not listed — it needs no configuration to attach.
 | `effect` | selectEffect | `''` | Effect |
 | `animation` | selectAnimation | `[object Object]` | Animation |
 
+## `ignoreCover`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `attack` | select | `''` | Limit this feature by attack type. |
+| `cover` | select | `2` | cover |
+
 ## `itemRecovery`
 
 | Setting | Type | Default | What it does |
@@ -246,6 +268,13 @@ settings is not listed — it needs no configuration to attach.
 | `moveAnimation` | selectAnimation | `[object Object]` | Move Animation |
 | `movementEffect` | selectEffect | `''` | Movement Effect |
 
+## `moveRegion`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `sourceActivityId` | selectActivity | `''` | Activity that placed the region this activity moves. |
+| `maxRange` | number | `0` | Furthest the region's centre can move from its old centre. 0 ignores distance. |
+
 ## `multiSingleTarget`
 
 | Setting | Type | Default | What it does |
@@ -258,6 +287,7 @@ settings is not listed — it needs no configuration to attach.
 | `reactionItemIdentifiers` | selectIdentifiers | `[]` | Reaction Item Identifiers |
 | `reactionEffectIdentifiers` | selectIdentifiers | `[]` | Reaction Effect Identifiers |
 | `utilityRollAsDamage` | checkbox | `false` | Utility Roll As Damage |
+| `combineAttacks` | checkbox | `false` | Roll one attack per target. The attack's first damage part rolls one die per attack allocated to that target. |
 
 ## `negateDamageFromEffect`
 
@@ -269,10 +299,12 @@ settings is not listed — it needs no configuration to attach.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
+| `animation` | selectAnimation | `[object Object]` | Played on the hit target when the rider is used. |
 | `bonus` | text | `''` | Extra damage added on the next hit. @scaling is the number of levels the spell was upcast. |
 | `bonusDamageType` | select | `''` | Damage type of the bonus. None uses the attack's damage type. |
 | `attackType` | select | `''` | Limit this feature by attack type. |
 | `rollActivity` | selectActivity | `''` | Activity rolled on the hit target after the bonus damage. |
+| `riderNearbyRange` | number | `0` | The rider activity also targets creatures within this distance of the hit target. 0 targets the hit target only. |
 | `endSpell` | select | `never` | When the spell ends after the rider activity is rolled. |
 
 ## `preventDeath`
@@ -294,6 +326,12 @@ settings is not listed — it needs no configuration to attach.
 | `effect` | selectEffect | `''` | Effect applied to each target. The {key} placeholder in its change keys becomes the chosen skill or tool path. |
 | `traits` | select-many | `[skills]` | Offer skills, tools, or both. |
 | `proficiency` | select | `''` | Limit the choices by the target's current proficiency. |
+
+## `proneOnFail`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `skipProne` | checkbox | `false` | Targets that are already prone or immune to it do not roll the save. The use is cancelled when no target is left. |
 
 ## `pullOnFail`
 
@@ -347,6 +385,17 @@ settings is not listed — it needs no configuration to attach.
 | `shortRestCures` | checkbox | `false` | Short Rest Cures |
 | `longRestCures` | checkbox | `true` | Long Rest Cures |
 | `damageTypes` | select-many | `[]` | Damage Types |
+
+## `reflectOnHit`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `rollActivity` | selectActivity | `''` | Activity on the effect's source item rolled against the attacker, at the level the effect was cast. |
+| `attackType` | select | `''` | Limit this feature by attack type. |
+| `range` | number | `0` | Only trigger when the attacker is within this distance. 0 ignores distance. |
+| `requireTempHP` | checkbox | `false` | Only trigger while the effect's bearer has temporary hit points. |
+| `oncePerTurn` | checkbox | `false` | Only trigger once per turn for each bearer. Outside combat it always triggers. |
+| `animation` | selectAnimation | `[object Object]` | Animation |
 
 ## `rerollCheckWithBonus`
 
@@ -438,6 +487,8 @@ settings is not listed — it needs no configuration to attach.
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `damageType` | select-many | `[]` | Prompt for a damage type when this item is rolled. |
+| `rememberChoice` | checkbox | `false` | Offer "Don't ask again this combat" on the damage type prompt. |
+| `atCast` | checkbox | `false` | Prompt once when the spell is cast and use that damage type for every later damage roll. |
 
 ## `skillBonus`
 
@@ -481,19 +532,6 @@ settings is not listed — it needs no configuration to attach.
 |---|---|---|---|
 | `animation` | selectAnimation | `[object Object]` | Animation |
 
-## `summon`
-
-| Setting | Type | Default | What it does |
-|---|---|---|---|
-| `activityId` | selectActivity | `''` | Create Activity |
-| `placeActivityId` | selectActivity | `''` | Place Activity |
-| `recallActivityId` | selectActivity | `''` | Recall Activity |
-| `moveActivityId` | selectActivity | `''` | Rolling this activity moves this item's placed summons up to the activity's range. |
-| `summons` | selectSummons | `[]` | Summons |
-| `maxDistance` | number | `0` | Summons farther than this many feet from you are dismissed when you or they move. 0 disables it. |
-| `replaceExisting` | checkbox | `false` | Dismiss this item's existing summons before creating new ones. |
-| `favorite` | checkbox | `false` | Favorite Activities |
-
 ## `summonModifier`
 
 | Setting | Type | Default | What it does |
@@ -511,15 +549,24 @@ settings is not listed — it needs no configuration to attach.
 | `creatureTypes` | select-many | `[]` | Keep only targets of these creature types. Leave empty to skip the creature type check. |
 | `invert` | checkbox | `false` | Remove targets of the selected creature types instead of keeping them. |
 | `aliveOnly` | checkbox | `false` | Remove targets at 0 hit points. |
-| `chooseTargets` | checkbox | `false` | For area activities, show a checklist of the remaining targets after filtering and keep only the ones picked. |
+| `maxSize` | select | `''` | Remove targets larger than this size. |
+| `maxCR` | number | `-1` | Remove targets above this challenge rating. -1 skips the check. |
+| `chooseTargets` | checkbox | `false` | For area activities, show a checklist of the remaining targets after filtering and keep only the ones picked. The user is always removed. |
+| `minIntelligence` | number | `0` | Remove targets with a lower Intelligence score. 0 turns the check off. |
+| `excludeSummoner` | checkbox | `false` | Remove the summoner when a summoned creature uses this item. |
 
 ## `teleport`
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
+| `targets` | select | `self` | Teleport the user, each target that failed its save, or the user to a space near one of the targets. Range is measured from the user, or from the chosen target for Near a Target. |
 | `range` | text | `''` | Maximum teleport distance. Leave blank to use the activity's own range. |
 | `rangeFromRoll` | checkbox | `false` | Use the activity's utility roll total as the maximum teleport distance. Falls back to Range, then the activity's own range, when nothing was rolled. |
 | `requireSight` | checkbox | `true` | Only allow spaces the user can see. |
+| `companions` | number | `0` | How many allies within Companion Range the user may bring along. They keep their position relative to the user. |
+| `companionRange` | number | `5` | Companion Range |
+| `companionMaxSize` | checkbox | `false` | Companions No Larger Than User |
+| `excludeUser` | checkbox | `false` | On a self teleport, remove the user from the activity's targets. Use for areas centred on the space the user leaves. |
 | `animation` | selectAnimation | `[object Object]` | Animation |
 
 ## `toolBonus`

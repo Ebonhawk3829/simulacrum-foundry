@@ -22,9 +22,17 @@ const REFERENCE = resolve(ROOT, 'reference');
 
 /** The id and version of the module the generated file describes. */
 function pinnedExtracts() {
-  const path = resolve(ROOT, '..', 'EXTRACTS.json');
-  if (!existsSync(path)) return null; // the workspace tooling is not always beside us
-  return JSON.parse(readFileSync(path, 'utf8'));
+  // EXTRACTS.json sits beside the workspace tooling, which is not always the fork's
+  // direct parent: in this workspace the fork lives at resources/_clones/simulacrum-foundry
+  // while the manifest is at resources/EXTRACTS.json. Search upward rather than assuming
+  // one level, or the version check below silently never runs.
+  let dir = ROOT;
+  for (let i = 0; i < 4; i++) {
+    dir = resolve(dir, '..');
+    const candidate = resolve(dir, 'EXTRACTS.json');
+    if (existsSync(candidate)) return JSON.parse(readFileSync(candidate, 'utf8'));
+  }
+  return null; // the workspace tooling is not always beside us
 }
 
 test('every declared reference file exists', () => {
@@ -72,7 +80,7 @@ test('the generated file names the same CPR version the extracts are pinned to',
   const extracts = pinnedExtracts();
   if (!extracts) return; // nothing to compare against outside the workspace
 
-  const pinned = extracts['chris-premades']?.tag;
+  const pinned = extracts.modules?.['chris-premades']?.tag ?? extracts['chris-premades']?.tag;
   if (!pinned) return;
 
   const text = readFileSync(resolve(REFERENCE, 'cpr-generic-config.md'), 'utf8');

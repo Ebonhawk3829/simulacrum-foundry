@@ -256,15 +256,14 @@ export function buildAppliedEffect({ spec, identifier, effectId, extraChanges = 
   const flags = { cat: { identifier, config: {} } };
   if (overTime) flags['midi-qol'] = { OverTime: overTime };
 
-  const conditionLevel = getSpecNumber(spec, 'conditionLevel');
-  if (condition && conditionLevel !== undefined) flags.cat.conditionLevel = conditionLevel;
-
-  // A rider that only lands when the save fails badly, e.g. "fails by 5 or more".
-  const failsBy = getSpecNumber(spec, 'damage.failsBy');
-  const failsByCondition = getSpecString(spec, 'damage.failsByCondition');
-  if (failsBy !== undefined && failsByCondition) {
-    flags.cat.failsBy = { amount: failsBy, condition: failsByCondition };
-  }
+  // Two keys used to be written here and are deliberately gone (0.3.1):
+  //   flags.cat.conditionLevel  and  flags.cat.failsBy
+  // Neither is read by any installed module — checked against CAT 0.1.3, CPR 2.1.3,
+  // midi-qol 14.6.3 and DAE 14.6.2 — so writing them only produced an effect that
+  // looked configured and did nothing. A condition *level* means exhaustion, which is
+  // a `system.attributes.exhaustion` change (or CAT's `actorUtils.addExhaustion`);
+  // a "fails by N or more" rider has no flag form and needs a CAT embedded macro on
+  // the save (see reference/cat-embedded-macros.md).
 
   return {
     _id: effectId,

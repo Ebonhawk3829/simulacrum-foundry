@@ -6,7 +6,8 @@ documentation in its release archive, and the flag that answers the question is 
 a dnd5e field — so nothing else in this reference covers it.
 
 Everything here was read out of DAE's own source at the version this world runs
-(v14.6.0), not from a wiki or from memory.
+(v14.6.2), not from a wiki or from memory. DAE 14.6.1/14.6.2 reworked expiry — the
+changes that matter are marked below and collected in §8.
 
 ---
 
@@ -36,20 +37,24 @@ So a converted effect can look migrated while half its expiry rules are inert. W
 
 ### The deprecated names, and what they become
 
-From `getDeprecatedSpecialDurMap()` in `src/module/specialDurations.ts`:
+From `getDeprecatedSpecialDurMap()` in `src/module/specialDurations.ts`. As of DAE
+14.6.2 this is a **single** map — there is no longer a separate dnd5e-5.x column,
+because DAE now maps source/target names through on 6.x too and preserves the
+source/target distinction:
 
-| Old `flags.dae.specialDuration` | `duration.expiry` (dnd5e < 6.0) | `duration.expiry` (dnd5e 6.0+) |
-|---|---|---|
-| `turnStart` | `targetStart` | `turnStart` |
-| `turnEnd` | `targetEnd` | `turnEnd` |
-| `turnStartSource` | `sourceStart` | `turnStart` |
-| `turnEndSource` | `sourceEnd` | `turnEnd` |
-| `combatEnd` | `combatEnd` | `combatEnd` |
+| Old `flags.dae.specialDuration` | `duration.expiry` (this world, dnd5e 6.x) |
+|---|---|
+| `turnStart` | `targetStart` |
+| `turnEnd` | `targetEnd` |
+| `turnStartSource` | `sourceStart` |
+| `turnEndSource` | `sourceEnd` |
+| `combatEnd` | `combatEnd` |
 
-This world runs dnd5e 6.x, so the **right-hand column** applies: dnd5e handles turn
-expiry natively and DAE does not remap it. The distinction matters — on 6.x,
-`turnStartSource` and `turnStart` both become `turnStart`, so an effect that needed
-to end on the *source's* turn cannot be expressed that way any more.
+This is the correction to watch for: **earlier 14.6.x mapped `turnStartSource` to
+plain `turnStart`**, silently losing the source/target distinction — the code comment
+calls it out. An effect that means "until the *caster's* turn starts" now migrates to
+`sourceStart` and stays correct. Write `duration.expiry` directly rather than relying
+on the migration either way.
 
 ## 2. Special durations that are still flags, because they have no core equivalent
 
@@ -119,6 +124,13 @@ until the target's turn, whichever first". It means the value is discarded and t
 effect ends at the target's next turn start. If you want both, that is two effects or
 a `turnStart` expiry with a duration.
 
+**But DAE 14.6.2 puts the duration back.** It deliberately preserves the duration on
+*Source/Target Turn* expiries where dnd5e 6 drops it, so on this world
+`{ value: 3, units: 'rounds', expiry: 'sourceStart' }` really does mean "ends at the
+caster's turn start, once three rounds have passed", exactly as on dnd5e 5.x. With no
+duration it is still the next such turn. The core `expirySupportsDuration` behaviour
+above is what DAE works around, not what you get.
+
 When `units` is `"turns"` and no expiry is given, dnd5e defaults it to `"turnStart"`
 rather than expiring at round turnover:
 
@@ -169,12 +181,37 @@ An unset per-effect value defers to the world's global action. This is worth kno
 before writing an automation that assumes the effect is gone: on a world configured
 to `"update"`, the effect is still present and merely disabled.
 
-## 7. What this file is not
+## 7. What DAE 14.6.1/14.6.2 changed about expiry
+
+Collected from DAE's changelog for the two patches this world added, because each is
+the kind of change that makes an existing effect behave differently without an error:
+
+- **Elapsed Time is retired.** Applied effects that take the activity's duration get
+  no expiry event, so dnd5e 6 gives them *Turn Start* in combat; an effect that stores
+  Elapsed Time is treated as having **no** expiry event.
+- **Source/Target Turn expiries keep their duration** where dnd5e 6 drops it (see §3).
+  A source/target **end** expiry no longer ends on the turn the effect was applied.
+- **Outside combat, time passing ends an effect whose expiry event has no duration**
+  (e.g. *Turn Start*, or dnd5e's *Target Turn End*), as Foundry does; only *Combat
+  Start* waits for a combat.
+- **Migrating deprecated special durations no longer discards** the ones
+  `duration.expiry` cannot express — the rest stay on `flags.dae.specialDuration` and
+  keep warning. An expiry the author set explicitly is **not** overwritten.
+- **An effect inheriting its duration from the activity/item** expires with world time
+  (`updateWorldTime`), not only on the round tick.
+- **`enableCondition` follows expiry mode:** when it becomes false the effect ends like
+  an expired one — deleted, or disabled+re-enabled under *suppress* mode.
+- **Effect expiry action** (delete vs disable, §6) is per-effect via
+  `CONFIG.ActiveEffect.expiryAction`, world setting as fallback.
+- **`expiry-reason`** is injected into Foundry v14's expiry operations so a macro can
+  tell why an effect was removed (`duration-expired:turnStart`, `dae:expired:…`).
+
+## 8. What this file is not
 
 - **Not a full DAE flag reference.** `flags.dae.*` also carries `stackable`,
   `macroRepeat` and `transfer`. Those are named here only where they affect expiry.
 - **Not verified against a live world.** Everything above was read from DAE's source
-  at v14.6.0 and dnd5e's at release-6.0.6. The migration table is DAE's own and the
+  at v14.6.2 and dnd5e's at release-6.0.6. The migration map is DAE's own and the
   expiry list is dnd5e's own, but no effect using these values has been created and
   observed in this world yet.
 

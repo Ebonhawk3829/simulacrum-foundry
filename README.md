@@ -42,10 +42,10 @@ It does not guess field names. It has tools for:
 
 | | |
 |---|---|
-| **Foundry VTT** | 14.367 or higher (verified on 14) |
+| **Foundry VTT** | 14.369 or higher (verified on 14) |
 | **dnd5e** | **6.x** (verified on 6.0.6) |
-| **Required modules** | `midi-qol` (v14.6.0), `dae` (v14.6.0), `cat` (Coven's Automation Toolkit, 0.1.2) |
-| **Recommended** | `chris-premades` (2.1.2), `dfreds-convenient-effects` |
+| **Required modules** | `midi-qol` (v14.6.3), `dae` (v14.6.2), `cat` (Coven's Automation Toolkit, 0.1.3) |
+| **Recommended** | `chris-premades` (2.1.3), `dfreds-convenient-effects` |
 | **Model access** | An [OpenRouter](https://openrouter.ai/keys) API key, and a model that supports tool calling |
 
 > [!IMPORTANT]

@@ -6,7 +6,7 @@ documentation it ships — says nothing about flags. Its real documentation is a
 GitHub wiki, which is not installed with the module.
 
 The shapes below were read out of CAT's own schema at the version this world runs
-(v0.1.2, `scripts/lib/macros.mjs`) and out of a stored document that uses it.
+(v0.1.3, `scripts/lib/macros.mjs`) and out of a stored document that uses it.
 
 ---
 
@@ -93,7 +93,7 @@ Seen on a real item (`Awakened Mind` from CPR's 2024 features pack):
 | `genericConfig` | configuration for a generic macro, e.g. which conditions it uses |
 | `automation` | marks the document as supplied by an automation, for the Cat Kit |
 
-**Every generic's settings are listed in `cpr-generic-config.md`** — all 51 of them,
+**Every generic's settings are listed in `cpr-generic-config.md`** — all 56 of them,
 with the type, the default, and CPR's own description of each. Read that rather than
 guessing a setting name.
 
@@ -124,10 +124,16 @@ own source for what it accepts.
 
 `flags.cat` may be on the **item** or on an **activity**. In the Awakened Mind
 example both are used: the item carries `flags.cat.macros.save` and the
-`genericConfig`, while its activity carries `flags.cat.automation`. CAT's note that
-"Item passes no longer have an activity filter, macros are applied directly to
-activities instead" is the migration hint for v14 — attaching to the activity is the
-modern placement.
+`genericConfig`, while its activity carries `flags.cat.automation`.
+
+Since 0.1.3 the two placements are collected **separately**: an activity's macros are
+grouped under an `activity.` key, so an activity macro and an item macro of the same
+event, pass and name no longer collapse to a single winner — **both run**. An
+item-level `macros.roll` and an activity-level `macros.roll` are additive now, not a
+conflict to resolve. To run a macro for one specific activity, put it on that
+activity; to run it for every use of the item, put it on the item. (Related 0.1.3
+fixes: a linked actor with several tokens runs its scene/nearby/level macros once, and
+an applied **enchantment** only fires its macros while `effect.active`.)
 
 ## 5. Reading a working example beats reading this file
 

@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-10-19
+
+Repinned to the 2026-10-19 module set and refreshed the reference the agent reads.
+Foundry minimum rises to **14.369** — midi-qol 14.6.3 and DAE 14.6.2 both require it.
+
+### Changed
+
+- **Required modules moved as a set:** midi-qol v14.6.0 → **v14.6.3**, DAE v14.6.0 →
+  **v14.6.2**, CAT 0.1.2 → **0.1.3**, recommended chris-premades 2.1.2 → **2.1.3**. They
+  are mutually constrained — midi-qol 14.6.3 needs DAE ≥14.6.2; CAT 0.1.3 needs
+  midi-qol ≥14.6.1 and DAE ≥14.6.1; CPR 2.1.3 needs CAT 0.1.3 — so a partial bump fails
+  to load.
+- **`reference/cpr-generic-config.md` regenerated** from CPR 2.1.3 (56 generics, 297
+  settings, up from 51/275). CPR's `summon` generic is gone (moved to CAT) and
+  `combatStartItemUses` was removed; several generics were added.
+- **`reference/dnd5e-6.0-fields.md`:** documented two silent upstream changes — DAE
+  14.6.2's effect sourcing (an applied effect's origin is now the caster's concentration
+  effect or the activity, **not its item**; `flags.dae.itemData` is gone) and midi-qol
+  14.6.3's auto-fail/success **roll fields**, which replace the deprecated
+  `flags.midi-qol.fail/success/min/max.*` keys.
+- **`reference/dae-effect-expiry.md`:** corrected the deprecated-special-duration map
+  (14.6.2 preserves the source/target distinction and keeps a duration where dnd5e 6
+  drops it) and added the 14.6.1/14.6.2 expiry changes (Elapsed Time retired,
+  out-of-combat time expiry, `applicationMode`).
+- **`reference/cat-macro-flags.md` / `cat-embedded-macros.md`:** CAT 0.1.3 collects
+  item- and activity-level macros of the same pass separately, so they no longer replace
+  one another; both run.
+- module.json Foundry minimum/verified `14.367` → **`14.369`**, dnd5e minimum `6.0.0` →
+  `6.0.6`; version and download URL bumped to 0.3.1.
+
+### Fixed
+
+- **`tests/unit/reference-integrity.test.mjs`** resolved `EXTRACTS.json` a fixed one
+  level above the fork, which this workspace's layout never matched — so the "generated
+  file matches the pinned CPR version" check silently never ran. It now searches upward.
+- **`scripts/core/dnd5e/activity-builders.js`** no longer writes `flags.cat.conditionLevel`
+  or `flags.cat.failsBy`. Neither key is read by any installed module (verified against
+  CAT 0.1.3, CPR 2.1.3, midi-qol 14.6.3 and DAE 14.6.2), so an effect carrying them
+  looked configured and did nothing. A "fails by N or more" rider needs a CAT embedded
+  macro; a condition level means exhaustion, applied as a `system.attributes.exhaustion`
+  change.
+
 ## [0.1.0] - 2026-10-12
 
 First release of the Ebonhawk automation-builder fork. Upstream's generalist
