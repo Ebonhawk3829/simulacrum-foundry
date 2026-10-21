@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-10-21
+
+Two changes: the agent keeps durable notes that survive a world reset, and the prompt
+stops prescribing how to work.
+
+### Added
+
+- **Persistent memory**, in `Data/simulacrum/` — outside the world tree, so a world
+  reset does not erase it. Two files: `lessons.md`, durable guidance the agent has
+  learned and the user has confirmed, and `history.md`, an append-only log of what was
+  built and discovered. Three tools: `read_memory` (read-only), `append_history`
+  (written at the agent's discretion) and `write_lesson` (saved only after the user
+  confirms). The system prompt now carries a live index of lesson headings and the
+  history size, so the agent knows what is retrievable without reading the files.
+
+### Changed
+
+- **The automation prompt is no longer procedural.** The numbered build protocol and
+  the nine critical rules are replaced by a statement of what the agent can do and
+  what it has to read; the preview → build → test loop survives as an example to
+  adapt, not an order to follow. The agent may create and update documents directly,
+  and run macros or JavaScript for any module. The one step that stays mandatory is
+  explaining how it reads the ability — the dnd5e mechanic and its VTT translation —
+  and getting the user's confirmation before writing anything.
+
+### Fixed
+
+- `toolPermissionManager.getPermission` ignored each tool's declared `defaultState`, so
+  an unset permission always resolved to ASK. Read-only tools that declare ALLOW
+  (`read_reference`, `read_ability_runs`) therefore prompted on every call despite
+  being documented as costing no confirmation. It now falls back to `defaultState`.
+
 ## [0.3.1] - 2026-10-19
 
 Repinned to the 2026-10-19 module set and refreshed the reference the agent reads.

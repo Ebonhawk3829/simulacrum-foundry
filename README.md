@@ -11,20 +11,28 @@ what happened, so the two of you can work out whether it behaves.
 
 Not listed in the Foundry package directory — it is installed by manifest URL.
 
-## The loop
+## How it works
 
 1. You paste an ability's text — a statblock entry, a class feature, a magic item.
 2. You open the Simulacrum tab and ask for it on a specific actor.
-3. The agent proposes an **editable preview** of what it understood. You correct
-   it rather than re-explaining.
+3. The agent says how it reads the ability — which activity, which flags, what lands
+   on whom — and you confirm or correct that reading **before anything is written**.
+   This check-in is the one step that always happens.
 4. It builds the item: activities, applied effects, and the midi-qol / DAE / CAT
-   flags behind them.
+   flags behind them, or a script where flags cannot express the behaviour.
 5. You use the ability in play the way you normally would.
 6. You tell it what you saw. It compares that against the recorded run and against
    what it intended, and either fixes the build or calls it confirmed.
 
-Steps 3 and 4 are what this fork is for. Steps 5 and 6 exist because an ability
-built from a statblock is a hypothesis until it has actually been used.
+The agent is given the tools and the reference material, not a fixed procedure. How
+it gets from the text to the item is its call — this fork does not dictate the route,
+and it may build through the editable preview or by writing documents and scripts
+directly. What it keeps is the habit of checking its reading of the ability with you
+first, because an ability built from a statblock is a hypothesis until it has actually
+been used.
+
+Steps 3 and 6 are what this fork is for: catching a misreading before the build, and
+catching a wrong build before it is trusted.
 
 ## What the agent can read
 
@@ -37,6 +45,10 @@ It does not guess field names. It has tools for:
   any document, straight from the system.
 - **`search_documents`** — working examples in compendiums. A similar spell that
   already works is the best template there is.
+- **`read_memory`** — its own persistent notes: the **lessons** it has learned and
+  the **session history** of what it built and discovered. These live outside the
+  world (`Data/simulacrum/`), so they survive a world reset. It records history as it
+  works and proposes lessons for you to confirm before they are saved.
 
 ## Requirements
 

@@ -30,6 +30,9 @@ import { BuildAbilityTool } from '../tools/build-ability.js';
 import { ReadAbilityRunsTool } from '../tools/read-ability-runs.js';
 import { ConfirmAbilityTool } from '../tools/confirm-ability.js';
 import { ReadReferenceTool } from '../tools/read-reference.js';
+import { ReadMemoryTool } from '../tools/read-memory.js';
+import { AppendHistoryTool } from '../tools/append-history.js';
+import { WriteLessonTool } from '../tools/write-lesson.js';
 import { DocumentAPI } from './document-api.js';
 
 /**
@@ -94,6 +97,9 @@ export class ToolRegistry {
         new ReadAbilityRunsTool(),
         new ConfirmAbilityTool(),
         new ReadReferenceTool(),
+        new ReadMemoryTool(),
+        new AppendHistoryTool(),
+        new WriteLessonTool(),
       ];
 
       for (const t of tools) {

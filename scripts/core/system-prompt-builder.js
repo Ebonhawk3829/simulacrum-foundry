@@ -7,6 +7,7 @@
 import { createLogger } from '../utils/logger.js';
 import { toolRegistry } from './tool-registry.js';
 import { getAutomationPromptBlocks } from './domain-prompt.js';
+import { memoryStore } from './memory-store.js';
 
 const logger = createLogger('SystemPrompt');
 
@@ -62,6 +63,38 @@ export async function getAvailableMacrosList() {
 
   if (macros.length === 0) return 'No macros available.';
   return macros.join('\n');
+}
+
+/**
+ * The live memory index: the lesson headings and how much history exists, read from
+ * the store so the agent knows what is retrievable without opening the files.
+ *
+ * Kept short on purpose - it is a table of contents, not the material. A read
+ * failure is reported to the agent rather than thrown, because the memory is an aid,
+ * not a prerequisite for building anything.
+ * @returns {Promise<string>}
+ */
+async function buildMemoryIndex() {
+  try {
+    const summary = await memoryStore.summary();
+    const lessons = summary.lessonTitles.length
+      ? summary.lessonTitles.map(title => `- ${title}`).join('\n')
+      : '(none recorded yet)';
+
+    return [
+      'MEMORY INDEX (live)',
+      '',
+      `Store: ${summary.location}lessons.md and history.md. Call read_memory to read any of it.`,
+      '',
+      'Lessons recorded:',
+      lessons,
+      '',
+      `History: ${summary.historyEntries} entries, ${summary.historyBytes} characters.`,
+    ].join('\n');
+  } catch (err) {
+    logger.warn('Could not read the memory index for the system prompt', err);
+    return 'MEMORY INDEX: the memory store could not be read this turn. Call read_memory to retry.';
+  }
 }
 
 /**
@@ -129,8 +162,11 @@ export async function buildSystemPrompt() {
       // Automation-builder fork: replace the generalist campaign-copilot prompt with
       // the scoped automation domain prompt. Document types are still included so the
       // model knows the system's schema; the macros list is omitted because this fork
-      // does not use execute_macro for automation.
-      basePrompt = [...getAutomationPromptBlocks(), documentTypesInfo].join('\n\n');
+      // does not use execute_macro for automation. The live memory index is appended
+      // so the agent knows which lessons and how much history exist without having to
+      // read the files to find out.
+      const memoryIndex = await buildMemoryIndex();
+      basePrompt = [...getAutomationPromptBlocks(), documentTypesInfo, memoryIndex].join('\n\n');
     } else {
       basePrompt = [
         game.i18n.localize('SIMULACRUM.SystemPrompt.Standard.Identity'),

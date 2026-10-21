@@ -71,6 +71,21 @@ set_document_ownership: {
     explainer: 'SIMULACRUM.ToolExplainer.ConfirmAbility',
     defaultState: PermissionState.ASK,
   },
+  read_memory: {
+    displayName: 'SIMULACRUM.Tools.read_memory',
+    explainer: 'SIMULACRUM.ToolExplainer.ReadMemory',
+    defaultState: PermissionState.ALLOW,
+  },
+  append_history: {
+    displayName: 'SIMULACRUM.Tools.append_history',
+    explainer: 'SIMULACRUM.ToolExplainer.AppendHistory',
+    defaultState: PermissionState.ALLOW,
+  },
+  write_lesson: {
+    displayName: 'SIMULACRUM.Tools.write_lesson',
+    explainer: 'SIMULACRUM.ToolExplainer.WriteLesson',
+    defaultState: PermissionState.ASK,
+  },
 };
 
 /**
@@ -109,8 +124,16 @@ class ToolPermissionManager {
       return PermissionState.ALLOW;
     }
 
+    // An explicit stored choice wins; otherwise fall back to the tool's declared
+    // default. Without that fallback a read-only tool listed as ALLOW (read_reference,
+    // read_ability_runs, read_memory) would prompt on every call, because an unset
+    // stored permission defaults to ASK.
     const permissions = this._getStoredPermissions();
-    return permissions[toolName] || PermissionState.ASK;
+    return (
+      permissions[toolName] ??
+      DESTRUCTIVE_TOOL_META[toolName]?.defaultState ??
+      PermissionState.ASK
+    );
   }
 
   /**

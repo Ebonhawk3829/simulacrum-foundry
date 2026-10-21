@@ -92,7 +92,10 @@
       "build_ability": "Build Ability",
       "read_ability_runs": "Read Ability Runs",
       "read_reference": "Read Reference",
-      "confirm_ability": "Confirm Ability"
+      "confirm_ability": "Confirm Ability",
+      "read_memory": "Read Memory",
+      "append_history": "Append History",
+      "write_lesson": "Write Lesson"
     },
     "ToolStatus": {
       "Creating": "Creating",
@@ -142,7 +145,10 @@
       "BuildAbility": "Creates or updates a Feature item on an actor from a spec: its activities, applied effects and module automation flags. Rebuilding the same ability updates the existing item rather than creating a duplicate.",
       "ReadAbilityRuns": "Reads what was recorded when a built ability was used in play: the chat output and its rolls, hit point and condition changes on the actor and its targets, and any errors. Read-only, and changes nothing.",
       "ConfirmAbility": "Marks a built ability as confirmed working, which stops recording its uses and removes the debug output. The recorded runs are kept as history. Rebuilding the ability starts recording again.",
-      "ReadReference": "Reads documentation that explains how these automations work: the dnd5e 6.x field guide shipped with this module, and the documentation belonging to modules installed in this world, such as midi-qol's flag reference and macro guide. Read-only, and changes nothing."
+      "ReadReference": "Reads documentation that explains how these automations work: the dnd5e 6.x field guide shipped with this module, and the documentation belonging to modules installed in this world, such as midi-qol's flag reference and macro guide. Read-only, and changes nothing.",
+      "ReadMemory": "Reads the persistent memory: the lessons learned and the session history, kept outside the world so they survive a world reset. Read-only, and changes nothing.",
+      "AppendHistory": "Adds an entry to the persistent session history, recording what was built, discovered or left outstanding. Append-only, and nothing else is changed.",
+      "WriteLesson": "Records a durable lesson in the persistent memory — guidance such as 'approach A fails because of X, do B instead'. This becomes standing guidance for future sessions, so it is saved only with your confirmation."
     },
     "ModelSelector": {
       "Placeholder": "Select model..."
