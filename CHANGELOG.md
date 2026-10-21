@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-10-22
+
+Tracks midi-qol v14.6.4 and DAE v14.6.3 (they must move together — midi 14.6.4 requires
+DAE ≥14.6.3). Both are fixes: no API, flag or vocabulary change, and the Foundry
+(14.369) and dnd5e (6.0.6) floors are unchanged.
+
+### Changed
+
+- **`reference/dae-effect-expiry.md`:** corrected the effect **duration inheritance**
+  rule — an applied effect with an expiry event but no duration no longer takes the
+  activity's duration (it inherits only when it has neither), an effect with neither now
+  takes the activity's expiry event, and an Elapsed-Time effect with no duration takes
+  the activity's duration. Recorded the expiry-migration refinements (`combatEnd` yields
+  the single expiry slot), the *Round End* off-by-one fix, the *Expiry Mode* fix under
+  *Mark Expired*, and the `hasExpiry`/`hasDuration` corrections.
+- **`reference/dnd5e-6.0-fields.md`:** noted that midi 14.6.3 shipped the auto-fail/
+  success roll fields with three check-activity bugs, all fixed in 14.6.4 (a Stealth
+  check ignoring `system.skills.ste.roll.success`, a multi-skill check rolling the first
+  skill's ability, and tool checks reading the tool's default ability).
+
+### Notes
+
+- midi-qol 14.6.4 also changes behaviour, with no reference change needed: walls block
+  an attack only if they block movement (total cover), a total-cover target can't be
+  targeted by a direct-creature activity, and a new optional activity flag
+  `flags.midi-qol.targetMustBeSeen` gates "a creature you can see" targeting.
+
 ## [0.4.0] - 2026-10-21
 
 Two changes: the agent keeps durable notes that survive a world reset, and the prompt

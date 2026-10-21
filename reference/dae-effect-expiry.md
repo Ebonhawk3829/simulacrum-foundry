@@ -6,8 +6,8 @@ documentation in its release archive, and the flag that answers the question is 
 a dnd5e field — so nothing else in this reference covers it.
 
 Everything here was read out of DAE's own source at the version this world runs
-(v14.6.2), not from a wiki or from memory. DAE 14.6.1/14.6.2 reworked expiry — the
-changes that matter are marked below and collected in §8.
+(v14.6.3), not from a wiki or from memory. DAE reworked expiry across 14.6.1–14.6.3 —
+the changes that matter are marked below and collected in §7.
 
 ---
 
@@ -181,37 +181,52 @@ An unset per-effect value defers to the world's global action. This is worth kno
 before writing an automation that assumes the effect is gone: on a world configured
 to `"update"`, the effect is still present and merely disabled.
 
-## 7. What DAE 14.6.1/14.6.2 changed about expiry
+## 7. What DAE 14.6.1–14.6.3 changed about expiry
 
-Collected from DAE's changelog for the two patches this world added, because each is
-the kind of change that makes an existing effect behave differently without an error:
+Collected from DAE's changelog for the patches this world added, because each is the
+kind of change that makes an existing effect behave differently without an error:
 
-- **Elapsed Time is retired.** Applied effects that take the activity's duration get
-  no expiry event, so dnd5e 6 gives them *Turn Start* in combat; an effect that stores
-  Elapsed Time is treated as having **no** expiry event.
+- **Elapsed Time is retired.** Applied effects that take the activity's duration get no
+  expiry event, so dnd5e 6 gives them *Turn Start* in combat; an effect that stores
+  Elapsed Time is treated as having **no** expiry event. (14.6.3: an Elapsed-Time
+  effect that also has no duration now takes the activity's duration.)
+- **Duration inheritance changed in 14.6.3.** An applied effect with an **expiry event
+  but no duration** no longer takes the activity's duration — it inherits only when it
+  has **neither**; an effect with **neither** now takes the activity's *expiry event*.
+  So an effect authored with only an expiry no longer silently gains the spell's
+  duration, and one authored with nothing now gains the spell's expiry.
 - **Source/Target Turn expiries keep their duration** where dnd5e 6 drops it (see §3).
   A source/target **end** expiry no longer ends on the turn the effect was applied.
 - **Outside combat, time passing ends an effect whose expiry event has no duration**
   (e.g. *Turn Start*, or dnd5e's *Target Turn End*), as Foundry does; only *Combat
   Start* waits for a combat.
-- **Migrating deprecated special durations no longer discards** the ones
+- **Migrating deprecated special durations** no longer discards the ones
   `duration.expiry` cannot express — the rest stay on `flags.dae.specialDuration` and
-  keep warning. An expiry the author set explicitly is **not** overwritten.
+  keep warning. An expiry the author set explicitly is **not** overwritten. 14.6.3
+  refined this: **`combatEnd` now yields the single expiry slot** (before it could take
+  it and then do nothing), and an entry the expiry already holds is dropped.
 - **An effect inheriting its duration from the activity/item** expires with world time
   (`updateWorldTime`), not only on the round tick.
 - **`enableCondition` follows expiry mode:** when it becomes false the effect ends like
   an expired one — deleted, or disabled+re-enabled under *suppress* mode.
+- **An effect's own *Expiry Mode* is honoured** (14.6.3): under *Mark Expired* it is
+  suppressed (disabled, kept) rather than deleted once out of combat.
 - **Effect expiry action** (delete vs disable, §6) is per-effect via
   `CONFIG.ActiveEffect.expiryAction`, world setting as fallback.
 - **`expiry-reason`** is injected into Foundry v14's expiry operations so a macro can
   tell why an effect was removed (`duration-expired:turnStart`, `dae:expired:…`).
+- **`hasExpiry`/`hasDuration` were wrong** for an expiry-only effect (reported false)
+  and a no-duration effect (reported true) until 14.6.3; both are exported, so if
+  anything consults them, the answer changed.
+- **A rounds/turns *Round End* off-by-one is fixed** (14.6.3): a 1-round *Round End*
+  effect now ends at the end of the round after its duration has run out.
 
 ## 8. What this file is not
 
 - **Not a full DAE flag reference.** `flags.dae.*` also carries `stackable`,
   `macroRepeat` and `transfer`. Those are named here only where they affect expiry.
 - **Not verified against a live world.** Everything above was read from DAE's source
-  at v14.6.2 and dnd5e's at release-6.0.6. The migration map is DAE's own and the
+  at v14.6.3 and dnd5e's at release-6.0.6. The migration map is DAE's own and the
   expiry list is dnd5e's own, but no effect using these values has been created and
   observed in this world yet.
 

@@ -428,6 +428,15 @@ Concentration, death and initiative have their own: `system.attributes.concentra
 Also note `flags.midi-qol.optional.<name>.<rollType>` **without** the `.all` suffix is no
 longer rewritten to `.all` — write `flags.midi-qol.optional.<name>.<rollType>.all`.
 
+**These fields were partly broken until 14.6.4.** midi 14.6.3 shipped them with three
+check-activity bugs, all fixed in 14.6.4: a skill or tool check could lose the roller's
+fail/success/min/max/advantage (with CAT active, a Stealth check ignored
+`system.skills.ste.roll.success`); a check offering several skills or tools rolled the
+chosen one with the first one's ability (Acrobatics with Strength); and a tool's check
+activity read the flags for the tool's *default* ability rather than the tool item's own.
+On 14.6.3 the fields were right for saves, attacks and single-skill checks and wrong for
+the rest; on 14.6.4 they are right throughout.
+
 ---
 
 ## 11. Where the ecosystem's own conventions live
