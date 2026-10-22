@@ -764,7 +764,7 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
   }
 
   async _addMessageImpl(role, content, display, noGroup) {
-    const processedDisplay = display || (await processMessageForDisplay(content));
+    const processedDisplay = display || (await processMessageForDisplay(content, { role }));
 
     if (this._tryMergeAssistantMessage(role, content, processedDisplay, noGroup)) return;
 

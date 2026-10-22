@@ -36,7 +36,11 @@ export function getDisplayUser(user = game?.user) {
  * @param {object} options - Processing options
  * @returns {Promise<string>} Processed HTML content
  */
-export async function processMessageForDisplay(content, _options = {}) {
+export async function processMessageForDisplay(content, options = {}) {
+  // The user's own input is echoed verbatim. Markdown (and plain HTML whitespace)
+  // collapse a single newline, which squashed a multi-line prompt into one paragraph.
+  if (options.role === 'user') return renderUserContent(content);
+
   let processedContent = String(content ?? '');
 
   // Transform <think></think> tags to collapsible spoilers
@@ -67,6 +71,28 @@ export async function processMessageForDisplay(content, _options = {}) {
 }
 
 /**
+ * Render the user's own chat input verbatim.
+ *
+ * The input is a plain textarea, so it is shown as plain text: escaped, with the
+ * line breaks and indentation they typed left in the markup and preserved by CSS.
+ *
+ * It deliberately does NOT go through markdown. A single newline is a soft break in
+ * markdown (and plain whitespace collapses in HTML), so a multi-line prompt was
+ * arriving as one squashed paragraph. The agent still receives the original string
+ * with its newlines — only the echo was collapsed — but the echo is what the user
+ * reads back, so it has to match what they typed. Escaping also means a prompt that
+ * happens to contain `<` or `&` cannot inject markup into the log.
+ *
+ * @param {string} content - Raw user input
+ * @returns {string} Escaped HTML that preserves whitespace
+ */
+export function renderUserContent(content) {
+  const text = String(content ?? '').replace(/\r\n?/g, '\n');
+  const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  return `<div class="simulacrum-user-text">${escaped}</div>`;
+}
+
+/**
  * Create a formatted message object for display
  * @param {string} role - Message role ('user' or 'assistant')
  * @param {string} content - Raw content
@@ -74,7 +100,7 @@ export async function processMessageForDisplay(content, _options = {}) {
  * @returns {Promise<object>} Formatted message object
  */
 export async function createDisplayMessage(role, content, display = null) {
-  const processedDisplay = display || (await processMessageForDisplay(content));
+  const processedDisplay = display || (await processMessageForDisplay(content, { role }));
 
   return {
     id: foundry.utils.randomID(),

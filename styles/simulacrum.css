@@ -472,6 +472,105 @@
   color: white;
 }
 
+/* ---------------------------------------- */
+/*  Chat Reading Surface — heading scale    */
+/* ---------------------------------------- */
+/*
+ * A real hierarchy for the assistant's markdown.
+ *
+ * Why the extra weight: UI-overhaul modules (the `crlngn-*` / `cui-*` classes on
+ * <body>) restyle `.chat-message` headings down to the body size. The rules above
+ * lose that fight — their font-size is not !important and their specificity is
+ * (1,1,1), so a `## Heading` rendered at exactly the paragraph size and the
+ * hierarchy disappeared. These rules are doubly-scoped (`#sidebar #simulacrum`,
+ * specificity 2-2-1) and !important so they win, and all six levels are defined so a
+ * heading can never fall back to an unstyled default.
+ *
+ * Sized in `em` off the message body on purpose: the base stays whatever the
+ * surrounding UI sets, and only the ratio between body and heading is enforced here.
+ * The second selector is a fallback for a context without `#sidebar` (a popout).
+ */
+#sidebar #simulacrum .chat-message .message-content :is(h1, h2, h3, h4, h5, h6),
+#simulacrum .chat-message .message-content :is(h1, h2, h3, h4, h5, h6) {
+  font-family: 'Modesto Condensed', Modesto, serif !important;
+  color: #ffffff !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0.03em !important;
+  margin: 0.9em 0 0.35em !important;
+}
+
+#sidebar #simulacrum .chat-message .message-content h1,
+#simulacrum .chat-message .message-content h1 {
+  font-size: 1.9em !important;
+}
+
+#sidebar #simulacrum .chat-message .message-content h2,
+#simulacrum .chat-message .message-content h2 {
+  font-size: 1.6em !important;
+}
+
+#sidebar #simulacrum .chat-message .message-content h3,
+#simulacrum .chat-message .message-content h3 {
+  font-size: 1.4em !important;
+}
+
+#sidebar #simulacrum .chat-message .message-content h4,
+#simulacrum .chat-message .message-content h4 {
+  font-size: 1.2em !important;
+}
+
+#sidebar #simulacrum .chat-message .message-content h5,
+#simulacrum .chat-message .message-content h5 {
+  font-size: 1.1em !important;
+}
+
+#sidebar #simulacrum .chat-message .message-content h6,
+#simulacrum .chat-message .message-content h6 {
+  font-size: 1em !important;
+}
+
+/* The rest of the reading surface, so blocks breathe consistently. */
+#simulacrum .chat-message .message-content :is(p, ul, ol, blockquote, table) {
+  margin: 0.5em 0;
+}
+
+#simulacrum .chat-message .message-content :is(ul, ol) {
+  padding-left: 1.4em;
+}
+
+#simulacrum .chat-message .message-content li {
+  margin: 0.2em 0;
+}
+
+#simulacrum .chat-message .message-content hr {
+  border: 0;
+  border-top: 1px solid rgba(255, 244, 194, 0.25);
+  margin: 1em 0;
+}
+
+#simulacrum .chat-message .message-content blockquote {
+  border-left: 3px solid rgba(255, 244, 194, 0.35);
+  padding-left: 0.8em;
+  margin-left: 0;
+  color: #e8dcaa;
+  font-style: italic;
+}
+
+#simulacrum .chat-message .message-content table {
+  border-collapse: collapse;
+}
+
+#simulacrum .chat-message .message-content :is(th, td) {
+  border: 1px solid rgba(255, 244, 194, 0.2);
+  padding: 0.25em 0.5em;
+  text-align: left;
+}
+
+#simulacrum .chat-message .message-content a {
+  color: #9cc7ff;
+  text-decoration: underline;
+}
+
 /* Merged content wrapper - ensures proper block-level separation when messages are grouped */
 #simulacrum .message-content .merged-content,
 .simulacrum-sidebar-tab .message-content .merged-content {
@@ -723,6 +822,19 @@
 #simulacrum .chat-message .message-content li code,
 #simulacrum .chat-message .message-content span code,
 #simulacrum .chat-message .message-content code.inline {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ---------------------------------------- */
+/*  User Input Whitespace                  */
+/* ---------------------------------------- */
+
+/* The user's own chat input is echoed verbatim: the line breaks and indentation of
+   a plain textarea must survive display, where markdown would otherwise collapse a
+   single newline into a space. Queued prompts get the same treatment. */
+#simulacrum .simulacrum-user-text,
+#simulacrum .simulacrum-queued-message-content {
   white-space: pre-wrap;
   word-break: break-word;
 }

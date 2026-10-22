@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-10-22
+
+Two fixes to the chat surface.
+
+### Fixed
+
+- **The user's own input is echoed verbatim.** A multi-line prompt was rendered through
+  markdown, which treats a single newline as a soft break, so it came back as one
+  squashed paragraph. The agent always received the original text with its newlines —
+  only the echo was collapsed — but the echo is what you read back, so it now matches
+  what you typed: plain text, line breaks and indentation preserved, and escaped, so a
+  prompt containing `<` or `&` cannot inject markup. Queued prompts get the same
+  treatment.
+- **Assistant headings are legible again.** The heading font sizes were not `!important`,
+  so a UI-overhaul module restyling `.chat-message` headings to the body size flattened
+  the hierarchy — a `## Heading` rendered at exactly the paragraph size under it. The
+  message body now has an explicit six-level scale, scoped so it wins, along with
+  spacing for lists, blockquotes, rules, tables and links, which had been falling back
+  to Foundry's chat-log defaults.
+
 ## [0.4.1] - 2026-10-22
 
 Tracks midi-qol v14.6.4 and DAE v14.6.3 (they must move together — midi 14.6.4 requires
