@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2026-10-24
+
+Fixes the agent's answer appearing twice again — this time in the stored conversation, so it
+came back whenever the log was rebuilt.
+
+### Fixed
+
+- **The final answer is no longer stored twice.** The loop requires `end_loop`, so a
+  text-only answer is stored so it survives a reload, and the model is then asked to re-send
+  it with `end_loop`. That re-send is the same answer, and it was stored too, so the
+  conversation held two copies and any log rebuilt from it — a reload, or reopening the tab —
+  showed the answer twice in one message. The re-send is now recognised as a restatement of
+  the answer already stored this turn and is not stored again. The live display already
+  suppressed the repeat, which is why 0.5.1 looked fixed and the duplicate only returned once
+  the log was rebuilt. The synthetic correction turn that prompts the re-send is skipped when
+  looking for the stored answer, and the search stops at your prompt, so a genuine repeat in a
+  later turn is still kept.
+
 ## [0.6.3] - 2026-10-23
 
 Fixes agent replies rendering as a wall of literal markdown again, and the stray tags that

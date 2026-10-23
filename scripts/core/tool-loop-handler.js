@@ -293,7 +293,11 @@ async function _processLoopCycle(currentResponse, context, state) {
   const addedToolCallsToConversation =
     context.currentToolSupport === true && currentResponse.toolCalls.length > 0;
   if (addedToolCallsToConversation) {
-    const content = currentResponse.content || null;
+    // The answer may already be stored as the text-only reply this tool call re-sends.
+    // Storing it again would show it twice once the log is rebuilt from the conversation.
+    const content = _restatesStoredAnswer(currentResponse.content, context)
+      ? null
+      : currentResponse.content || null;
     const metadata = currentResponse.provider_metadata || null;
     // Strip transient UI-only fields (justification, response) from stored tool_calls
     // to reduce token accumulation in conversation history. These fields are already
@@ -554,6 +558,34 @@ function _getConversationMessages(context) {
   return context.conversationManager.getMessages?.() ?? context.conversationManager.messages ?? [];
 }
 
+/**
+ * Whether `content` restates the answer already stored for this turn.
+ *
+ * The loop requires `end_loop`, so a text-only reply is stored so it survives a reload, and
+ * the model is then asked to re-send it with `end_loop`. That re-send is a restatement of the
+ * stored reply; storing it too put the answer in the log twice, because the live display
+ * suppressed the repeat but a log rebuilt from the conversation rendered both copies.
+ *
+ * Only the most recent assistant message counts, and the search stops at the user's message,
+ * so a genuine repeat in a later turn is still kept.
+ *
+ * @param {string} content - The content about to be stored
+ * @param {object} context
+ * @returns {boolean}
+ */
+function _restatesStoredAnswer(content, context) {
+  if (!content || !content.trim()) return false;
+  const messages = _getConversationMessages(context);
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    if (message.role === 'user') return false;
+    // Skip the synthetic correction turn (marked _internal) that prompted the re-send.
+    if (message.role !== 'assistant' || message._internal) continue;
+    return isRestatement(content, message.content);
+  }
+  return false;
+}
+
 async function _chatWithAI(messages, systemPrompt, context) {
   const { aiClient, tools, currentToolSupport, signal } = context;
   const toolsToSend = currentToolSupport === true ? tools : null;
@@ -749,7 +781,13 @@ async function _handleTextOnlyResponse(currentResponse, context, state) {
 
   // Save the AI's text content as a visible message BEFORE adding the correction, so it
   // survives a reload (the live display already showed it via _notifyAssistantMessage).
-  if (currentResponse.content && currentResponse.content.trim().length > 0) {
+  // A reply that merely restates an answer already stored this turn is skipped, so the
+  // answer is not stored twice.
+  if (
+    currentResponse.content &&
+    currentResponse.content.trim().length > 0 &&
+    !_restatesStoredAnswer(currentResponse.content, context)
+  ) {
     context.conversationManager.addMessage('assistant', currentResponse.content);
     await context.conversationManager.save();
   }
