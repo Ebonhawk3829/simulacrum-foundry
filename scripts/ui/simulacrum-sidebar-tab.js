@@ -780,7 +780,7 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
     if (lastMsg.role !== 'assistant') return false;
 
     // Merge with proper HTML separation to prevent content running together
-    lastMsg.content += '\n\n' + content;
+    lastMsg.content += '\n\n' + (content ?? '');
     const existingDisplay = lastMsg.display || lastMsg.content;
     lastMsg.display = existingDisplay + `<div class="merged-content">${processedDisplay}</div>`;
 

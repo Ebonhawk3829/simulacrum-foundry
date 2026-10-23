@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2026-10-23
+
+Fixes agent replies rendering as a wall of literal markdown again, and the stray tags that
+came with it.
+
+### Fixed
+
+- **A supplied display is trusted only when it is already HTML.** A display that is not HTML
+  is not a rendering of the content — it is a status line or a label — and trusting it put a
+  one-line status where a page of prose belonged, with literal `##` and `\n\n` in the log.
+  This was introduced in 0.4.2 to preserve a short "🛑 Process cancelled" label; that label
+  now passes HTML instead.
+- **A stray tag-shaped word no longer disables markdown for a whole chunk.** The HTML sniff
+  was unanchored, so prose containing something like `</verb>` was treated as HTML and passed
+  through raw — which is why a chunk could show both the stray tag and literal `##`. The sniff
+  is now anchored to the start of the text, so it identifies HTML fragments rather than
+  mentions of tags.
+- An undefined chunk no longer appends the literal string `undefined` into a merged message.
+
 ## [0.6.2] - 2026-10-23
 
 Fixes the edit control on your own prompts doing nothing.

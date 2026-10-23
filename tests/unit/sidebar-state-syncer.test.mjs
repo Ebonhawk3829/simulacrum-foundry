@@ -64,10 +64,38 @@ test('a caller-supplied HTML display is trusted as-is', async () => {
   assert.equal(await resolveDisplay('assistant', 'ignored', html), html);
 });
 
-test('a plain-text display with nothing to render is trusted as-is', async () => {
-  const display = '🛑 Process cancelled';
+test('a plain-text display is not trusted: the content is rendered instead', async () => {
+  // A display that is not HTML is not a rendering of the content. Trusting it is what put
+  // a status line where a page of prose belonged, and literal `##` into the log.
+  const display = 'Reading the full lessons file.';
 
-  assert.equal(await resolveDisplay('assistant', 'Process cancelled by user', display), display);
+  assert.equal(await resolveDisplay('assistant', 'plain reply', display), 'plain reply');
+});
+
+test('a status-line display does not swallow the prose it stands in for', async () => {
+  const previous = globalThis.window;
+  globalThis.window = {
+    showdown: {
+      Converter: class {
+        makeHtml(text) {
+          return String(text).replace(/^## (.+)$/gm, '<h2>$1</h2>');
+        }
+      },
+      setOption() {},
+    },
+  };
+  MarkdownRenderer.reset();
+
+  try {
+    const content = 'Reading the file.\n\n## What the last session left\n\nThree items.';
+    const html = await resolveDisplay('assistant', content, 'Reading the file.');
+
+    assert.match(html, /<h2>What the last session left<\/h2>/, 'the prose is rendered');
+    assert.doesNotMatch(html, /(^|\n)#{1,6}\s/, 'no literal heading marker survives');
+  } finally {
+    globalThis.window = previous;
+    MarkdownRenderer.reset();
+  }
 });
 
 test('a caller-supplied raw-markdown display is re-rendered, not shown literally', async () => {

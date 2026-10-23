@@ -95,10 +95,15 @@ export function renderUserContent(content) {
 /**
  * Resolve the HTML to show for a message.
  *
- * A caller-supplied `display` is used when it is HTML, or when it is text with nothing
- * to render. It is re-rendered from the message content only when it carries markdown
- * markers without being HTML — the case where a render was skipped somewhere upstream
- * and showing the display verbatim is what left literal `##` and `**` in the log.
+ * A caller-supplied `display` is trusted only when it is already HTML — that is what
+ * "pre-rendered" means. Anything else is not a rendering of the content: it is a status
+ * line, a label, or raw markdown, and trusting it is what put literal `##` and `\n\n` into
+ * the log. A display like "Reading the full lessons file." standing in for a page of prose
+ * renders as that one line, and the prose is lost.
+ *
+ * An earlier version of this also trusted displays with "nothing to render" in order to
+ * keep a short label such as "🛑 Process cancelled". That case belongs in the caller, which
+ * should pass HTML if it wants its own wording.
  *
  * @param {string} role - 'user' or 'assistant'
  * @param {string} content - The message's own content
@@ -107,9 +112,8 @@ export function renderUserContent(content) {
  */
 export async function resolveDisplay(role, content, display = null) {
   if (role === 'user') return renderUserContent(content);
-  if (typeof display === 'string' && display.trim()) {
-    const isHtml = MarkdownRenderer.looksLikeHtml(display);
-    if (isHtml || !MarkdownRenderer.looksLikeMarkdown(display)) return display;
+  if (typeof display === 'string' && display.trim() && MarkdownRenderer.looksLikeHtml(display)) {
+    return display;
   }
   return processMessageForDisplay(content, { role });
 }

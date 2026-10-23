@@ -124,10 +124,11 @@ class ChatHandler {
   async _handleCancellation(options) {
     this.logger.info('Process cancelled by user');
     const { onInterimStart, onInterimEnd, getInterimSignal } = options;
+    // HTML, so the display is used as-is rather than replaced by the content text.
     const fallback = {
       role: 'assistant',
       content: 'Process cancelled by user',
-      display: '🛑 Process cancelled',
+      display: '<span>🛑 Process cancelled</span>',
       noGroup: true,
     };
 

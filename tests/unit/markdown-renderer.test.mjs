@@ -25,6 +25,22 @@ function withShowdown(present, run) {
     });
 }
 
+test('HTML is only HTML when it opens with a tag', () => {
+  assert.equal(MarkdownRenderer.looksLikeHtml('<div class="x">y</div>'), true);
+  assert.equal(MarkdownRenderer.looksLikeHtml('\n  <p>hi</p>'), true, 'leading whitespace is fine');
+  assert.equal(MarkdownRenderer.looksLikeHtml('a sentence with </verb> in it'), false);
+  assert.equal(MarkdownRenderer.looksLikeHtml('3 < 4 and 5 > 2'), false);
+});
+
+test('a stray tag-shaped word does not stop a chunk being rendered as markdown', async () => {
+  await withShowdown(true, async () => {
+    const html = await MarkdownRenderer.render('## Heading\n\nHe said </verb> and left.');
+
+    assert.match(html, /<h2>Heading<\/h2>/, 'the markdown is still rendered');
+    assert.doesNotMatch(html, /(^|\n)#{1,6}\s/, 'no literal heading marker survives');
+  });
+});
+
 test('renders markdown when showdown is available', async () => {
   await withShowdown(true, async () => {
     const html = await MarkdownRenderer.render('## Heading\n\n**bold**');

@@ -2,7 +2,15 @@
 import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger('MarkdownRenderer');
-const HTML_PATTERN = /<\/?[a-z][^>]*>/i;
+/**
+ * Text that *is* an HTML fragment, rather than merely mentioning something tag-shaped.
+ *
+ * Anchored to the start on purpose. Models write things like `</verb>` or `<spirit>` in
+ * prose, and the unanchored version let one stray closing tag mark a whole chunk as HTML —
+ * which skipped markdown for that chunk entirely and put literal `##` and `**` into the
+ * log alongside the stray tag.
+ */
+const HTML_PATTERN = /^\s*<\/?[a-z][^>]*>/i;
 const MARKDOWN_PATTERN = new RegExp(
   /(\*\*|__|[_*]{1}|`{1,3}|~~|^>\s|\n>\s|\n[-*+]\s|\n\d+\.\s|^#{1,6}\s|```)/.source,
   'm'
