@@ -65,6 +65,9 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
       clearChat: SimulacrumSidebarTab.prototype._onClearChat,
       jumpToBottom: SimulacrumSidebarTab.prototype._onJumpToBottom,
       cancelProcess: SimulacrumSidebarTab.prototype._onCancelProcess,
+      editMessage: function (event, target) {
+        return SidebarEventHandlers.handleEditMessage(this, event, target);
+      },
     },
   };
 

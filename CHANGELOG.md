@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-10-23
+
+You can now edit one of your own prompts and re-run the turn from there.
+
+### Added
+
+- **Edit and resend.** Your prompts carry an edit control in the message header; clicking
+  it turns the message into an inline editor with Save & resend and Cancel. Saving rewinds
+  the conversation to that prompt, discards the turn it produced, and runs it again with
+  the edited text. Only user messages are editable, and only while nothing is running.
+
+### Changed
+
+- `ConversationManager` gains `rewindFrom(index)`, which drops a message and everything
+  after it, recalculates the token count and notifies auto-save. Cutting at a user message
+  is safe by construction — that turn's tool calls and results all follow it — so nothing
+  is left orphaned.
+- The rewind is destructive by design: the branch it replaces is discarded rather than
+  kept alongside the new one.
+- `tests/baselines/file-sizes.json` records `scripts/ui/simulacrum-sidebar-tab.js` at 1687
+  lines (was 1684), for the single action registration this needed.
+
 ## [0.5.1] - 2026-10-23
 
 Fixes the agent's answer sometimes appearing twice in the chat log.

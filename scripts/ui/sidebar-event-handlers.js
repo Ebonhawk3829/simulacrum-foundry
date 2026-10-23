@@ -207,4 +207,131 @@ export class SidebarEventHandlers {
     }
     app.render?.({ parts: ['log', 'input'] });
   }
+
+  /**
+   * Replace one of your own prompts and run the turn again from there.
+   *
+   * The turn the original prompt produced is no longer valid once the prompt changes, so
+   * that turn is discarded and re-run — a rewind, not a branch. Only user messages are
+   * editable, and only while nothing is running.
+   * @param {object} app
+   * @param {Event} _event
+   * @param {HTMLElement} target
+   */
+  static handleEditMessage(app, _event, target) {
+    if (app.isProcessing()) return;
+
+    const li = target.closest?.('.chat-message');
+    const contentEl = li?.querySelector('.message-content');
+    if (!li || !contentEl || li.querySelector('.simulacrum-message-edit')) return;
+
+    const index = SidebarEventHandlers._conversationIndexOf(app, li.dataset.messageId);
+    if (index < 0) return;
+
+    const original = app.chatHandler.conversationManager.getMessages()[index].content;
+    SidebarEventHandlers._showMessageEditor(app, contentEl, original, index);
+  }
+
+  /**
+   * Conversation index of the prompt behind a UI message.
+   *
+   * UI messages are rebuilt from the conversation in order, so the ordinal of user
+   * messages is stable between the two even though the message ids are not.
+   * @param {object} app
+   * @param {string} messageId
+   * @returns {number} Index into getMessages(), or -1
+   */
+  static _conversationIndexOf(app, messageId) {
+    const uiIndex = app.messages.findIndex(message => message.id === messageId);
+    if (uiIndex < 0) return -1;
+    const before = app.messages.slice(0, uiIndex);
+    const ordinal = before.filter(message => message.role === 'user').length;
+
+    const messages = app.chatHandler?.conversationManager?.getMessages() ?? [];
+    let seen = 0;
+    for (let index = 0; index < messages.length; index++) {
+      if (messages[index].role !== 'user') continue;
+      if (seen === ordinal) return index;
+      seen++;
+    }
+    return -1;
+  }
+
+  /**
+   * Swap a message's body for an inline editor. Save re-runs the turn from the edit;
+   * Cancel just re-renders the log, so nothing has to be un-done.
+   * @param {object} app
+   * @param {HTMLElement} contentEl
+   * @param {string} original
+   * @param {number} index
+   */
+  static _showMessageEditor(app, contentEl, original, index) {
+    const editor = document.createElement('div');
+    editor.className = 'simulacrum-message-edit';
+
+    const textarea = document.createElement('textarea');
+    textarea.className = 'message-edit-input';
+    textarea.value = original;
+
+    const actions = document.createElement('div');
+    actions.className = 'message-edit-actions';
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'message-edit-save';
+    save.textContent = 'Save & resend';
+    const cancel = document.createElement('button');
+    cancel.type = 'button';
+    cancel.className = 'message-edit-cancel';
+    cancel.textContent = 'Cancel';
+    actions.append(save, cancel);
+    editor.append(textarea, actions);
+
+    const restore = () => app.render({ parts: ['log'] });
+    cancel.addEventListener('click', restore);
+    save.addEventListener('click', () => {
+      const text = textarea.value.trim();
+      if (!text || text === original) {
+        restore();
+        return;
+      }
+      SidebarEventHandlers._rewindAndResend(app, index, text);
+    });
+
+    contentEl.replaceChildren(editor);
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+  }
+
+  /**
+   * Discard the turn from `index` onward and run it again with the edited prompt.
+   * @param {object} app
+   * @param {number} index
+   * @param {string} text
+   */
+  static async _rewindAndResend(app, index, text) {
+    const conversation = app.chatHandler?.conversationManager;
+    if (!conversation?.rewindFrom) return;
+
+    // The edited prompt is dropped along with its turn; the send path below re-adds it
+    // with the new text, so the log never shows the prompt twice.
+    conversation.rewindFrom(index);
+    await conversation.save();
+
+    // Rebuild the log from the rewound conversation before the new turn starts.
+    await app._syncFromCoreConversation?.();
+    app.render({ parts: ['log', 'input'] });
+
+    const signal = app.startProcess();
+    app.setProcessing(true);
+    try {
+      await SidebarEventHandlers._processMessageThroughHandler(app, text, signal);
+    } catch (error) {
+      if (!signal.aborted) {
+        createLogger('SidebarEventHandlers').error('Error resending edited message', error);
+        ui.notifications?.error(`Simulacrum: ${error.message}`, { permanent: false });
+      }
+    } finally {
+      app.finishProcess(signal);
+    }
+  }
 }

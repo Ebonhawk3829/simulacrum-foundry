@@ -100,6 +100,31 @@ class ConversationManager {
   }
 
   /**
+   * Drop a message and everything after it.
+   *
+   * Used by edit-and-resend: the edited prompt goes with the turn it produced, and the
+   * send path re-adds it with the new text — so there is exactly one copy of it. Cutting
+   * at a user message is safe by construction: every tool call and result belonging to
+   * that turn comes after it, so nothing is left orphaned.
+   *
+   * @param {number} index - Index into getMessages()
+   * @returns {boolean} Whether anything was dropped
+   */
+  rewindFrom(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= this.activeMessages.length) {
+      return false;
+    }
+
+    const removed = this.activeMessages.splice(index);
+    if (!removed.length) return false;
+
+    this.messages = [...this.activeMessages];
+    this._recalculateTokens();
+    this._triggerStateChange();
+    return true;
+  }
+
+  /**
    * Updates the system message (first message) with additional content.
    * @param {string} additionalContent - Content to append to the system message.
    */

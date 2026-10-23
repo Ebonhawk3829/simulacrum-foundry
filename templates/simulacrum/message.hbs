@@ -19,6 +19,11 @@
         <i class="fa-solid fa-trash" inert></i>
       </a>
       {{/if}}
+      {{#if (eq role 'user')}}
+      <a aria-label="Edit and resend" class="message-edit" data-action="editMessage">
+        <i class="fa-solid fa-pen" inert></i>
+      </a>
+      {{/if}}
     </span>
   </header>
   <div class="message-content">

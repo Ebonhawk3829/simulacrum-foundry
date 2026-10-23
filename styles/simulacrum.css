@@ -2050,3 +2050,51 @@ section[data-tab="simulacrum"] .discord-btn:hover {
   border-color: #dc3545;
   color: #dc3545;
 }
+
+/* ---------------------------------------- */
+/*  Message Editing                        */
+/* ---------------------------------------- */
+
+/* Edit affordance on your own prompts: quiet until hovered, so it does not compete
+   with the message text. */
+.simulacrum-chat-message .message-edit {
+  margin-left: 6px;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.simulacrum-chat-message .message-edit:hover {
+  opacity: 1;
+}
+
+/* The inline editor replaces the message body, so it inherits the message's typography
+   and only supplies the box and the actions. */
+.simulacrum-message-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.simulacrum-message-edit .message-edit-input {
+  width: 100%;
+  min-height: 5em;
+  resize: vertical;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.4;
+  color: inherit;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 244, 194, 0.3);
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.simulacrum-message-edit .message-edit-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.simulacrum-message-edit .message-edit-actions button {
+  cursor: pointer;
+}
