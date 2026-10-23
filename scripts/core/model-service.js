@@ -15,6 +15,15 @@ const logger = createLogger('ModelService');
 const OPENROUTER_MODELS_URL = 'https://openrouter.ai/api/v1/models';
 
 /**
+ * The context window assumed when nothing better is known.
+ *
+ * The single home for this number. It used to be repeated as a literal in the setting
+ * registration, the conversation manager, the AI client and here, which is how the
+ * displayed limit and the compaction limit were able to disagree.
+ */
+export const DEFAULT_CONTEXT_LIMIT = 32000;
+
+/**
  * Keys to search for context limit in model metadata (in priority order)
  * Supports both flat and nested paths (dot notation)
  */
@@ -59,11 +68,7 @@ class ModelService {
     const apiKey = game.settings.get(MODULE_ID, 'apiKey');
 
     // Check if cache is valid
-    if (
-      !forceRefresh &&
-      this.#cachedModels.length > 0 &&
-      this.#cachedApiKey === apiKey
-    ) {
+    if (!forceRefresh && this.#cachedModels.length > 0 && this.#cachedApiKey === apiKey) {
       return this.#cachedModels;
     }
 
@@ -325,7 +330,7 @@ class ModelService {
    * @param {number} [fallback=32000] - Fallback value if not derivable
    * @returns {{ limit: number, source: 'manual' | 'derived' | 'openrouter' | 'fallback' }} Context limit and source
    */
-  getContextLimit(modelId, fallback = 32000) {
+  getContextLimit(modelId, fallback = DEFAULT_CONTEXT_LIMIT) {
     // A manually saved limit for this exact model wins over derived metadata
     // so a user-entered value survives refresh/re-render (#184)
     const manual = this._getManualContextLimit(modelId);
@@ -355,6 +360,34 @@ class ModelService {
 
     logger.debug(`Using fallback context limit for ${modelId}: ${fallback}`);
     return { limit: fallback, source: 'fallback' };
+  }
+
+  /**
+   * The context window actually in force for a model: a manual override, else provider
+   * metadata, else the OpenRouter cross-reference, else the fallback setting.
+   *
+   * This is the number the conversation has to compact against. Reading the fallback
+   * setting directly instead — which is what compaction used to do — let the sidebar
+   * display a model's real window (1M, say) while the conversation manager compacted at
+   * the 32k default, so the log filled with compaction notices for a model with thirty
+   * times the room.
+   *
+   * @param {string|null} [modelId] - Defaults to the configured model
+   * @returns {number} Context limit in tokens
+   */
+  resolveContextLimit(modelId = null) {
+    let fallback = DEFAULT_CONTEXT_LIMIT;
+    let model = modelId;
+
+    try {
+      const configured = game.settings.get(MODULE_ID, 'fallbackContextLimit');
+      if (configured > 0) fallback = configured;
+      if (!model) model = game.settings.get(MODULE_ID, 'model') || '';
+    } catch {
+      // Settings unavailable (early init, tests): the default stands.
+    }
+
+    return this.getContextLimit(model, fallback).limit;
   }
 
   /**

@@ -20,7 +20,7 @@ import {
   buildConnectionRetryLabel,
   DEFAULT_RETRY_CONFIG,
 } from '../utils/retry-helpers.js';
-import { modelService } from './model-service.js';
+import { DEFAULT_CONTEXT_LIMIT, modelService } from './model-service.js';
 
 /**
  * The only supported AI endpoint in this fork. OpenRouter is OpenAI-compatible,
@@ -75,7 +75,7 @@ export class AIClient {
     this.model = config.model;
 
     // Context length will be dynamically derived when needed
-    this._fallbackContextLimit = 32000;
+    this._fallbackContextLimit = DEFAULT_CONTEXT_LIMIT;
     try {
       if (typeof game !== 'undefined' && game?.settings?.get) {
         const configuredLimit = game.settings.get('simulacrum', 'fallbackContextLimit');

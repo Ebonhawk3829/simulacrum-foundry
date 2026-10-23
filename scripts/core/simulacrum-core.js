@@ -8,6 +8,7 @@ import { COMPACTION_STATUS, ConversationManager, MAX_COMPACTION_ROUNDS } from '.
 import { toolRegistry } from './tool-registry.js';
 import { documentReadRegistry } from '../utils/document-read-registry.js';
 import { toolPermissionManager } from './tool-permission-manager.js';
+import { modelService } from './model-service.js';
 
 import { DocumentAPI } from './document-api.js';
 import {
@@ -80,8 +81,11 @@ class SimulacrumCore {
     // Initialize AI client
     await this.initializeAIClient();
 
-    // Initialize conversation manager with auto-save callback
-    const tokenLimit = game.settings.get('simulacrum', 'fallbackContextLimit') || 32000;
+    // Initialize conversation manager with auto-save callback. The window is *resolved*
+    // — manual override, then model metadata, then the OpenRouter cross-reference, then
+    // the fallback setting — rather than read straight from the fallback, which is what
+    // pinned compaction to the 32k default regardless of the model's real context.
+    const tokenLimit = modelService.resolveContextLimit();
     this.conversationManager = new ConversationManager(
       game.user.id,
       game.world.id,
@@ -89,6 +93,15 @@ class SimulacrumCore {
       null,
       () => this.saveConversationState() // Auto-save callback
     );
+
+    // The window is per-model and settable from the sidebar, so re-resolve whenever the
+    // model, the manual limit, or the model that limit is pinned to changes.
+    const windowSettings = ['model', 'fallbackContextLimit', 'contextLimitModel'];
+    Hooks.on('updateSetting', setting => {
+      const [namespace, key] = String(setting?.key ?? '').split('.');
+      if (namespace !== 'simulacrum' || !windowSettings.includes(key)) return;
+      this.conversationManager?.setTokenLimit(modelService.resolveContextLimit());
+    });
     // Attempt to load any previously saved conversation state
     try {
       const loaded = await this.loadConversationState();

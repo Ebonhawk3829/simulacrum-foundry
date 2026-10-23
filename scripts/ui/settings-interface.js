@@ -6,6 +6,7 @@
 
 import { createLogger } from '../utils/logger.js';
 import { ToolPermissionsConfig } from './tool-permissions-config.js';
+import { DEFAULT_CONTEXT_LIMIT } from '../core/model-service.js';
 
 /**
  * Helper function that converts an input field for a setting into a textarea.
@@ -121,7 +122,7 @@ function _registerCoreSettings() {
     scope: 'world',
     config: false, // Managed via sidebar input
     type: Number,
-    default: 32000,
+    default: DEFAULT_CONTEXT_LIMIT,
     restricted: true,
   });
 

@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2026-10-23
+
+Fixes conversation compaction running far more often than the model's context window
+warrants.
+
+### Fixed
+
+- **Compaction now uses the model's real context window.** The conversation manager was
+  constructed from the `fallbackContextLimit` setting (default 32,000) and compacted at
+  roughly two-thirds of it, so a model with a 1M window was compacting at around 20k and the
+  log filled with compaction notices. The window is now resolved the same way the sidebar
+  displays it — manual override, then provider metadata, then the OpenRouter cross-reference,
+  then the fallback setting — and pushed into the conversation whenever the model or the
+  settings change, so the displayed limit and the enforced limit are the same number.
+- A manually entered context limit still takes precedence, as before.
+
+### Changed
+
+- `ConversationManager` no longer reads settings; it takes the window it is given, via
+  `setTokenLimit`. `DEFAULT_CONTEXT_LIMIT` is exported from `model-service` rather than
+  repeated as a literal in four places.
+
 ## [0.6.0] - 2026-10-23
 
 You can now edit one of your own prompts and re-run the turn from there.

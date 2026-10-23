@@ -22,7 +22,7 @@ class ConversationManager {
   /**
    * @param {string} userId - The ID of the FoundryVTT user initiating the conversation.
    * @param {string} worldId - The ID of the FoundryVTT world the conversation is taking place in.
-   * @param {number} [maxTokens=32000] - The maximum token limit for the conversation history.
+   * @param {number} [maxTokens=32000] - Context window in tokens; the owner resolves this (see setTokenLimit).
    * @param {Function} [onStateChange=null] - Callback function to trigger when conversation state changes.
    */
   constructor(userId, worldId, maxTokens = 32000, tokenizer = null, onStateChange = null) {
@@ -36,19 +36,11 @@ class ConversationManager {
     this.activeMessages = []; // Tier 3: Recent messages in full fidelity
     this.toolOutputBuffer = new Map(); // Store full tool outputs for indexed access
 
-    // Configurable token limit support (fallback context limit)
-    let configuredMax = maxTokens;
-    try {
-      if (typeof game !== 'undefined' && game?.settings?.get) {
-        const limit = game.settings.get('simulacrum', 'fallbackContextLimit');
-        if (limit && limit > 0) {
-          configuredMax = limit;
-        }
-      }
-    } catch {
-      // Ignore settings access errors
-    }
-    this.maxTokens = configuredMax;
+    // The context window is resolved by the owner — manual override, then model metadata,
+    // then the OpenRouter cross-reference, then the fallback setting — and pushed in here.
+    // This class deliberately reads no settings of its own, so there is one resolution
+    // path and it cannot disagree with what the sidebar displays.
+    this.maxTokens = maxTokens;
     this.tokenizer = tokenizer || defaultTokenizer; // Pluggable adapter
     this.onStateChange = onStateChange; // Auto-save callback
   }
@@ -167,23 +159,30 @@ class ConversationManager {
   }
 
   /**
+   * Set the context window this conversation compacts against.
+   *
+   * The owner resolves it — manual override, then provider metadata, then the OpenRouter
+   * cross-reference, then the fallback setting — and pushes it here whenever the model or
+   * the settings change. Keeping it here rather than re-reading the fallback setting means
+   * the window the agent is told about and the window it compacts at are the same number.
+   *
+   * @param {number} limit - Context window in tokens
+   */
+  setTokenLimit(limit) {
+    if (typeof limit === 'number' && limit > 0) {
+      this.maxTokens = limit;
+      this._triggerStateChange();
+    }
+  }
+
+  /**
    * Calculate the compaction threshold based on model context window
    * @param {number} [overhead=0] - Additional token overhead to reserve (e.g. system prompt tokens)
    * @returns {number} Token threshold for triggering compaction
    * @private
    */
   _getCompactionThreshold(overhead = 0) {
-    // Re-read current limit so runtime changes to fallbackContextLimit take effect without reload
-    let contextWindow = this.maxTokens;
-    try {
-      if (typeof game !== 'undefined' && game?.settings?.get) {
-        const current = game.settings.get('simulacrum', 'fallbackContextLimit');
-        if (current && current > 0) contextWindow = current;
-      }
-    } catch {
-      // Ignore — fall back to initialised maxTokens
-    }
-    const available = Math.max(0, contextWindow - Math.max(0, overhead));
+    const available = Math.max(0, this.maxTokens - Math.max(0, overhead));
     const contextTarget = Math.floor(available * 0.33); // 33% of available space for working memory
     const compactionPromptSize = 500; // Overhead for summarization prompt
     return Math.max(0, available - contextTarget - compactionPromptSize);
