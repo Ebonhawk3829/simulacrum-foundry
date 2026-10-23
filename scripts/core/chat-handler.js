@@ -60,15 +60,7 @@ class ChatHandler {
     } catch (error) {
       // Handle cancellation — not an error, just user-initiated stop
       if (error.name === 'AbortError' || error.message === 'Process was cancelled') {
-        this.logger.info('Process cancelled by user');
-        const cancelMessage = {
-          role: 'assistant',
-          content: 'Process cancelled by user',
-          display: '🛑 Process cancelled',
-          noGroup: true,
-        };
-        this.addMessageToUI(cancelMessage, options);
-        return cancelMessage;
+        return await this._handleCancellation(options);
       }
 
       this.logger.error('Error processing user message', error);
@@ -115,6 +107,55 @@ class ChatHandler {
       this.addMessageToUI(errorMessage, options);
 
       return errorMessage;
+    }
+  }
+
+  /**
+   * Hand the turn's state over when the user stops the run.
+   *
+   * A stop used to discard the work and print "Process cancelled". Instead it now
+   * emits the factual state of play immediately, then one model-written wrap-up on its
+   * own abort signal — the stop that triggered this must not kill the report it asked
+   * for. A second press aborts that signal and the facts stand alone.
+   *
+   * @param {object} options - The same options the run was started with
+   * @returns {Promise<object>} The message that was emitted
+   */
+  async _handleCancellation(options) {
+    this.logger.info('Process cancelled by user');
+    const { onInterimStart, onInterimEnd, getInterimSignal } = options;
+    const fallback = {
+      role: 'assistant',
+      content: 'Process cancelled by user',
+      display: '🛑 Process cancelled',
+      noGroup: true,
+    };
+
+    onInterimStart?.();
+    try {
+      const { runInterimReport } = await import('./interim-report.js');
+      const { facts, summary } = await runInterimReport({
+        conversationManager: this.conversationManager,
+        aiClient: SimulacrumCore.aiClient,
+        signal: getInterimSignal?.() ?? null,
+        onPart: async part => {
+          await this.addMessageToUI(
+            { role: 'assistant', content: part, display: part, noGroup: true },
+            options
+          );
+        },
+      });
+      // Keep the wrap-up in the conversation so the next message can continue from it
+      // rather than starting cold. The facts are derived from the conversation, so they
+      // are shown but not stored.
+      if (summary) this.addMessageToConversation('assistant', summary);
+      return { role: 'assistant', content: facts, display: facts, noGroup: true };
+    } catch (err) {
+      this.logger.error('Interim report failed', err);
+      await this.addMessageToUI(fallback, options);
+      return fallback;
+    } finally {
+      onInterimEnd?.();
     }
   }
 

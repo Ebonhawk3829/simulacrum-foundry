@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-10-23
+
+Stopping the agent now hands over the turn instead of discarding it.
+
+### Added
+
+- **Stop produces a handover.** Pressing Stop aborts the run, then immediately emits the
+  facts of the turn — how many tool calls ran, how many failed, and each one with its
+  outcome — and follows it with a short model-written wrap-up: what was established, what
+  changed, what is still open, and the next step. The wrap-up is written with tools
+  disabled, on its own abort signal so the stop that triggered it cannot kill it, and
+  capped at 20 seconds. It is added to the conversation, so the next message continues
+  from it rather than starting cold. If the wrap-up cannot be written, the facts stand
+  alone — Stop always produces something.
+- **A second press is a hard stop.** While the wrap-up is being written the status reads
+  "Summarising…"; pressing Stop again aborts it and keeps the facts.
+
+### Changed
+
+- The cancellation path no longer discards the turn's work behind a bare
+  "Process cancelled".
+
 ## [0.4.3] - 2026-10-23
 
 Fixes assistant replies that sometimes rendered as raw markdown — a wall of literal `##`

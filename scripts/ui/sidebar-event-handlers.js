@@ -6,6 +6,7 @@
 import { ConversationCommands } from './conversation-commands.js';
 import { createLogger } from '../utils/logger.js';
 import { processMessageForDisplay } from './sidebar-state-syncer.js';
+import { interimControl } from '../core/interim-report.js';
 
 export class SidebarEventHandlers {
   /**
@@ -142,6 +143,11 @@ export class SidebarEventHandlers {
         if (textarea) textarea.value = originalMessage;
       },
       signal,
+      // Stopping hands the turn over rather than discarding it; the wrap-up runs on its
+      // own signal so the stop cannot kill it, and a second press aborts that signal.
+      getInterimSignal: () => interimControl.signal(),
+      onInterimStart: () => SidebarEventHandlers._setSummarising(app, true),
+      onInterimEnd: () => SidebarEventHandlers._setSummarising(app, false),
     });
   }
   /* eslint-enable max-lines-per-function */
@@ -170,12 +176,35 @@ export class SidebarEventHandlers {
   }
 
   static async handleCancelProcess(app, _event, _target) {
-    if (app.chatHandler) {
-      // Placeholder for controller logic
+    // A second press, while the wrap-up is being written, is a hard stop.
+    if (interimControl.abort()) {
+      SidebarEventHandlers._setSummarising(app, false);
+      return;
     }
+    if (!app.isProcessing()) return;
+
+    interimControl.begin();
     const success = await app.cancelCurrentProcesses();
     if (success) {
-      ui.notifications.info('AI processing cancelled.');
+      SidebarEventHandlers._setSummarising(app, true);
     }
+  }
+
+  /**
+   * Show or clear the "summarising" state.
+   *
+   * Reuses the active-process map so the process-status line and the stop button stay
+   * in place for the second press, without the sidebar having to know about any of it.
+   * @param {object} app
+   * @param {boolean} active
+   */
+  static _setSummarising(app, active) {
+    if (active) {
+      app._activeProcesses?.set('interim', { label: 'Summarising…' });
+    } else {
+      app._activeProcesses?.delete('interim');
+      interimControl.reset();
+    }
+    app.render?.({ parts: ['log', 'input'] });
   }
 }
