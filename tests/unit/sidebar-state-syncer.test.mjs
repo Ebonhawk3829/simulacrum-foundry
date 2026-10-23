@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { renderUserContent, createDisplayMessage } from '../../scripts/ui/sidebar-state-syncer.js';
+import {
+  renderUserContent,
+  createDisplayMessage,
+  resolveDisplay,
+} from '../../scripts/ui/sidebar-state-syncer.js';
+import { MarkdownRenderer } from '../../scripts/lib/markdown-renderer.js';
 
 test('the user input keeps its line breaks and blank lines', () => {
   const html = renderUserContent('Target: one creature\n\nOn a failed save:\n- 4d6 fire');
@@ -51,4 +56,48 @@ test('createDisplayMessage renders a user message verbatim, and an assistant mes
   // markdown renderer is a no-op without markers), which is the existing behaviour.
   const assistant = await createDisplayMessage('assistant', 'plain reply');
   assert.equal(assistant.display, 'plain reply');
+});
+
+test('a caller-supplied HTML display is trusted as-is', async () => {
+  const html = '<div class="simulacrum-tool-call tool-success">ok</div>';
+
+  assert.equal(await resolveDisplay('assistant', 'ignored', html), html);
+});
+
+test('a plain-text display with nothing to render is trusted as-is', async () => {
+  const display = '🛑 Process cancelled';
+
+  assert.equal(await resolveDisplay('assistant', 'Process cancelled by user', display), display);
+});
+
+test('a caller-supplied raw-markdown display is re-rendered, not shown literally', async () => {
+  const previous = globalThis.window;
+  globalThis.window = {
+    showdown: {
+      Converter: class {
+        makeHtml(text) {
+          return String(text).replace(/^## (.+)$/gm, '<h2>$1</h2>');
+        }
+      },
+      setOption() {},
+    },
+  };
+  MarkdownRenderer.reset();
+
+  try {
+    const html = await resolveDisplay('assistant', '## Heading', '## Heading');
+    assert.match(html, /<h2>Heading<\/h2>/);
+    assert.doesNotMatch(html, /## Heading/);
+  } finally {
+    globalThis.window = previous;
+    MarkdownRenderer.reset();
+  }
+});
+
+test('a user message is rendered verbatim regardless of a supplied display', async () => {
+  const html = await resolveDisplay('user', 'line one\nline two', '<p>ignored</p>');
+
+  assert.match(html, /class="simulacrum-user-text"/);
+  assert.match(html, /line one\nline two/);
+  assert.doesNotMatch(html, /<p>ignored<\/p>/);
 });

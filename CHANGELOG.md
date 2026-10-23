@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.3] - 2026-10-23
+
+Fixes assistant replies that sometimes rendered as raw markdown — a wall of literal `##`
+and `**` instead of headings and emphasis.
+
+### Fixed
+
+- **A failed markdown render no longer reaches the log unrendered.** `MarkdownRenderer`
+  looked showdown up on `window` at call time and, when it was missing or a conversion
+  threw, returned the message text unchanged; because a message's display is computed
+  once and cached, the raw `##`/`**` then stayed on screen for the rest of the session.
+  It now waits briefly for showdown to load, retries, and on a genuine failure falls back
+  to escaped text with line breaks kept, logging which path was taken.
+- **A caller-supplied `display` that is still raw markdown is rendered** rather than shown
+  verbatim (`resolveDisplay`). HTML displays such as tool cards, and plain results with
+  nothing to render, are left untouched.
+
 ## [0.4.2] - 2026-10-22
 
 Two fixes to the chat surface.

@@ -11,7 +11,7 @@ import { SidebarEventHandlers } from './sidebar-event-handlers.js';
 import {
   getDisplayUser,
   syncMessagesFromCore,
-  processMessageForDisplay,
+  resolveDisplay,
 } from './sidebar-state-syncer.js';
 import { modelService } from '../core/model-service.js';
 import { formatPendingToolCall, formatToolCallDisplay } from '../utils/message-utils.js';
@@ -764,7 +764,7 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
   }
 
   async _addMessageImpl(role, content, display, noGroup) {
-    const processedDisplay = display || (await processMessageForDisplay(content, { role }));
+    const processedDisplay = await resolveDisplay(role, content, display);
 
     if (this._tryMergeAssistantMessage(role, content, processedDisplay, noGroup)) return;
 

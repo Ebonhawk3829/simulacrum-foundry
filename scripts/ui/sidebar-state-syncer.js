@@ -93,6 +93,28 @@ export function renderUserContent(content) {
 }
 
 /**
+ * Resolve the HTML to show for a message.
+ *
+ * A caller-supplied `display` is used when it is HTML, or when it is text with nothing
+ * to render. It is re-rendered from the message content only when it carries markdown
+ * markers without being HTML — the case where a render was skipped somewhere upstream
+ * and showing the display verbatim is what left literal `##` and `**` in the log.
+ *
+ * @param {string} role - 'user' or 'assistant'
+ * @param {string} content - The message's own content
+ * @param {string|null} [display] - A pre-processed display, if the caller has one
+ * @returns {Promise<string>} HTML for the message
+ */
+export async function resolveDisplay(role, content, display = null) {
+  if (role === 'user') return renderUserContent(content);
+  if (typeof display === 'string' && display.trim()) {
+    const isHtml = MarkdownRenderer.looksLikeHtml(display);
+    if (isHtml || !MarkdownRenderer.looksLikeMarkdown(display)) return display;
+  }
+  return processMessageForDisplay(content, { role });
+}
+
+/**
  * Create a formatted message object for display
  * @param {string} role - Message role ('user' or 'assistant')
  * @param {string} content - Raw content
@@ -100,7 +122,7 @@ export function renderUserContent(content) {
  * @returns {Promise<object>} Formatted message object
  */
 export async function createDisplayMessage(role, content, display = null) {
-  const processedDisplay = display || (await processMessageForDisplay(content, { role }));
+  const processedDisplay = await resolveDisplay(role, content, display);
 
   return {
     id: foundry.utils.randomID(),
