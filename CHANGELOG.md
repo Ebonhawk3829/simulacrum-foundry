@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-10-23
+
+Fixes the agent's answer sometimes appearing twice in the chat log.
+
+### Fixed
+
+- **A reworded repeat of an answer is no longer shown or stored.** The loop requires the
+  model to call `end_loop`, so a text-only reply is rejected and the model is asked again
+  — and it almost always restates its answer in slightly different words. The only guard
+  was an exact string comparison, so the second copy passed through and the answer
+  appeared twice. The comparison is now content-based: a reply that merely restates the
+  previous one is neither emitted nor stored, and the turn ends rather than asking for a
+  third copy. The similarity check only applies to replies of 25 words or more at 75%
+  shared words, so short answers are never suppressed.
+
 ## [0.5.0] - 2026-10-23
 
 Stopping the agent now hands over the turn instead of discarding it.

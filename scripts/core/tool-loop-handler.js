@@ -30,6 +30,16 @@ export { retrieveToolJustification } from './tool-execution.js';
 
 const logger = createLogger('ToolLoop');
 const MAX_TOOL_FAILURE_ATTEMPTS = 3;
+
+/**
+ * A restatement is only judged on a substantial reply. Short ones ("Done.") share too
+ * few words for overlap to mean anything, and suppressing a genuine second answer is
+ * worse than occasionally showing a duplicate.
+ */
+const RESTATEMENT_MIN_TOKENS = 25;
+
+/** Fraction of shared words at which two replies count as the same answer. */
+const RESTATEMENT_THRESHOLD = 0.75;
 const TOOL_RETRY_STATUS_PREFIX = 'tool-retry';
 
 /**
@@ -274,33 +284,7 @@ async function _processLoopCycle(currentResponse, context, state) {
 
   // 3. Terminate if no tools - require end_loop to exit
   if (!Array.isArray(currentResponse.toolCalls) || currentResponse.toolCalls.length === 0) {
-    if (isDebugEnabled()) logger.debug('No tool calls in current AI response; requesting end_loop');
-    // Instead of breaking, ask AI to use end_loop tool
-    repeatCount++;
-    if (repeatCount >= REPEAT_LIMIT) {
-      return { action: 'break', reason: 'repeat_limit' };
-    }
-
-    // PERSIST FIX: Save the AI's text content as a visible message BEFORE adding correction.
-    // This ensures the text is available on reload (live display already shows it via _notifyAssistantMessage).
-    // Only save if there's actual text content (not just whitespace).
-    if (currentResponse.content && currentResponse.content.trim().length > 0) {
-      context.conversationManager.addMessage('assistant', currentResponse.content);
-      await context.conversationManager.save();
-    }
-
-    // Send comprehensive correction message with loop context and exit options
-    const correctionMessage = `LOOP CONTEXT: You are currently in an autonomous tool execution loop. Text-only responses are rejected - you MUST respond with a tool call.
-
-To exit this loop, call the \`end_loop\` tool. Your text response is already displayed to the user - the end_loop tool just signals that you are done and control should return to the user.
-
-You cannot respond without a tool call. Either continue with the next tool in your plan, or call end_loop to finish.`;
-    await appendEmptyContentCorrection(context.conversationManager, correctionMessage);
-    interactionLogger.logLoopEvent(context.loopId, 'continuation_requested', {
-      reason: 'text_only_correction',
-    });
-    const response = await _getNextAIResponse([], context);
-    return { action: 'continue', response, repeatCount, toolFailureAttempts };
+    return _handleTextOnlyResponse(currentResponse, context, state);
   }
 
   // 3.5 FIX: Add assistant message with tool_calls to conversation BEFORE executing tools
@@ -686,13 +670,122 @@ function _extractToolResponse(toolCalls) {
   return responses.join('\n\n');
 }
 
+/** Lowercased words with punctuation and markdown dropped, for the overlap check. */
+function tokenize(text) {
+  return String(text ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
+/**
+ * Whether two replies say the same thing.
+ *
+ * The loop requires the model to call `end_loop`, so a text-only answer is rejected and
+ * the model is asked again — and it almost always restates its answer in slightly
+ * different words. The exact-match guard let that second copy through, so the user saw
+ * the answer twice. Wording changes; the content does not, so compare the words.
+ *
+ * @param {string} a
+ * @param {string} b
+ * @returns {boolean}
+ */
+export function isRestatement(a, b) {
+  const left = tokenize(a);
+  const right = tokenize(b);
+  if (left.length < RESTATEMENT_MIN_TOKENS || right.length < RESTATEMENT_MIN_TOKENS) {
+    return false;
+  }
+
+  const remaining = new Map();
+  for (const token of left) remaining.set(token, (remaining.get(token) || 0) + 1);
+
+  let shared = 0;
+  for (const token of right) {
+    const count = remaining.get(token) || 0;
+    if (count > 0) {
+      shared++;
+      remaining.set(token, count - 1);
+    }
+  }
+
+  const union = left.length + right.length - shared;
+  return union > 0 && shared / union >= RESTATEMENT_THRESHOLD;
+}
+
+/** Sent when the model replies with text instead of calling `end_loop`. */
+const TEXT_ONLY_CORRECTION = `LOOP CONTEXT: You are currently in an autonomous tool execution loop. Text-only responses are rejected - you MUST respond with a tool call.
+
+To exit this loop, call the \`end_loop\` tool. Your text response is already displayed to the user - the end_loop tool just signals that you are done and control should return to the user.
+
+You cannot respond without a tool call. Either continue with the next tool in your plan, or call end_loop to finish.`;
+
+/**
+ * A reply with no tool calls.
+ *
+ * The loop requires `end_loop`, so the model is normally asked again — and it almost
+ * always restates the answer it just gave, which the user then sees twice. If this reply
+ * only restates the previous one, the turn ends here instead.
+ *
+ * @param {object} currentResponse
+ * @param {object} context
+ * @param {object} state
+ * @returns {Promise<object>} A cycle result
+ */
+async function _handleTextOnlyResponse(currentResponse, context, state) {
+  const { REPEAT_LIMIT, toolFailureAttempts } = state;
+  let { repeatCount } = state;
+
+  if (isRestatement(currentResponse.content, context.previousEmittedContent)) {
+    return _restatementTerminal(currentResponse.content, context);
+  }
+
+  if (isDebugEnabled()) logger.debug('No tool calls in current AI response; requesting end_loop');
+  repeatCount++;
+  if (repeatCount >= REPEAT_LIMIT) {
+    return { action: 'break', reason: 'repeat_limit' };
+  }
+
+  // Save the AI's text content as a visible message BEFORE adding the correction, so it
+  // survives a reload (the live display already showed it via _notifyAssistantMessage).
+  if (currentResponse.content && currentResponse.content.trim().length > 0) {
+    context.conversationManager.addMessage('assistant', currentResponse.content);
+    await context.conversationManager.save();
+  }
+
+  await appendEmptyContentCorrection(context.conversationManager, TEXT_ONLY_CORRECTION);
+  interactionLogger.logLoopEvent(context.loopId, 'continuation_requested', {
+    reason: 'text_only_correction',
+  });
+  const response = await _getNextAIResponse([], context);
+  return { action: 'continue', response, repeatCount, toolFailureAttempts };
+}
+
+/** End the turn on a restated answer: nothing new to add, and no third copy to show. */
+function _restatementTerminal(content, context) {
+  interactionLogger.logLoopEvent(context.loopId, 'text_only_restatement', {});
+  return {
+    action: 'return',
+    reason: 'text_only_restatement',
+    value: { content, display: content, toolCalls: [], _emitted: true },
+  };
+}
+
 async function _notifyAssistantMessage(response, context) {
   if (context.onToolResult && !response._parseError) {
     // Deduplicate identical content within the same loop to prevent UI spam
     const content = response.content?.trim() || ''; // Use empty string if undefined
 
+    // A restatement of the previous answer is not a new message, however it is worded.
+    const restated = content !== '' && isRestatement(content, context.lastEmittedContent);
+
+    // Remember what was on screen before this iteration, so the cycle can tell whether the
+    // model has merely restated it (lastEmittedContent is about to become this content).
+    context.previousEmittedContent = context.lastEmittedContent;
+
     // We emit if content is new OR if it's the first emission (even if empty) to serve as tool anchor
-    if (content !== context.lastEmittedContent || !response._emitted) {
+    if (!restated && (content !== context.lastEmittedContent || !response._emitted)) {
       // Pass content (even if empty) to UI. SidebarEventHandlers/ChatHandler must handle empty accordingly.
       await context.onToolResult({
         role: 'assistant',
