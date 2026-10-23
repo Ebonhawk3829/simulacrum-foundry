@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-10-23
+
+Fixes the edit control on your own prompts doing nothing.
+
+### Fixed
+
+- **Edit and resend now works on a freshly loaded session.** The chat handler is built
+  lazily on the first send while the log is synced straight from core on load, so
+  `app.chatHandler` is null until you have sent something. The index was built from that,
+  found nothing, and the handler returned silently. It now builds the chat handler first,
+  falling back to core's conversation manager, and resolves the conversation once so the
+  editor and the resend both use it — the resend had the same dependency, so Save & resend
+  would also have done nothing.
+- A refused edit now logs the reason instead of returning silently.
+- Editing is refused for anything that is not one of your prompts; previously an assistant
+  message could have mapped onto an earlier prompt's index and rewound the wrong turn.
+
 ## [0.6.1] - 2026-10-23
 
 Fixes conversation compaction running far more often than the model's context window

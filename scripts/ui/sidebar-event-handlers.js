@@ -8,6 +8,9 @@ import { createLogger } from '../utils/logger.js';
 import { processMessageForDisplay } from './sidebar-state-syncer.js';
 import { interimControl } from '../core/interim-report.js';
 
+/** Reporter for the handlers below, so a refused action is visible instead of silent. */
+const log = createLogger('SidebarEventHandlers');
+
 export class SidebarEventHandlers {
   /**
    * Resolve the prompt for a send: queued replays carry it in target.message,
@@ -218,18 +221,43 @@ export class SidebarEventHandlers {
    * @param {Event} _event
    * @param {HTMLElement} target
    */
-  static handleEditMessage(app, _event, target) {
+  static async handleEditMessage(app, _event, target) {
     if (app.isProcessing()) return;
 
     const li = target.closest?.('.chat-message');
     const contentEl = li?.querySelector('.message-content');
     if (!li || !contentEl || li.querySelector('.simulacrum-message-edit')) return;
 
-    const index = SidebarEventHandlers._conversationIndexOf(app, li.dataset.messageId);
-    if (index < 0) return;
+    // The chat handler is built lazily on the first send, but the log is synced straight
+    // from SimulacrumCore on load — so it can still be null here even with messages on
+    // screen. Build it before we need it, or every edit quietly does nothing.
+    await app.ensureChatHandler();
+    const conversation = await SidebarEventHandlers._resolveConversation(app);
+    if (!conversation?.getMessages) {
+      log.warn('Edit ignored: no conversation is available yet');
+      return;
+    }
 
-    const original = app.chatHandler.conversationManager.getMessages()[index].content;
-    SidebarEventHandlers._showMessageEditor(app, contentEl, original, index);
+    const messageId = li.dataset.messageId;
+    const index = SidebarEventHandlers._conversationIndexOf(app, conversation, messageId);
+    if (index < 0) {
+      log.warn('Edit ignored: could not match that message to the conversation');
+      return;
+    }
+
+    const original = conversation.getMessages()[index].content;
+    SidebarEventHandlers._showMessageEditor(app, { conversation, contentEl, original, index });
+  }
+
+  /**
+   * The conversation manager, reachable either through the chat handler or through core.
+   * @param {object} app
+   * @returns {Promise<object|null>}
+   */
+  static async _resolveConversation(app) {
+    if (app.chatHandler?.conversationManager) return app.chatHandler.conversationManager;
+    const { SimulacrumCore } = await import('../core/simulacrum-core.js');
+    return SimulacrumCore?.conversationManager ?? null;
   }
 
   /**
@@ -238,16 +266,20 @@ export class SidebarEventHandlers {
    * UI messages are rebuilt from the conversation in order, so the ordinal of user
    * messages is stable between the two even though the message ids are not.
    * @param {object} app
+   * @param {object} conversation
    * @param {string} messageId
    * @returns {number} Index into getMessages(), or -1
    */
-  static _conversationIndexOf(app, messageId) {
+  static _conversationIndexOf(app, conversation, messageId) {
     const uiIndex = app.messages.findIndex(message => message.id === messageId);
-    if (uiIndex < 0) return -1;
+    const uiMessage = uiIndex >= 0 ? app.messages[uiIndex] : null;
+    // Only prompts carry the ordinal mapping; anything else has no conversation position.
+    if (uiMessage?.role !== 'user') return -1;
+
     const before = app.messages.slice(0, uiIndex);
     const ordinal = before.filter(message => message.role === 'user').length;
 
-    const messages = app.chatHandler?.conversationManager?.getMessages() ?? [];
+    const messages = conversation.getMessages() ?? [];
     let seen = 0;
     for (let index = 0; index < messages.length; index++) {
       if (messages[index].role !== 'user') continue;
@@ -261,11 +293,10 @@ export class SidebarEventHandlers {
    * Swap a message's body for an inline editor. Save re-runs the turn from the edit;
    * Cancel just re-renders the log, so nothing has to be un-done.
    * @param {object} app
-   * @param {HTMLElement} contentEl
-   * @param {string} original
-   * @param {number} index
+   * @param {object} edit - The conversation, its DOM body, the original text and the index
    */
-  static _showMessageEditor(app, contentEl, original, index) {
+  static _showMessageEditor(app, edit) {
+    const { conversation, contentEl, original, index } = edit;
     const editor = document.createElement('div');
     editor.className = 'simulacrum-message-edit';
 
@@ -294,7 +325,7 @@ export class SidebarEventHandlers {
         restore();
         return;
       }
-      SidebarEventHandlers._rewindAndResend(app, index, text);
+      SidebarEventHandlers._rewindAndResend(app, conversation, index, text);
     });
 
     contentEl.replaceChildren(editor);
@@ -305,11 +336,11 @@ export class SidebarEventHandlers {
   /**
    * Discard the turn from `index` onward and run it again with the edited prompt.
    * @param {object} app
+   * @param {object} conversation
    * @param {number} index
    * @param {string} text
    */
-  static async _rewindAndResend(app, index, text) {
-    const conversation = app.chatHandler?.conversationManager;
+  static async _rewindAndResend(app, conversation, index, text) {
     if (!conversation?.rewindFrom) return;
 
     // The edited prompt is dropped along with its turn; the send path below re-adds it
@@ -327,7 +358,7 @@ export class SidebarEventHandlers {
       await SidebarEventHandlers._processMessageThroughHandler(app, text, signal);
     } catch (error) {
       if (!signal.aborted) {
-        createLogger('SidebarEventHandlers').error('Error resending edited message', error);
+        log.error('Error resending edited message', error);
         ui.notifications?.error(`Simulacrum: ${error.message}`, { permanent: false });
       }
     } finally {
