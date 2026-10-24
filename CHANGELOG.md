@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.5] - 2026-10-24
+
+The sidebar tab, popped out into its own window, now fills that window and gets the module's
+dark surface, so wide content — tables especially — is readable there.
+
+### Fixed
+
+- **A popped-out sidebar tab is full width and dark.** Foundry's right-click → Pop Out renders
+  the tab outside the sidebar, but it kept the sidebar's `.chat-sidebar` width and landed on a
+  window body with no theme of its own, so it sat at sidebar width on a light surface and wide
+  tables were squeezed into a column of single characters. The popped-out tab is now tagged and
+  stretched to the window width with the module background. The tag goes on the tab's own root,
+  and on the window body only for a genuinely detached window, so an in-page popout cannot
+  affect the main UI.
+
 ## [0.6.4] - 2026-10-24
 
 Fixes the agent's answer appearing twice again — this time in the stored conversation, so it

@@ -82,6 +82,43 @@
   direction: rtl;
 }
 
+/* ---------------------------------------- */
+/*  Popout Window (right-click → Pop Out)   */
+/* ---------------------------------------- */
+/*
+ * A popped-out tab renders outside the sidebar. It keeps the tab's `.chat-sidebar` class,
+ * so it stays at sidebar width, and a detached window's body carries no dark theme, so it
+ * sits on a light surface — which squeezes wide content (tables especially) into a column
+ * of single characters. The classes below are added in `renderPopout()`.
+ */
+.simulacrum-popout {
+  width: 100% !important;
+  max-width: none !important;
+  background: #1a1625;
+  color: #fff4c2;
+}
+
+/* The detached window's body has no theme of its own; give it the module surface and let
+   the tab fill it. Scoped to the detached document only, so an in-page popout is untouched. */
+body.simulacrum-popout-window {
+  margin: 0;
+  height: 100vh;
+  overflow: hidden;
+  background: #1a1625;
+  color: #fff4c2;
+}
+
+body.simulacrum-popout-window #simulacrum,
+body.simulacrum-popout-window .chat-sidebar {
+  height: 100%;
+}
+
+/* The task tracker is sized to the sidebar; in a popout it should span the window. */
+.simulacrum-popout .task-tracker {
+  width: 100%;
+  margin-right: 0;
+}
+
 /* Privacy Buttons */
 #simulacrum-chat-controls section {
   display: flex;

@@ -400,6 +400,7 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
 
   async renderPopout() {
     const popout = await super.renderPopout();
+    this._decoratePopout(popout);
     const originalClose = popout.close.bind(popout);
     popout.close = async options => {
       this._popoutClosing = true;
@@ -410,6 +411,32 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
     };
     if (this.rendered) this.render();
     return popout;
+  }
+
+  /**
+   * Mark the popped-out tab so the stylesheet can give it the module surface and full
+   * width.
+   *
+   * A popped-out tab renders outside the sidebar: there is no `#sidebar` context, and when
+   * it lands in its own browser window that window's body carries no dark theme. Without
+   * this the tab keeps the sidebar's `.chat-sidebar` width and sits on a light surface, so
+   * wide content (tables especially) is squeezed to a column of single characters.
+   *
+   * The class goes on the tab's own root, and the window body only when it is genuinely a
+   * detached document, so an in-page popout cannot leak styling into the main UI.
+   *
+   * @param {object} popout - The popped-out application returned by super.renderPopout()
+   */
+  _decoratePopout(popout) {
+    const element = popout?.element?.[0] ?? popout?.element;
+    if (!element?.classList) return;
+
+    element.classList.add('simulacrum-popout');
+
+    const doc = element.ownerDocument;
+    if (doc && doc !== document && doc.body) {
+      doc.body.classList.add('simulacrum-popout-window');
+    }
   }
 
   async _prepareContext(options) {
