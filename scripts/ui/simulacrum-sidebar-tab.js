@@ -30,6 +30,87 @@ const AbstractSidebarTab =
 const HandlebarsApplicationMixin =
   foundry?.applications?.api?.HandlebarsApplicationMixin ?? globalThis.HandlebarsApplicationMixin;
 
+/*
+ * Styling for a popped-out tab.
+ *
+ * A popped-out tab leaves the sidebar. When it is detached to its own browser window that
+ * window carries none of the module's stylesheet, and in both cases the tab keeps the
+ * `.chat-sidebar` width that another module (crlngn-ui) pins. So the tab would render at
+ * sidebar width on a pale surface, its message bubbles painted by the light theme rather
+ * than the module. These rules are written into the popped-out tab's own document by
+ * `_stylePopout`; the document-level rules apply only to a genuinely detached window, so an
+ * in-page popout cannot affect the main UI.
+ */
+const POPOUT_STYLE_ID = 'simulacrum-popout-styles';
+
+const POPOUT_DOC_CSS = `
+html,
+body {
+  background: #1a1625 !important;
+  color: #fff4c2 !important;
+}
+`;
+
+const POPOUT_OVERRIDES = `
+.simulacrum-popout,
+#simulacrum-popout {
+  width: 100% !important;
+  max-width: none !important;
+  background: #1a1625 !important;
+  align-items: stretch !important;
+}
+
+.simulacrum-popout > *,
+#simulacrum-popout > * {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.simulacrum-popout .chat-log,
+.simulacrum-popout .chat-scroll,
+.simulacrum-popout .chat-form,
+#simulacrum-popout .chat-log,
+#simulacrum-popout .chat-scroll,
+#simulacrum-popout .chat-form {
+  width: 100% !important;
+  max-width: none !important;
+}
+
+.simulacrum-popout .chat-message.simulacrum-chat-message,
+#simulacrum-popout .chat-message.simulacrum-chat-message {
+  background-color: #1a1625 !important;
+  background-image: none !important;
+  color: #fff4c2 !important;
+}
+
+.simulacrum-popout .chat-message.simulacrum-chat-message.simulacrum-role-user,
+#simulacrum-popout .chat-message.simulacrum-chat-message.simulacrum-role-user {
+  background-color: #101318 !important;
+}
+`;
+
+/**
+ * The module's own stylesheet text, fetched once. A detached window has none of it, and a
+ * `<link>` there would flash unstyled until it loaded, so it is cached and then written as a
+ * `<style>` synchronously.
+ */
+let moduleCssText = null;
+let moduleCssFetch = null;
+
+function loadModuleCssText() {
+  if (moduleCssText !== null) return Promise.resolve(moduleCssText);
+  if (!moduleCssFetch) {
+    const href =
+      document.querySelector('link[rel="stylesheet"][href*="/modules/simulacrum/"]')?.href ??
+      'modules/simulacrum/styles/simulacrum.css';
+    moduleCssFetch = fetch(href)
+      .then(response => (response.ok ? response.text() : ''))
+      .catch(() => '')
+      .then(text => (moduleCssText = text));
+  }
+  return moduleCssFetch;
+}
+
 export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSidebarTab) {
   static tabName = 'simulacrum';
 
@@ -103,6 +184,9 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
     // sequentially after each response.
     this._sidebarQueue = new SidebarMessageQueue(this);
     this.messageQueue = this._sidebarQueue.messageQueue;
+
+    // Warm the module stylesheet, so a later detach can style its window synchronously.
+    void loadModuleCssText();
 
     this._registerHookListeners();
   }
@@ -400,7 +484,8 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
 
   async renderPopout() {
     const popout = await super.renderPopout();
-    this._decoratePopout(popout);
+    const popoutElement = popout?.element?.[0] ?? popout?.element;
+    this._stylePopout(popoutElement, popoutElement?.ownerDocument);
     const originalClose = popout.close.bind(popout);
     popout.close = async options => {
       this._popoutClosing = true;
@@ -413,30 +498,64 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
     return popout;
   }
 
+  /** @override */
+  async detachWindow(options) {
+    const result = await super.detachWindow?.(options);
+    const element = this.element?.[0] ?? this.element;
+    this._stylePopout(element, element?.ownerDocument);
+    return result;
+  }
+
+  /** @override */
+  _onDetach(from, to) {
+    super._onDetach?.(from, to);
+    const element = this.element?.[0] ?? this.element;
+    this._stylePopout(element, to ?? element?.ownerDocument);
+  }
+
   /**
-   * Mark the popped-out tab so the stylesheet can give it the module surface and full
-   * width.
+   * Give the popped-out tab the module surface and a full-width column.
    *
-   * A popped-out tab renders outside the sidebar: there is no `#sidebar` context, and when
-   * it lands in its own browser window that window's body carries no dark theme. Without
-   * this the tab keeps the sidebar's `.chat-sidebar` width and sits on a light surface, so
-   * wide content (tables especially) is squeezed to a column of single characters.
+   * A popped-out tab leaves the sidebar: a detached window carries none of the module's
+   * stylesheet, and in every case the tab keeps the `.chat-sidebar` width that another
+   * module (crlngn-ui) pins. Without this, wide content (tables especially) is squeezed into
+   * single-character columns and the bubbles render pale-on-light, because the light theme
+   * wins the bubble background. The rules are written into the popped-out tab's own
+   * document; the document-level rules apply only when it is genuinely detached, so an
+   * in-page popout cannot affect the main UI.
    *
-   * The class goes on the tab's own root, and the window body only when it is genuinely a
-   * detached document, so an in-page popout cannot leak styling into the main UI.
-   *
-   * @param {object} popout - The popped-out application returned by super.renderPopout()
+   * @param {HTMLElement} [element] - The popped-out tab's own root element.
+   * @param {Document} [doc] - The document hosting it; defaults to the root's own.
    */
-  _decoratePopout(popout) {
-    const element = popout?.element?.[0] ?? popout?.element;
-    if (!element?.classList) return;
+  _stylePopout(element, doc) {
+    const root = element ?? this.element?.[0] ?? this.element;
+    const target = doc ?? root?.ownerDocument;
+    if (!target?.head) return;
 
-    element.classList.add('simulacrum-popout');
+    root?.classList?.add('simulacrum-popout');
+    if (target.getElementById(POPOUT_STYLE_ID)) return;
 
-    const doc = element.ownerDocument;
-    if (doc && doc !== document && doc.body) {
-      doc.body.classList.add('simulacrum-popout-window');
+    const detached = target !== document;
+    this._writePopoutStyle(target, detached ? moduleCssText ?? '' : '');
+    if (detached && moduleCssText === null) {
+      // The prefetch had not resolved yet: rewrite once the stylesheet text lands.
+      void loadModuleCssText().then(text => {
+        if (text) this._writePopoutStyle(target, text);
+      });
     }
+  }
+
+  _writePopoutStyle(doc, moduleCss) {
+    let style = doc.getElementById(POPOUT_STYLE_ID);
+    if (!style) {
+      style = doc.createElement('style');
+      style.id = POPOUT_STYLE_ID;
+      doc.head.appendChild(style);
+    }
+    const parts = [moduleCss];
+    if (doc !== document) parts.push(POPOUT_DOC_CSS);
+    parts.push(POPOUT_OVERRIDES);
+    style.textContent = parts.filter(Boolean).join('\n');
   }
 
   async _prepareContext(options) {

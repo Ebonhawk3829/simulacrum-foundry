@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.6] - 2026-10-24
+
+Fixes the 0.6.5 popout change: a detached sidebar tab is now actually styled — full width, dark
+surface — instead of only the in-page popout.
+
+### Fixed
+
+- **The popped-out tab carries its own stylesheet into the window.** A detached sidebar tab
+  renders in its own document that loads only Foundry's and some other modules' CSS — not
+  Simulacrum's — so the 0.6.5 rules never applied there: the tab stayed at the `.chat-sidebar`
+  width another module (crlngn-ui) pins, and the light theme painted the message bubbles pale,
+  leaving yellow text on a light surface. The tab now fetches its stylesheet once and writes
+  it, together with the popout sizing and a dark surface for the bubbles, into the popped-out
+  document when it opens or detaches. The document-level rules apply only to a genuinely
+  detached window, so an in-page popout cannot affect the main UI.
+
 ## [0.6.5] - 2026-10-24
 
 The sidebar tab, popped out into its own window, now fills that window and gets the module's
