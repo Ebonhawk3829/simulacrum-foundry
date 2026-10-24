@@ -95,6 +95,7 @@ const POPOUT_OVERRIDES = `
  * `<style>` synchronously.
  */
 let moduleCssText = null;
+let popoutCssText = null;
 let moduleCssFetch = null;
 
 function loadModuleCssText() {
@@ -106,7 +107,14 @@ function loadModuleCssText() {
     moduleCssFetch = fetch(href)
       .then(response => (response.ok ? response.text() : ''))
       .catch(() => '')
-      .then(text => (moduleCssText = text));
+      .then(text => {
+        moduleCssText = text;
+        // Retarget the module's `#simulacrum` rules onto the popped-out root. A popout has
+        // no `#simulacrum` element, so every rule scoped to it — the heading scale, the
+        // scroll container, user-text wrapping — silently misses there. The negative
+        // lookahead leaves the module's own ids (`#simulacrum-chat-message`, …) untouched.
+        popoutCssText = text.replace(/#simulacrum(?![\w-])/g, '#simulacrum-popout');
+      });
   }
   return moduleCssFetch;
 }
@@ -520,9 +528,10 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
    * stylesheet, and in every case the tab keeps the `.chat-sidebar` width that another
    * module (crlngn-ui) pins. Without this, wide content (tables especially) is squeezed into
    * single-character columns and the bubbles render pale-on-light, because the light theme
-   * wins the bubble background. The rules are written into the popped-out tab's own
-   * document; the document-level rules apply only when it is genuinely detached, so an
-   * in-page popout cannot affect the main UI.
+   * wins the bubble background. The module's own stylesheet is injected, retargeted onto the
+   * popout root (see `loadModuleCssText`), plus the sizing and surface overrides; the
+   * document-level rules apply only when it is genuinely detached, so an in-page popout
+   * cannot affect the main UI.
    *
    * @param {HTMLElement} [element] - The popped-out tab's own root element.
    * @param {Document} [doc] - The document hosting it; defaults to the root's own.
@@ -535,24 +544,23 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
     root?.classList?.add('simulacrum-popout');
     if (target.getElementById(POPOUT_STYLE_ID)) return;
 
-    const detached = target !== document;
-    this._writePopoutStyle(target, detached ? moduleCssText ?? '' : '');
-    if (detached && moduleCssText === null) {
+    this._writePopoutStyle(target, popoutCssText ?? '');
+    if (popoutCssText === null) {
       // The prefetch had not resolved yet: rewrite once the stylesheet text lands.
-      void loadModuleCssText().then(text => {
-        if (text) this._writePopoutStyle(target, text);
+      void loadModuleCssText().then(() => {
+        if (popoutCssText) this._writePopoutStyle(target, popoutCssText);
       });
     }
   }
 
-  _writePopoutStyle(doc, moduleCss) {
+  _writePopoutStyle(doc, popoutCss) {
     let style = doc.getElementById(POPOUT_STYLE_ID);
     if (!style) {
       style = doc.createElement('style');
       style.id = POPOUT_STYLE_ID;
       doc.head.appendChild(style);
     }
-    const parts = [moduleCss];
+    const parts = [popoutCss];
     if (doc !== document) parts.push(POPOUT_DOC_CSS);
     parts.push(POPOUT_OVERRIDES);
     style.textContent = parts.filter(Boolean).join('\n');

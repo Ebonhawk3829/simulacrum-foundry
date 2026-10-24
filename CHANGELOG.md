@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.7] - 2026-10-24
+
+Restores the module's own styling inside a popped-out tab.
+
+### Fixed
+
+- **Markdown headings — and the rest of the module's `#simulacrum`-scoped styling — apply in a
+  popout.** Every rule the module scopes to `#simulacrum` (the heading scale, the scroll
+  container, user-text wrapping) silently missed a popout, whose root is `#simulacrum-popout`,
+  so headings fell back to plain text. The stylesheet injected into the popped-out document is
+  now retargeted: `#simulacrum` becomes `#simulacrum-popout`, leaving the module's own ids
+  (`#simulacrum-chat-message`, …) untouched.
+
 ## [0.6.6] - 2026-10-24
 
 Fixes the 0.6.5 popout change: a detached sidebar tab is now actually styled — full width, dark
