@@ -1,9 +1,9 @@
-# This world's conventions, and the corrections not to re-learn
+# This world's conventions, and how the runtime actually behaves
 
-Four things that are true of **this world specifically** and that no generic reference can
-tell you, then a positive shape that is easy to miss, then the claims that were believed
-before and turned out to be wrong. The last list exists only so a fresh agent does not spend
-a session rediscovering them.
+Four things that are true of **this world specifically** and that no generic reference can tell
+you, a mechanism whose correct shape is easy to miss, and the corrections folded in from session
+lessons. Each correction is written as how the thing actually works, anchored to the case that
+taught it, so the same symptom pulls it back to mind.
 
 ---
 
@@ -42,7 +42,7 @@ condition or reaction-counter test affects ALL of them.
 
 ---
 
-## Weapon mastery (the real shape, since it was reported as absent)
+## Weapon mastery (the real shape)
 
 `system.mastery` on the weapon holds only the **KEY** ("sap"/"topple"/"vex") — a label,
 nothing acts on it. The behaviour is a `transfer: false` ActiveEffect **on the weapon item**,
@@ -51,24 +51,48 @@ effects, so check whether a mastery survived a clone rather than assuming it was
 
 ---
 
-## Known non-deltas — do NOT re-learn these as lessons
+## Corrections: how it actually works
 
-Each of these was recorded as a lesson and is wrong, or was reference material mistaken for a
-delta. Where a correction is longer, it points at the file that now holds it.
+Folded in from session lessons, each stated as the mechanism rather than as a label, and
+grouped by the module it concerns.
 
-- **"`isDamaged` fires too late to change damage" — FALSE.** It fires before the damage record
-  is finalised; the damage is mutable. See the field guide, §12 (`uncanny-dodge`).
-- **"`flags.dae.specialDuration` keeps only four values" — FALSE.** midi-qol reads it for a
-  large set. See `dae-effect-expiry.md` §2.
-- **"`workflow.saves` means the payload is wrong" — FALSE.** A success-payload is a real
-  design (e.g. Eyebite: succeed → dazed, fail → choose one of three). Read the item's own
-  description before judging.
-- **"activity effect-links do not apply effects" — FALSE.** See the field guide, §13.
-- **"concentration effects must leave their duration empty" / "must carry their own duration
-  cap" — BOTH over-general.** The live world shows: a spell's own granted buff carries a
-  duration matching the spell (Bless 60s/`turnStart`, Invisibility 3600s); separate
-  component/companion effects leave it empty (Spirit Guardians ×2, Compelled Duel ×2,
-  Guidance). Judge by what the effect IS.
-- **"weapon mastery automation does not exist here" — FALSE.** See the weapon-mastery section
-  above.
-- **"smite unification was never actioned" — FALSE.** A later history entry closed it.
+### midi-qol
+
+**`isDamaged` can change the damage.** It fires inside `callDamageHooksAndMacros` *before* the
+damage record is finalised, so a reaction bound to it can still mutate the damage —
+`uncanny-dodge` halves each entry from there, and its condition has to include `hasAttack`. The
+field guide's midi section describes the flag itself.
+
+**`workflow.saves` is used for effects that apply on a SUCCESSFUL save.** Morgantha's Eyebite is
+the worked case: it is homebrew with an inverted save, where a target that SUCCEEDS is dazed, so
+looping `workflow.saves` was right for it. A success-payload is a real design, not a symptom of
+a wrong payload.
+
+### dnd5e and DAE effects
+
+**An activity's effect-link DOES apply its effect.** `activity.effects[]._id` pointing at an item
+effect with `onSave: false` applies it, including on a failed save — it is a supported
+mechanism. The claim that it did not came from a single negative test that read
+`wf.appliedEffects`, which is `undefined` by design; one observation is not enough to overturn a
+mechanism.
+
+**`duration.expiry` and `flags.dae.specialDuration` are both live, for different values.**
+`duration.expiry` is the field for the turn and rest values; the flag stays the field for every
+value dnd5e has no field for — midi-qol's whole set, plus `combatEnd`/`joinCombat`. A `1Reaction`
+or a `1Attack` belongs on the flag, where it still works; migrating one to `duration.expiry`
+stops it. `dae-effect-expiry.md` has the full split.
+
+**A granted effect's duration follows what the effect IS.** A spell's own granted buff carries a
+duration matching the spell — Bless 60s/`turnStart`, Invisibility 3600s. A separate component or
+companion effect leaves its duration empty — Spirit Guardians ×2, Compelled Duel ×2, Guidance —
+which is what those cases needed. A blanket "always empty" and a blanket "always carry its own
+cap" contradict each other, which is the tell that neither is the rule; the effect decides.
+
+---
+
+## Where project status lives
+
+Whether something has been actioned, or is "not started", is project **state**, not a fact about
+how a module behaves. It belongs in the history log, where the latest entry on a topic is the
+state of record. These reference files describe mechanisms; they do not track what has been
+built.

@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.11] - 2026-10-25
+
+Rewrites the world-conventions corrections in the positive, and fixes two reference-tool
+defects.
+
+### Changed
+
+- **`world-conventions.md` corrections rewritten as how things actually work.** The section
+  headed "Known non-deltas — do NOT re-learn these as lessons" is now "Corrections: how it
+  actually works": each entry states the mechanism, anchored to the case that taught it
+  (Eyebite's inverted save, Bless vs Spirit Guardians, `isDamaged` mutability), rather than
+  quoting a claim and labelling it FALSE — a style that gives a reader nothing to follow and
+  files a genuine finding along with the bad wording. Two entries that were not mechanic facts
+  are gone: weapon mastery (a positive section already states the mechanism) and smite (project
+  status). Project state now has its own short note pointing at the history log. The file title
+  and section headings are renamed to describe the content.
+
+### Fixed
+
+- **`read_reference` reports real file sizes.** The index measured the truncated text, so a file
+  over the 300,000-character cap was listed at the capped size (midi-qol's Changelog showed
+  300,034 for a 655,958-byte file). Fetching is now uncapped; the cap applies only to text a
+  read returns.
+- **Upstream changelogs are no longer listed.** They were the bulk of the ~925 KB the reference
+  surface could put in context and are rarely what an answer needs; they remain readable by
+  passing an explicit path.
+
 ## [0.6.10] - 2026-10-25
 
 Raises the read and store limits, and fixes the reference defects the in-world agent reported.

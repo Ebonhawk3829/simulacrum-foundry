@@ -46,12 +46,16 @@ import { BaseTool } from './base-tool.js';
  * a different job with different output.
  */
 const MODULE_DOCS = Object.freeze({
-  'midi-qol': ['README.md', 'Changelog.md'],
+  'midi-qol': ['README.md'],
   // DAE is deliberately absent rather than listed empty: it ships no readable file,
   // so its documentation is bundled in this module's own reference instead. Listing
   // a module with nothing behind it would advertise material that does not exist.
   cat: ['README.md'],
-  'chris-premades': ['CHANGELOG.md'],
+  // Upstream CHANGELOGs are deliberately not listed. They are the bulk of the readable
+  // module documentation (midi-qol alone is ~650 KB, Chris's Premades ~175 KB) and are
+  // rarely what an answer needs, so listing them invites a context-filling read for a
+  // question a search would have answered. A changelog can still be read by passing its
+  // path (`file: "midi-qol/Changelog.md"`) — it is just not advertised.
 });
 
 /** Extensions worth treating as readable text. */
@@ -71,7 +75,7 @@ const COMMON_DOCS = [
   'Getting Started.md',
 ];
 
-/** Cap on a single fetched file, so one huge changelog cannot flood the context. */
+/** Cap on text a read returns, so one huge file cannot flood the context. */
 const MAX_FILE_BYTES = 300_000;
 
 /** Cap on probes per directory. */
@@ -321,15 +325,24 @@ export class ReadReferenceTool extends BaseTool {
     try {
       const res = await fetch(this._route(route), { redirect: 'follow' });
       if (!res.ok) return null;
-
-      const text = await res.text();
-      if (text.length > MAX_FILE_BYTES) {
-        return `${text.slice(0, MAX_FILE_BYTES)}\n\n[truncated at ${MAX_FILE_BYTES} characters]`;
-      }
-      return text;
+      // Returned whole. The cap applies where text LEAVES the tool (a read), not here, so the
+      // index can report a file's real size rather than the size it was cut to.
+      return await res.text();
     } catch {
       return null; // absent or unreadable is the normal result of a probe
     }
+  }
+
+  /**
+   * Cap text on its way out of the tool, so one huge file cannot flood the context.
+   * @param {string} text
+   * @returns {string}
+   */
+  _truncateForOutput(text) {
+    if (text.length > MAX_FILE_BYTES) {
+      return `${text.slice(0, MAX_FILE_BYTES)}\n\n[truncated at ${MAX_FILE_BYTES} characters]`;
+    }
+    return text;
   }
 
   /**
@@ -465,7 +478,12 @@ export class ReadReferenceTool extends BaseTool {
     if (known) {
       return {
         content: JSON.stringify(
-          { ok: true, path: known.path, bytes: known.text.length, text: known.text },
+          {
+            ok: true,
+            path: known.path,
+            bytes: known.text.length,
+            text: this._truncateForOutput(known.text),
+          },
           null,
           2
         ),
@@ -497,7 +515,11 @@ export class ReadReferenceTool extends BaseTool {
     }
 
     return {
-      content: JSON.stringify({ ok: true, path: route, bytes: text.length, text }, null, 2),
+      content: JSON.stringify(
+        { ok: true, path: route, bytes: text.length, text: this._truncateForOutput(text) },
+        null,
+        2
+      ),
       display: `**Reference:** ${route}`,
     };
   }

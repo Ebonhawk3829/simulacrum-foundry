@@ -194,11 +194,11 @@ test('a file named in mixed case still resolves', async () => {
   const tool = new ReadReferenceTool();
   const files = {
     'modules/midi-qol/module.json': MANIFEST,
-    'modules/midi-qol/Changelog.md': '# Changes',
+    'modules/midi-qol/README.md': '# Flags',
   };
 
   await withFetch(files, () => tool.execute({ source: 'midi-qol' }));
-  const result = await withFetch(files, () => tool.execute({ file: 'MIDI-QOL/CHANGELOG.MD' }));
+  const result = await withFetch(files, () => tool.execute({ file: 'MIDI-QOL/README.MD' }));
 
   assert.equal(JSON.parse(result.content).ok, true);
 });
