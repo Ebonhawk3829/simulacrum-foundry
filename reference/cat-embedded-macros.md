@@ -163,7 +163,7 @@ And read a working example: `search_documents` with a `pack` argument finds CPR
 items, and `document_read` shows their `flags.cat.macros`. A similar ability that
 already works is a better template than anything written here.
 
-## 7. Pass names come from the enum — do not infer one (C1)
+## 7. Pass names come from the enum — do not infer one
 
 CAT 0.1.3's passes live in `scripts/lib/constants.mjs` as `workflowPasses`. Read it. Known
 members include `preTargeting`, `preItemRoll`, `targeting`, `preambleComplete`,
@@ -178,7 +178,7 @@ members include `preTargeting`, `preItemRoll`, `targeting`, `preambleComplete`,
 `optionalBonusDamage`, and the optional-attack one is `optionalBonusAttack`. A pass name you
 guessed is accepted where a name is expected and then never fires.
 
-## 8. Creating an effect from a macro (C6)
+## 8. Creating an effect from a macro
 
 The working pattern is:
 
@@ -195,7 +195,7 @@ delete d._id;
 await effectUtils.createEffects(actor, [d]);
 ```
 
-## 9. `build_ability` does not replace — it appends (C5)
+## 9. `build_ability` does not replace — it appends
 
 Despite its docstring, `build_ability` does not remove effects on rebuild: it appends.
 Assert the effect count after rebuilding an item that already had effects. (See the field

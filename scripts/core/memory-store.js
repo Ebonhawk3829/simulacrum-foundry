@@ -42,12 +42,19 @@ const DIR = 'simulacrum';
 const LESSONS = 'lessons.md';
 const HISTORY = 'history.md';
 
-/** Cap a single read so one bloated log cannot flood the agent's context. */
-const MAX_READ_CHARS = 200_000;
+/**
+ * Cap a single CONTEXT read, so one bloated log cannot flood the model's context. The file
+ * itself is not capped: read-modify-write goes through `_readRaw`, so a file may grow past
+ * this and the next append will not silently discard its tail.
+ */
+const MAX_READ_CHARS = 1_000_000;
 
-/** Cap a single written lesson and history entry. */
-const MAX_LESSON_CHARS = 6_000;
-const MAX_ENTRY_CHARS = 8_000;
+/**
+ * Cap a single written lesson and history entry. Raised well past a normal entry, because a
+ * body cut in half is worse than a large one — the loss is silent either way.
+ */
+const MAX_LESSON_CHARS = 30_000;
+const MAX_ENTRY_CHARS = 40_000;
 
 /** A section heading: `## Title`. */
 const HEADING = /^##\s+(.+?)\s*$/;
@@ -108,22 +115,33 @@ export class MemoryStore {
   }
 
   /**
-   * Read one memory file. Absent or unreadable is the normal result, not an error.
+   * Read one memory file, whole. Used for read-modify-write, where a truncated read would
+   * write a shorter file back and discard everything past the truncation point.
    * @param {string} name
    * @returns {Promise<string>} File text, or '' when there is none.
    */
-  async _read(name) {
+  async _readRaw(name) {
     try {
       const res = await fetch(routeFor(name), { redirect: 'follow' });
       if (!res.ok) return '';
-      const text = await res.text();
-      if (text.length > MAX_READ_CHARS) {
-        return `${text.slice(0, MAX_READ_CHARS)}\n\n[truncated at ${MAX_READ_CHARS} characters]`;
-      }
-      return text;
+      return await res.text();
     } catch {
       return ''; // a missing file is the empty case, not a failure
     }
+  }
+
+  /**
+   * Read one memory file for the model's context, truncated so one bloated log cannot flood
+   * it. Absent or unreadable is the normal result, not an error.
+   * @param {string} name
+   * @returns {Promise<string>} File text (possibly truncated), or '' when there is none.
+   */
+  async _read(name) {
+    const text = await this._readRaw(name);
+    if (text.length > MAX_READ_CHARS) {
+      return `${text.slice(0, MAX_READ_CHARS)}\n\n[truncated at ${MAX_READ_CHARS} characters]`;
+    }
+    return text;
   }
 
   /** Create the folder if it is not there yet. Harmless when it already exists. */
@@ -169,7 +187,7 @@ export class MemoryStore {
    * @returns {Promise<Array<{title: string, lines: number}>>}
    */
   async lessonIndex() {
-    return parseSections(await this.readLessons()).map(s => ({
+    return parseSections(await this._readRaw(LESSONS)).map(s => ({
       title: s.title,
       lines: s.body ? s.body.split('\n').length : 0,
     }));
@@ -180,7 +198,7 @@ export class MemoryStore {
    * @returns {Promise<{location: string, lessonTitles: string[], historyEntries: number, historyBytes: number}>}
    */
   async summary() {
-    const [lessons, history] = await Promise.all([this.readLessons(), this.readHistory()]);
+    const [lessons, history] = await Promise.all([this._readRaw(LESSONS), this._readRaw(HISTORY)]);
     return {
       location: this.location,
       lessonTitles: parseSections(lessons).map(s => s.title),
@@ -206,7 +224,9 @@ export class MemoryStore {
       .slice(0, MAX_ENTRY_CHARS);
     const at = stamp || new Date().toISOString().replace('T', ' ').slice(0, 16);
 
-    const existing = await this.readHistory();
+    // Read the WHOLE file: a truncated read here is written back as a shorter file, which
+    // silently discards everything past the truncation point.
+    const existing = await this._readRaw(HISTORY);
     const prefix = existing && !existing.endsWith('\n') ? `${existing}\n\n` : existing;
     const next = `${prefix}${renderEntry(heading, text, at)}`;
     const written = await this._write(HISTORY, next);
@@ -228,7 +248,8 @@ export class MemoryStore {
       .trim()
       .slice(0, MAX_LESSON_CHARS);
 
-    const existing = parseSections(await this.readLessons());
+    // Whole file, for the same reason as appendHistory: this rewrites the file in full.
+    const existing = parseSections(await this._readRaw(LESSONS));
     const key = heading.toLowerCase();
     const at = existing.findIndex(s => s.title.toLowerCase() === key);
     const action = at === -1 ? 'added' : 'updated';

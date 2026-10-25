@@ -11,7 +11,7 @@ the changes that matter are marked below and collected in §7.
 
 ---
 
-## 1. `duration.expiry` is the field — `flags.dae.specialDuration` is deprecated
+## 1. `duration.expiry` is the field for turn and rest expiries
 
 The question "when does this end?" is answered by dnd5e's own
 `duration.expiry`, not by a DAE flag:
@@ -24,16 +24,18 @@ The question "when does this end?" is answered by dnd5e's own
 }
 ```
 
-`flags.dae.specialDuration` was the pre-v14 way to say this, and it is **deprecated**.
-DAE migrates it on effect creation, but the migration is lossy in a way that will
-surprise you:
+`flags.dae.specialDuration` was the pre-v14 way to say this. For the **turn and rest**
+values it is **deprecated** in favour of `duration.expiry`, and DAE migrates it on effect
+creation — but the migration is lossy in a way that will surprise you:
 
 - Only the **first** recognised entry is converted to `duration.expiry`.
-- The rest are **left on the flag** rather than dropped — and the flag no longer
-  drives anything.
+- The rest are **left on the flag**, not dropped.
 
-So a converted effect can look migrated while half its expiry rules are inert. Write
-`duration.expiry`.
+That second point is the trap, and §2 is the correction to the usual misreading of it.
+"Left on the flag" does **not** mean inert: for every value `duration.expiry` cannot express
+— midi-qol's whole set, and `combatEnd`/`joinCombat` — the flag is exactly what still drives
+the expiry. Do not "clean one up" by moving it to `duration.expiry`; it would stop working.
+Write `duration.expiry` for the turn/rest values and the flag for the rest.
 
 ### The deprecated names, and what they become
 

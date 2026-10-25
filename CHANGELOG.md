@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.10] - 2026-10-25
+
+Raises the read and store limits, and fixes the reference defects the in-world agent reported.
+
+### Changed
+
+- **Memory files can grow again.** The 200,000-character read cap was also the read an append
+  was built on, so once `lessons.md` or `history.md` passed it the next write kept the first
+  200,000 characters and silently discarded the rest. The read is now split: the context view
+  stays capped (raised 5x, to 1,000,000) while read-modify-write reads the whole file. A lesson
+  is capped at 30,000 characters and a history entry at 40,000 (5x).
+- **Large tool results and reference files are readable again.** The per-result truncation and
+  the `read_tool_output` page cap were both 10,000 characters (5x to 50,000), and
+  `read_reference` results are now returned inline rather than compacted into a reference the
+  agent could not page — a curated document asked for by name should come back whole.
+
+### Fixed
+
+- **The expiry reference no longer contradicts itself.** Its §1 heading and a sentence claimed
+  `flags.dae.specialDuration` "no longer drives anything"; §2 correctly says it is midi-qol's
+  field too. §1 now names the turn/rest values it *is* deprecated for and points at §2 for the
+  rest, and the field guide's pointer to that file said the same wrong half and is corrected.
+- **Reference cross-references no longer point at findings that do not exist.** The `(B5)`,
+  `(C1)`, `(D3)`-style labels carried over from the source notes are removed.
+- **Weapon mastery is filed as the positive shape it is**, not under "known non-deltas".
+- Mixed CRLF/LF line endings in the reference files normalised to LF.
+
 ## [0.6.9] - 2026-10-25
 
 Bakes the in-world agent's learned corrections into the shipped reference, replacing the

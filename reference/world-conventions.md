@@ -1,21 +1,22 @@
 # This world's conventions, and the corrections not to re-learn
 
-Two things that are true of **this world specifically** and that no generic reference can
-tell you, followed by the claims that were taught before and turned out to be wrong. The
-second list exists only so a fresh agent does not spend a session rediscovering them.
+Four things that are true of **this world specifically** and that no generic reference can
+tell you, then a positive shape that is easy to miss, then the claims that were believed
+before and turned out to be wrong. The last list exists only so a fresh agent does not spend
+a session rediscovering them.
 
 ---
 
-## F. World conventions
+## World conventions
 
-### F1. Damage is applied MANUALLY by the GM
+### 1. Damage is applied MANUALLY by the GM
 
 `autoApplyDamage: "noCard"`. Damage-gated automation does not run until the GM clicks
 **Apply**. **Testing consequence:** a damage-triggered ability cannot be tested
 unsupervised — and a silent non-fire there looks exactly like a broken ability. Confirm the
 damage was actually applied before calling an `isDamaged` reaction broken.
 
-### F2. Testing recipe (the parts that need no damage)
+### 2. Testing recipe (the parts that need no damage)
 
 - Stub `foundry.applications.api.DialogV2.wait` to capture the prompt and return a chosen
   button action.
@@ -25,12 +26,12 @@ damage was actually applied before calling an `isDamaged` reaction broken.
 - ALWAYS cover the negative cases (declined, out of range, no target).
 - Clean up in a `finally`.
 
-### F3. Prose versus disposition
+### 3. Prose versus disposition
 
 Lowercase "hostile" / "friendly" in statblock prose is **relative** (usually "not its
 allies"). Capital "Hostile" / "Friendly" is the token **disposition**.
 
-### F4. Unlinked tokens have their own actor; edits go to the BASE actor
+### 4. Unlinked tokens have their own actor; edits go to the BASE actor
 
 Editing through `token.actor` on an unlinked token writes a **delta override** — it fixes
 that one token and leaves the base actor and every sibling token unchanged. Deleting a delta
@@ -41,7 +42,16 @@ condition or reaction-counter test affects ALL of them.
 
 ---
 
-## H. Known non-deltas — do NOT re-learn these as lessons
+## Weapon mastery (the real shape, since it was reported as absent)
+
+`system.mastery` on the weapon holds only the **KEY** ("sap"/"topple"/"vex") — a label,
+nothing acts on it. The behaviour is a `transfer: false` ActiveEffect **on the weapon item**,
+linked from the attack activity. Weapon **clones** drop non-attack activities and their
+effects, so check whether a mastery survived a clone rather than assuming it was never there.
+
+---
+
+## Known non-deltas — do NOT re-learn these as lessons
 
 Each of these was recorded as a lesson and is wrong, or was reference material mistaken for a
 delta. Where a correction is longer, it points at the file that now holds it.
@@ -59,12 +69,6 @@ delta. Where a correction is longer, it points at the file that now holds it.
   duration matching the spell (Bless 60s/`turnStart`, Invisibility 3600s); separate
   component/companion effects leave it empty (Spirit Guardians ×2, Compelled Duel ×2,
   Guidance). Judge by what the effect IS.
-- **"weapon mastery automation does not exist here" — FALSE.** See H1.
+- **"weapon mastery automation does not exist here" — FALSE.** See the weapon-mastery section
+  above.
 - **"smite unification was never actioned" — FALSE.** A later history entry closed it.
-
-### H1. Weapon mastery (the real shape)
-
-`system.mastery` on the weapon holds only the **KEY** ("sap"/"topple"/"vex") — a label,
-nothing acts on it. The behaviour is a `transfer: false` ActiveEffect **on the weapon item**,
-linked from the attack activity. Weapon **clones** drop non-attack activities and their
-effects, so check whether a mastery survived a clone rather than assuming it was never there.

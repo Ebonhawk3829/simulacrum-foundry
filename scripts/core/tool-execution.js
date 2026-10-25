@@ -228,8 +228,14 @@ export async function executeToolCalls(toolCalls, context) {
       const TOKEN_THRESHOLD = 1000; // ~4000 chars
       const estimatedTokens = Math.ceil(resultStr.length / 4);
 
+      // read_tool_output pages from the buffer, and read_reference returns a known, curated
+      // document the agent asked for by name. Both are returned inline rather than compacted
+      // into a reference — a reference file the agent could not page was the whole complaint,
+      // and a compacted read_reference is exactly that. The truncation cap below keeps them.
+      const returnsInline = toolName === 'read_tool_output' || toolName === 'read_reference';
+
       if (
-        toolName !== 'read_tool_output' &&
+        !returnsInline &&
         estimatedTokens > TOKEN_THRESHOLD &&
         conversationManager.toolOutputBuffer
       ) {
@@ -422,7 +428,7 @@ async function _promptToolConfirmation(toolName, parsedArgs, toolCallId, context
 }
 
 function _truncateInitialResult(result, toolName) {
-  const MAX_OUTPUT_CHARS = 10000;
+  const MAX_OUTPUT_CHARS = 50000;
   if (typeof result.content === 'string' && result.content.length > MAX_OUTPUT_CHARS) {
     const truncatedContent = result.content.substring(0, MAX_OUTPUT_CHARS);
     const lineCount = truncatedContent.split('\n').length;

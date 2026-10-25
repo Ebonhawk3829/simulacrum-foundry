@@ -93,7 +93,7 @@ export class ReadToolOutputTool extends BaseTool {
     const slice = lines.slice(start_line - 1, effectiveEndLine);
 
     // Limit output size to prevent context overflow
-    const MAX_OUTPUT_CHARS = 10000;
+    const MAX_OUTPUT_CHARS = 50000;
     let content = slice.join('\n');
     let wasTruncated = false;
 

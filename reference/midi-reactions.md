@@ -11,7 +11,7 @@ Read out of midi-qol's source at the version this world runs (14.6.4), in
 
 ---
 
-## 1. The trigger is `useConditionText`, not `activation.condition` (D1)
+## 1. The trigger is `useConditionText`, not `activation.condition`
 
 `activity.useConditionText` **is** midi's `reactionCondition`:
 
@@ -29,7 +29,7 @@ An **empty** `useConditionText` is not "no trigger". midi's fallback is
 if (!reactionCondition) reactionCondition = 'reaction === "isHit"';
 ```
 
-## 2. Compare the trigger LABEL, not an id (D2)
+## 2. Compare the trigger LABEL, not an id
 
 The string in `reaction === "..."` comes from `reactionTriggerLabelFor(triggerType)`, which
 reads `reactionTypes` in `utils.ts`:
@@ -50,14 +50,14 @@ reads `reactionTypes` in `utils.ts`:
 | `reactionsavesuccess` | `isSaveSuccess` |
 | `reactionmoved` | `isMoved` |
 
-## 3. Reactions PROMPT by default — no flag needed (D3)
+## 3. Reactions PROMPT by default — no flag needed
 
 midi always renders a `ReactionDialog` when the condition matches; only the chosen button's
 callback calls `completeActivityUse`. Declining, or the timeout (30s in this world), spends
 nothing and creates **no workflow**. A fallback macro at `roll/itemRollFinished` therefore
 CANNOT run on a declined reaction — there is no roll.
 
-## 4. Token scope for an actor shared by several tokens (D4)
+## 4. Token scope for an actor shared by several tokens
 
 ```js
 reaction === "isDamaged" && targetUuid === "<reacting token's FULL uuid>" && ...
@@ -70,7 +70,7 @@ The uuid is a full `TokenDocument` uuid: `Scene.<sceneId>.Token.<tokenId>`. It *
 scene id**, so it breaks if the token is re-placed on a new scene, and it must be re-derived
 per actor — two actors with identical token names still have different uuids.
 
-## 5. Qualifiers ARE expressible in the condition — but the sandbox is tiny (D5)
+## 5. Qualifiers ARE expressible in the condition — but the sandbox is tiny
 
 The condition is evaluated in a sandbox that exposes ONLY the bare globals `getDistance` and
 `fromUuidSync`. `canvas`, `game`, `MidiQOL`, `workflow`, `actor`, `token`, `target` and
@@ -88,7 +88,7 @@ hasAttack
 ALWAYS guard a distance test with `!!tokenUuid`, or an unattributed damage source (an aura, a
 trap) evaluates TRUE and fires the reaction.
 
-## 6. Distance is PERIMETER-based, and `<= R` is the correct idiom (D6)
+## 6. Distance is PERIMETER-based, and `<= R` is the correct idiom
 
 World setting `optionalRules.distanceMeasurement === "perimeter"`. midi computes
 `distance = gridDistance + perimeterGap` — EDGE-TO-EDGE with a 5 ft base:
@@ -101,7 +101,7 @@ Express reach/range as `getDistance(...) <= R`. This is correct, not a bug — d
 to centre-to-centre". `canvas.grid.measurePath([centreA, centreB])` gives the
 centre-to-centre number, which is a *different* measurement, not a fix.
 
-## 7. `canSee` is false if EITHER token is hidden (D7)
+## 7. `canSee` is false if EITHER token is hidden
 
 `_canSenseModes` starts `if (target.document.hidden || token.document.hidden) return [];`.
 This is correct behaviour — a GM-hidden token is not part of the scene, not a trap.
@@ -109,7 +109,7 @@ Diagnostic consequence: a sight-gated reaction is absent in a dry run on a scene
 monsters stay hidden until initiative. Check `token.document.hidden` before suspecting the
 condition.
 
-## 8. midi cannot offer a bystander's reaction (D8)
+## 8. midi cannot offer a bystander's reaction
 
 `ReactionFilter` charges the wrong actor. An ability where an **ally** is the target needs a
 world-hooks approach instead of a midi reaction.

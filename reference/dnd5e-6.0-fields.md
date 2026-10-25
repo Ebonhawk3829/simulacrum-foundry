@@ -470,10 +470,11 @@ installed, so it cannot go stale the way a snapshot would.
 
 **Expiry is the exception, and it has its own file.** When an effect should end —
 on a turn, on a rest, when the bearer is attacked — the vocabulary is in
-`dae-effect-expiry.md`. Two things there are easy to get wrong: `duration.expiry`
-is the field, not `flags.dae.specialDuration`, and on plain dnd5e 6 several expiry
-values silently discard `duration.value` (DAE 14.6.2 restores it for source/target
-turn expiries — read the file).
+`dae-effect-expiry.md`. Two things there are easy to get wrong: `duration.expiry` is the
+field for the **turn/rest** values while `flags.dae.specialDuration` is still the live field
+for everything it cannot express (midi-qol's set — §2 of that file), and on plain dnd5e 6
+several expiry values silently discard `duration.value` (DAE 14.6.2 restores it for
+source/target turn expiries — read the file).
 
 ---
 
@@ -482,7 +483,7 @@ turn expiries — read the file).
 These are midi-qol's, not dnd5e's, and each was read out of the installed source. They fail
 silently when wrong, so verify against the live getter where one is named.
 
-### `defaultOtherActivity` silently adopts a sole sibling activity (B5)
+### `defaultOtherActivity` silently adopts a sole sibling activity
 
 With `otherActivityId: ""` and the world setting `defaultOtherActivity: "auto"`, midi adopts
 the item's **sole** compatible activity and fires it on **every** hit — so a conditional save
@@ -495,12 +496,12 @@ VERIFY with the live getter `activity.otherActivity` — it returns the adopted 
 null. Fix by setting an explicit `otherActivityId: "none"`, and `otherActivityCompatible:
 false` on any activity that must never be adopted.
 
-### Hide a secondary activity with `automationOnly`, never delete it (B6)
+### Hide a secondary activity with `automationOnly`, never delete it
 
 `midiProperties.automationOnly: true` hides an activity from the sheet while keeping it
 callable. Deleting it breaks any macro that names it.
 
-### Advantage / disadvantage flag shapes (B7)
+### Advantage / disadvantage flag shapes
 
 An easy pair to get subtly wrong:
 
@@ -511,7 +512,7 @@ Disadvantage is the mirror: `flags.midi-qol.disadvantage.attack.all`,
 `flags.midi-qol.disadvantage.check.all`. A numeric bonus to saves is
 `flags.midi-qol.ability.save.bonus`. Use **mode 0** with a numeric value for these.
 
-### `flags.midi-qol.uncanny-dodge` halves incoming damage (B8)
+### `flags.midi-qol.uncanny-dodge` halves incoming damage
 
 Set it as an effect change (`flags.midi-qol.uncanny-dodge` = 1, mode 5). midi's
 `applyUncannyDodge` multiplies each damage entry by 0.5 (`utils.ts`), and it requires
@@ -519,7 +520,7 @@ Set it as an effect change (`flags.midi-qol.uncanny-dodge` = 1, mode 5). midi's
 do this: midi fires `isDamaged` inside `callDamageHooksAndMacros` **before** it finalises
 the damage record, so the damage is still mutable.
 
-### Concentration is tracked PER ACTOR (B9)
+### Concentration is tracked PER ACTOR
 
 `system.attributes.concentration.limit` is a plain integer (minimum 0, initial 1), and it
 gates whether **ending an existing concentration is optional**:
@@ -554,7 +555,7 @@ and a concentration save from damage is one set of checks for the actor.
   A plain dotted write merges and will not remove it.
 - **A numeric index in a dot-path turns an array into an object.** Avoid indexed dot-paths.
 
-### An activity's effect link DOES apply effects (B4)
+### An activity's effect link DOES apply effects
 
 `activity.effects[]._id` pointing at an item effect with `onSave: false` applies it, including
 on a natural failed save. It is a supported mechanism — use it. (An earlier claim that it was
