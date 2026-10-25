@@ -163,7 +163,45 @@ And read a working example: `search_documents` with a `pack` argument finds CPR
 items, and `document_read` shows their `flags.cat.macros`. A similar ability that
 already works is a better template than anything written here.
 
-## 7. What this file is not
+## 7. Pass names come from the enum — do not infer one (C1)
+
+CAT 0.1.3's passes live in `scripts/lib/constants.mjs` as `workflowPasses`. Read it. Known
+members include `preTargeting`, `preItemRoll`, `targeting`, `preambleComplete`,
+`attackRollConfig`, `attackRoll`, `attackRollBonuses`, `attackRollMissedBonuses`,
+`optionalBonusAttack`, `attackRollComplete`, `savesComplete`, `damageRoll`,
+`optionalBonusDamage`, `damageRollBonuses`, `damageRollComplete`, `utilityRoll`,
+`utilityRollBonuses`, `utilityRollComplete`, `damage`, `damageBonuses`,
+`damageFlatReductions`, `damagePercentReductions`, `damageComplete`, `rollFinished`,
+`onHit`, `cleanup`.
+
+**There is no pass called `optionalDamage`** — the optional-damage pass is
+`optionalBonusDamage`, and the optional-attack one is `optionalBonusAttack`. A pass name you
+guessed is accepted where a name is expected and then never fires.
+
+## 8. Creating an effect from a macro (C6)
+
+The working pattern is:
+
+```js
+await effectUtils.createEffects(actor, [effectData]);
+```
+
+`actor.createEmbeddedDocuments("ActiveEffect", [...])` works too. To base a new effect on an
+effect **template** stored on the item, resolve it, strip `_id`, and pass the data:
+
+```js
+const d = template.toObject();
+delete d._id;
+await effectUtils.createEffects(actor, [d]);
+```
+
+## 9. `build_ability` does not replace — it appends (C5)
+
+Despite its docstring, `build_ability` does not remove effects on rebuild: it appends.
+Assert the effect count after rebuilding an item that already had effects. (See the field
+guide, section 13, for the embedded-collection rules.)
+
+## 10. What this file is not
 
 - **Not verified in a live world.** The shape is CAT's own and the scope names come
   from CAT's source, but no embedded macro authored this way has yet been built and

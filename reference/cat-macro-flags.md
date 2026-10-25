@@ -150,7 +150,45 @@ an automation rather than one spell: `attackRider`, `extraAttack`, `contestedChe
 `bladeSpell`, `damageBonusToOneRoll`, `multiSingleTarget`, `reduceMaxHP`. These are
 registered by CPR and configured per-item through `genericConfig`.
 
-## 6. What this file is not
+## 6. Where a follow-up macro belongs
+
+### Five stores, and an audit misses one
+
+    flags.cat.embeddedMacros[].macros[].macro   CAT embedded macro (needs event + pass)
+    flags.dae.macro.command                     the DIME slot
+    system.activities.<id>.macroData.command    activity macro, wired [<pass>]ActivityMacro-<id>
+    flags.midi-qol.onUseMacroName               item or actor level
+    a world-hooks script                        flags["world-hooks"].active + scope
+
+A macro missing from one store is not a missing macro. Count the population before
+generalising, and read the actor/item memory first.
+
+### Where a follow-up belongs
+
+On the **item** as `flags["midi-qol"].onUseMacroName = "[<pass>]ItemMacro"` with the body in
+that item's `flags.dae.macro.command`, **or** as a CAT embedded macro. `[<pass>]ItemMacro`
+resolves to the DIME slot — the store audits miss.
+
+### Comma-separated, and a caveat
+
+midi splits `onUseMacroName` on commas and trims each entry
+(`Workflow.ts callMacros`: `macros.split(",").map(s => s.trim())`). **I could not reproduce
+the claim that a space after the comma breaks later entries** — the source trims, so write
+entries comma-separated and read the parsed macro list back rather than trusting either
+report.
+
+### CAT embedded macro shape, restated
+
+`{name, event, pass, macros: [{macro, priority}]}` — `macros` holds ONE entry plus its
+filters, not a list of scripts; `event` and `pass` are siblings of `macros`; there is no
+`_id`. The world's most-used pass is `roll/itemRollFinished`, and CAT has **no `isHit`
+event**.
+
+### CAT's optional-bonus cost check is pact-blind
+
+Do not "fix" it on the item — CAT resolves the slot itself.
+
+## 7. What this file is not
 
 - **The settings are in another file.** This covers attaching a macro; what each
   generic accepts once attached is `cpr-generic-config.md`, generated from CPR's own

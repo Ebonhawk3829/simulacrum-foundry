@@ -56,26 +56,56 @@ calls it out. An effect that means "until the *caster's* turn starts" now migrat
 `sourceStart` and stays correct. Write `duration.expiry` directly rather than relying
 on the migration either way.
 
-## 2. Special durations that are still flags, because they have no core equivalent
+## 2. `flags.dae.specialDuration` is NOT dead — it is midi-qol's field as much as DAE's
 
-Some expiry conditions are not turn-based and dnd5e has no field for them. These stay
-on `flags.dae.specialDuration` and **are** still honoured, because DAE scans for them
-itself rather than leaving them to core:
+The flag is deprecated only for the turn/rest values that `duration.expiry` now covers.
+For everything dnd5e has no field for it is still the live field, and **two** modules read
+it. An expiry guide that lists only four values (`isAttacked`, `isDamaged`, `combatEnd`,
+`joinCombat`) is describing the DAE side and missing the larger set midi-qol enforces — a
+list that will make you "migrate" a working midi value off the flag and break it.
 
-| Value | Ends when |
-|---|---|
-| `isAttacked` | the bearer is attacked |
-| `isDamaged` | the bearer takes damage |
-| `combatEnd` | the combat ends |
-| `joinCombat` | the bearer joins a combat |
+- **DAE** reads it for the combat/rest values it hooks itself.
+- **midi-qol** reads it for the roll- and action-scoped expiries, in
+  `Workflow.expireTargetEffects()` (`src/module/Workflow.ts`) and `expireMyEffects()`
+  (`src/module/utils.ts`). Verified by extracting every `specialDuration.includes(...)`
+  comparison and `expireMyEffects.bind(this)([...])` call.
 
-`combatEnd` and `joinCombat` are verified as flag-driven: DAE's own hooks filter on
-`effect.flags?.dae?.specialDuration?.includes("combatEnd")` (and `"joinCombat"`).
-They are **not** dnd5e expiry values — `combatEnd` does not appear in dnd5e at all.
-DAE's migration map does translate `combatEnd` into `duration.expiry`, but dnd5e
-ignores it; the flag is what acts. So for these four, write the flag.
+### DAE-owned values (turn/rest/combat)
 
-A worked example of the flag form, which is what you want for these:
+`duration.expiry` is the live field for the turn ones, but these flag spellings are still
+read:
+
+    turnStart, turnEnd, roundStart, roundEnd
+    sourceStart, sourceEnd, targetStart, targetEnd
+    combatEnd, joinCombat
+    longRest, shortRest, newDay
+
+`combatEnd` is not a dnd5e value at all; the flag is what acts. DAE's migration map
+translates it to `duration.expiry` for completeness, but dnd5e ignores it.
+
+### midi-qol-owned values (write these ON THE FLAG — no `duration.expiry` equivalent)
+
+    1Attack, 1Attack:<actionType>       (mwak/msak/rwak/rsak)
+    1Hit, 1Hit:<actionType>
+    1Miss, 1Miss:<actionType>
+    1Critical, 1Fumble
+    1Spell, 1Action, 1Reaction
+    Bonus Action, Reaction, Turn Action   (activation types)
+    DamageDealt, Initiative
+    isAttacked, isAttacked:<actionType>
+    isDamaged, isDamaged.<damageType>
+    isHealed
+    isHit, isHit:<actionType>, isHitCritical, isMissed
+    isSave<ability>, isSaveSuccess<ability>, isSaveFailure<ability>, isSaveFail<ability>
+    isMoved
+
+### The consequence for authoring
+
+- `1Reaction` and `1Attack` are midi values. Moving one to `duration.expiry` silently
+  breaks it.
+- `1Save` and `1Check` appear in **neither** module and are inert. The real save values are
+  `isSave` / `isSaveSuccess` / `isSaveFailure`. Fix those if you see them.
+- `flags.dae.specialDuration` is an **array**. A worked midi example:
 
 ```js
 {
@@ -84,8 +114,9 @@ A worked example of the flag form, which is what you want for these:
 }
 ```
 
-Note the array. This is the one place the flag is still correct, and it is the case
-the agent asked about.
+Because the flag is read by two modules, set `duration.expiry` only for the turn/rest
+values and keep the flag for midi's set and `combatEnd`/`joinCombat` — do not assume one
+replaces the other. See §1 for the lossy migration that makes this easy to get wrong.
 
 ## 3. Which `duration.expiry` values dnd5e actually accepts
 

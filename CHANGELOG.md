@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.9] - 2026-10-25
+
+Bakes the in-world agent's learned corrections into the shipped reference, replacing the
+stale or silent material.
+
+### Changed
+
+- **`dae-effect-expiry.md`**: `flags.dae.specialDuration` is no longer described as keeping
+  only four values. It is midi-qol's field as much as DAE's — the full midi-owned set
+  (`1Attack`, `1Reaction`, `isHit`, `isSaveSuccess`, …) is now listed, with guidance not to
+  "migrate" a midi value off the flag, and the note that `1Save`/`1Check` are inert.
+- **`dnd5e-6.0-fields.md`**: `damage.onSave` is spelled out (`full` means the save does not
+  reduce the damage); new sections cover the midi flags that decide an effect or a roll
+  (`defaultOtherActivity`, `automationOnly`, advantage/disadvantage shapes, `uncanny-dodge`,
+  per-actor concentration) and the embedded-collection traps (`activity.effects[]._id`
+  length, append vs replace, dotted embedded writes, the `-=key` idiom).
+- **`cat-macro-flags.md` / `cat-embedded-macros.md`**: the five macro stores, where a
+  follow-up belongs, the `workflowPasses` enum (there is no `optionalDamage`), and creating
+  an effect from a macro.
+- **New `midi-reactions.md`**: the reaction trigger (`useConditionText`), the trigger-label
+  table, the default prompt, token scope, the condition sandbox, and perimeter distance.
+- **New `world-conventions.md`**: this world's conventions (manual damage application, the
+  testing recipe, unlinked-token actor edits) and the list of corrections not to re-learn.
+- **System prompt**: the user's working agreements, and the memory read/append truncation
+  traps.
+
 ## [0.6.8] - 2026-10-25
 
 The log no longer snaps to the bottom while you are reading above it.

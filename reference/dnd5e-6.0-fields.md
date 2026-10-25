@@ -207,6 +207,16 @@ number and denomination separately. `onSave` uses **`half`, not `full`**, for
 half-damage-on-a-successful-save — `none`/`half`/`full` is the activity
 vocabulary and `full` there means something else.
 
+Read `damage.onSave` as "what a successful save does to THIS damage":
+
+- `none` — a successful save **negates** the damage.
+- `half` — a successful save halves it.
+- `full` — the save does **not** reduce this damage at all. Use `full` when the save
+  governs only a condition, a push or another rider and the damage is the same either way.
+
+`full` is not "full damage on a failed save". Getting this wrong silently doubles or
+negates damage.
+
 An attack or save with no damage should still carry `{ onSave: 'none', parts: [] }`
 rather than omitting the key.
 
@@ -467,7 +477,91 @@ turn expiries — read the file).
 
 ---
 
-## 12. Things not confirmed here
+## 12. The midi-qol flags that decide whether an effect or a roll lands
+
+These are midi-qol's, not dnd5e's, and each was read out of the installed source. They fail
+silently when wrong, so verify against the live getter where one is named.
+
+### `defaultOtherActivity` silently adopts a sole sibling activity (B5)
+
+With `otherActivityId: ""` and the world setting `defaultOtherActivity: "auto"`, midi adopts
+the item's **sole** compatible activity and fires it on **every** hit — so a conditional save
+(a "charge", a "topple") rolls on a plain attack. `otherActivityCompatible` defaults to
+`true` on every activity (`MidiActivityMixin.ts:251`), and the getter prefers a sole
+`automationOnly` candidate, then a sole compatible one, and pairs nothing when ambiguous
+(`MidiActivityMixin.ts:2346-2355`).
+
+VERIFY with the live getter `activity.otherActivity` — it returns the adopted activity or
+null. Fix by setting an explicit `otherActivityId: "none"`, and `otherActivityCompatible:
+false` on any activity that must never be adopted.
+
+### Hide a secondary activity with `automationOnly`, never delete it (B6)
+
+`midiProperties.automationOnly: true` hides an activity from the sheet while keeping it
+callable. Deleting it breaks any macro that names it.
+
+### Advantage / disadvantage flag shapes (B7)
+
+An easy pair to get subtly wrong:
+
+- `ability.all` covers **checks + skills + saves**.
+- `check.all` covers **checks + skills only** — it does **not** touch saves.
+
+Disadvantage is the mirror: `flags.midi-qol.disadvantage.attack.all`,
+`flags.midi-qol.disadvantage.check.all`. A numeric bonus to saves is
+`flags.midi-qol.ability.save.bonus`. Use **mode 0** with a numeric value for these.
+
+### `flags.midi-qol.uncanny-dodge` halves incoming damage (B8)
+
+Set it as an effect change (`flags.midi-qol.uncanny-dodge` = 1, mode 5). midi's
+`applyUncannyDodge` multiplies each damage entry by 0.5 (`utils.ts`), and it requires
+`item.hasAttack` — so the condition must include `hasAttack`. An `isDamaged` reaction **can**
+do this: midi fires `isDamaged` inside `callDamageHooksAndMacros` **before** it finalises
+the damage record, so the damage is still mutable.
+
+### Concentration is tracked PER ACTOR (B9)
+
+`system.attributes.concentration.limit` is a plain integer (minimum 0, initial 1), and it
+gates whether **ending an existing concentration is optional**:
+
+```js
+const optional = existingConcentration.length < (limit ?? 0);
+```
+
+At limit 1 a second concentration **forces** ending the first; at limit 3 the dropdown gains
+a blank "keep it" option. It does **not** partition concentration per token. On an actor
+shared by several linked tokens, `endConcentration()` with no argument ends **all** of them,
+and a concentration save from damage is one set of checks for the actor.
+
+## 13. Writing into embedded collections, and the traps that fail silently
+
+- **`activity.effects[]._id` must be EXACTLY 16 alphanumeric characters.** A 15-character or
+  hyphenated id fails schema validation **and the whole activity is dropped**, with `ok:true`
+  returned. A failed write can leave the invalid and the new activity keys **merged** in the
+  source, after which the item cannot validate at all and every later write re-triggers the
+  error. Recovery: **delete the item and recreate it in one clean write** — do not patch it.
+- **Effects are an embedded collection.** `item.update({effects: [...]})` **appends**; it does
+  not replace. Remove with `item.deleteEmbeddedDocuments("ActiveEffect", [ids])`. `build_ability`
+  never removes effects on rebuild — it appends — so assert the effect count after rebuilding
+  an item that already had effects.
+- **A dotted write into an embedded effect is silently ignored.**
+  `item.update({"effects.<id>.duration.expiry": "none"})` returns ok and changes nothing. Use
+  `item.effects.get(id).update({...})`.
+- **`duration.units` must be PLURAL** ("seconds", "turns", "minutes"). An empty create return
+  means a silent validation failure.
+- **`actor.update` with dotted flag paths coerces flags to strings.** Use `setFlag`/`unsetFlag`.
+- **To DELETE a flag key, use the `-=key` idiom**: `{"flags.midi-qol.-=onUseMacroName": null}`.
+  A plain dotted write merges and will not remove it.
+- **A numeric index in a dot-path turns an array into an object.** Avoid indexed dot-paths.
+
+### An activity's effect link DOES apply effects (B4)
+
+`activity.effects[]._id` pointing at an item effect with `onSave: false` applies it, including
+on a natural failed save. It is a supported mechanism — use it. (An earlier claim that it was
+"decorative" was wrong, driven by a single negative test that misread `wf.appliedEffects`,
+which is `undefined` by design. Never overturn a mechanism from one observation.)
+
+## 14. Things not confirmed here
 
 Recorded so they are not mistaken for facts:
 
