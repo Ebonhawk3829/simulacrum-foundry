@@ -12,6 +12,7 @@
 
 import { BaseTool } from './base-tool.js';
 import { memoryStore } from '../core/memory-store.js';
+import { negativeClaimWithoutReference } from '../core/reference-journal.js';
 
 export class AppendHistoryTool extends BaseTool {
   constructor() {
@@ -53,6 +54,19 @@ export class AppendHistoryTool extends BaseTool {
   /** @param {object} params */
   async execute(params) {
     try {
+      if (negativeClaimWithoutReference(`${params.title ?? ''} ${params.body ?? ''}`)) {
+        return this._reject(
+          {
+            ok: false,
+            error:
+              'This history entry asserts something negative about the world, but no reference file has been read this session.',
+            rule: 'REFERENCE FIRST: before recording that a mechanism is absent, missing, not installed, broken or never built, READ the reference file that owns it (read_reference with the "file" argument). A world search that found nothing is not evidence of absence.',
+            hint: 'Call read_reference with no arguments to list the reference, read the owning file, then append the entry grounded in it.',
+          },
+          'History refused: read the reference before claiming absence',
+          'REFERENCE_FIRST'
+        );
+      }
       const result = await memoryStore.appendHistory({
         title: params.title,
         body: params.body,

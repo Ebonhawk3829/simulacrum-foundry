@@ -30,6 +30,7 @@
  */
 
 import { BaseTool } from './base-tool.js';
+import { markReferenceConsulted, recordReferenceRead } from '../core/reference-journal.js';
 
 /**
  * Documentation to look for inside an installed module, by module id.
@@ -85,7 +86,7 @@ export class ReadReferenceTool extends BaseTool {
   constructor() {
     super(
       'read_reference',
-      'List or search the reference material available for writing these automations: the dnd5e 6.x field guide shipped with this module, the CAT macro flag shapes, the CPR generic settings (every generic and every setting it accepts, with defaults), and the DAE effect expiry vocabulary. Use this BEFORE authoring an activity or setting a flag, so the field names and shapes come from the actual system rather than from memory. Read-only.'
+      'List or search the reference material available for writing these automations: the dnd5e 6.x field guide shipped with this module, the CAT macro flag shapes, the CPR generic settings (every generic and every setting it accepts, with defaults), and the DAE effect expiry vocabulary. Use this BEFORE authoring an activity or setting a flag, so the field names and shapes come from the actual system rather than from memory. This is the ONLY route to the documentation: run_javascript, document_search and asset_search read the world\'s documents, never these. A "how does this work" or "does this exist" question is answered here, by reading the owning file - not by searching the world and reporting that nothing was found. Read-only.'
     );
     this.requiresConfirmation = false; // read-only
     this._index = null; // in-memory only, for the life of the page
@@ -440,8 +441,11 @@ export class ReadReferenceTool extends BaseTool {
 
     const content = { ok: true, query: params.query, matchCount: matches.length, matches };
     if (!matches.length) {
-      content.next = `Nothing matched "${params.query}". Try a shorter or different term. The dnd5e field guide reads in full with file "module/dnd5e-6.0-fields.md", and live field shapes are available from inspect_document_schema.`;
+      content.next = `Nothing matched "${params.query}" in the reference. That is not evidence the mechanism does not exist - try a shorter or different term, read the file that owns it in full, or use inspect_document_schema for live field shapes.`;
+      content.caution =
+        'A REFERENCE search that finds nothing is the absence of a match, not evidence of absence. Do not report a mechanism as absent, missing, not installed or broken on the strength of this.';
     } else {
+      markReferenceConsulted();
       content.next =
         'Read the relevant file in full with the "file" argument before authoring anything. A match shows one passage, and the shape you need is often a little further up.';
     }
@@ -476,6 +480,7 @@ export class ReadReferenceTool extends BaseTool {
       f => f.path.toLowerCase() === key || f.path.toLowerCase().endsWith(key)
     );
     if (known) {
+      recordReferenceRead(known.path);
       return {
         content: JSON.stringify(
           {
@@ -514,6 +519,7 @@ export class ReadReferenceTool extends BaseTool {
       );
     }
 
+    recordReferenceRead(route);
     return {
       content: JSON.stringify(
         { ok: true, path: route, bytes: text.length, text: this._truncateForOutput(text) },

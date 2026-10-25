@@ -82,7 +82,15 @@ class DocumentSearchTool extends BaseTool {
    */
   formatSearchResults(results, query) {
     if (results.length === 0) {
-      return 'No documents found matching "' + query + '"';
+      return (
+        'No documents found matching "' +
+        query +
+        '".\n\n' +
+        'This searched the WORLD, not the documentation. Empty here is the absence of a match ' +
+        'in this search, not evidence the thing does not exist: before reporting a mechanism as ' +
+        'absent, missing, not installed or broken, read the reference file that owns it with ' +
+        'read_reference. A world search cannot read the reference.'
+      );
     }
 
     const formattedResults = results.map(doc => {

@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.12] - 2026-10-25
+
+Makes the reference the first read rather than a fallback, and enforces it where a claim is
+written.
+
+### Added
+
+- **A REFERENCE FIRST rule and an ordered audit workflow in the system prompt.** The prompt now
+  states that documentation questions are answered by reading `read_reference`, never by
+  `run_javascript` or `search_documents` (which read the world, not the docs); that the first
+  step of any "how does this work / is this present" question is to name the file that owns it;
+  and that a search which finds nothing is not evidence of absence. A new AUDIT workflow — for
+  "is the automation on this item consistent with its description?" — makes "find where in the
+  documents each mechanic is described" its step 2, and forbids calling a mechanic
+  unimplemented until that step is done for it.
+- **A reference journal, and a gate on the write tools.** `read_reference` records what has been
+  read this session; `write_lesson` and `append_history` now REFUSE an entry that asserts
+  something negative about the world (absent, missing, not installed, broken, never built…)
+  when no reference file has been read, returning the rule and the index instead.
+- **The empty-result caution at the moment it is misread.** `search_documents`' no-match result
+  and `read_reference`'s no-match search now say plainly that empty is the absence of a match,
+  not evidence of absence, and name reading the reference as the next step.
+
+### Changed
+
+- `read_reference`'s description states that it is the only route to the documentation.
+
 ## [0.6.11] - 2026-10-25
 
 Rewrites the world-conventions corrections in the positive, and fixes two reference-tool
