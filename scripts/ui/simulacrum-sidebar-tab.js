@@ -760,7 +760,10 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
 
     if (this.#needsScroll || options.isFirstRender) {
       if (isTabActive) {
-        await this._scrollToBottom({ waitImages: options.isFirstRender });
+        await this._scrollToBottom({
+          waitImages: options.isFirstRender,
+          force: options.isFirstRender,
+        });
         this.#needsScroll = false;
       } else {
         // Tab is not active. Set the flag so _onActivate will scroll when the tab becomes visible.
@@ -798,19 +801,32 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
 
   /**
    * Scroll the chat log to the bottom.
+   *
+   * By default this does nothing when the log is scrolled up, so lines arriving while you
+   * read above the fold do not move the view — the jump-to-bottom button appears instead.
+   * Pass `force` for the scrolls the user expects wherever they are: their own prompt, the
+   * first render.
+   *
    * @param {object} [options]
    * @param {boolean} [options.waitImages=false] Wait for images to load before scrolling.
+   * @param {boolean} [options.force=false] Scroll even when the log is scrolled up.
    */
-  async _scrollToBottom({ waitImages = false } = {}) {
+  async _scrollToBottom({ waitImages = false, force = false } = {}) {
     if (!this.element) return;
     const log =
       this.element[0]?.querySelector('.chat-scroll') ??
       this.element.querySelector?.('.chat-scroll');
-    if (log) {
-      if (waitImages) await this.constructor.waitForImages(log);
-      log.scrollTop = log.scrollHeight;
+    if (!log) return;
+
+    if (!force && !this.#isAtBottom) {
+      // Reading above the fold: leave the view where it is and just surface the button.
       this._updateJumpToBottomVisibility(log);
+      return;
     }
+
+    if (waitImages) await this.constructor.waitForImages(log);
+    log.scrollTop = log.scrollHeight;
+    this._updateJumpToBottomVisibility(log);
   }
 
   /**
@@ -989,7 +1005,9 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
       // A new message changes where the queue block belongs: refresh it so it
       // stays pinned just above the process-status line, not below the log.
     }
-    this._scrollToBottom();
+    // Your own prompt always comes into view; an assistant or tool append only follows the
+    // bottom when you were already there.
+    this._scrollToBottom({ force: role === 'user' });
   }
 
   /**

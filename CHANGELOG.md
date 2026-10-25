@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.8] - 2026-10-25
+
+The log no longer snaps to the bottom while you are reading above it.
+
+### Changed
+
+- **New lines only scroll the log when you are already at the bottom.** Every append used to
+  jump the view to the latest message, so scrolling up to read during a long agent run was
+  impossible — the view kept yanking back down. The log now follows the bottom only when it is
+  already there: scroll up and it stays put, with the jump-to-bottom button appearing to bring
+  you back. Your own prompt still scrolls into view, and the first render still opens at the
+  bottom.
+
 ## [0.6.7] - 2026-10-24
 
 Restores the module's own styling inside a popped-out tab.
