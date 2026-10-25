@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.13] - 2026-10-25
+
+Puts the "empty is not absence" rule on the tool that was actually misused.
+
+### Added
+
+- **`run_javascript` carries the rule at both ends.** Its description now says it runs code in
+  the world and cannot read the shipped reference, so a "how does this work / does this exist"
+  question belongs on `read_reference`; and a script that returns nothing **and** logs nothing
+  now gets the caution appended to its result — that is the absence of a result from this
+  script, not evidence the thing does not exist. This was the exact case: a world script
+  returned "nothing found" and the nothing was read as a finding.
+
 ## [0.6.12] - 2026-10-25
 
 Makes the reference the first read rather than a fallback, and enforces it where a claim is

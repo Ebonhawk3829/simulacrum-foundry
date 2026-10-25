@@ -2,6 +2,25 @@
 import { BaseTool } from './base-tool.js';
 
 /**
+ * A caution for the empty result that reads like a finding: a script that returned nothing and
+ * logged nothing is the absence of a result from THIS script, not evidence that the thing does
+ * not exist. Attached at the moment it would otherwise be misread.
+ * @param {*} result
+ * @param {Array} logs
+ * @returns {string}
+ */
+function emptyResultCaution(result, logs) {
+  if (logs.length) return '';
+  const empty =
+    result === undefined ||
+    result === null ||
+    (Array.isArray(result) && result.length === 0) ||
+    (typeof result === 'object' && !Array.isArray(result) && Object.keys(result).length === 0);
+  if (!empty) return '';
+  return '\n\nNothing was returned and nothing was logged. That is the absence of a result from THIS script, not evidence that the thing does not exist. If the question was how a mechanism works or whether it is present, this was the wrong tool - read the reference with read_reference and read the file that owns it before concluding anything.';
+}
+
+/**
  * Tool to execute arbitrary JavaScript code.
  * WARNING: This tool allows full code execution.
  */
@@ -9,7 +28,7 @@ export class RunJavascriptTool extends BaseTool {
   constructor() {
     super(
       'run_javascript',
-      'Execute JavaScript code in the FoundryVTT browser context. The script runs with full access to the Foundry API (`game`, `canvas`, `CONFIG`, `ui`, etc.) and can interact with any game data or UI element. Use `return` to send a value back. Console output is captured and included in the result.',
+      'Execute JavaScript code in the FoundryVTT browser context. The script runs with full access to the Foundry API (`game`, `canvas`, `CONFIG`, `ui`, etc.) and can interact with any game data or UI element. Use `return` to send a value back. Console output is captured and included in the result. This runs code in THIS WORLD and cannot read the shipped reference: for a "how does this work" or "does this exist" question use read_reference, not a script.',
       {
         type: 'object',
         properties: {
@@ -72,7 +91,7 @@ export class RunJavascriptTool extends BaseTool {
       const result = await fn(capturedConsole);
 
       const resultStr = result !== undefined ? JSON.stringify(result) : 'undefined';
-      const content = `Result: ${resultStr}${formatLogs()}`;
+      const content = `Result: ${resultStr}${formatLogs()}${emptyResultCaution(result, logs)}`;
       const display = `Script executed successfully`;
       return this.createSuccessResponse(content, display);
     } catch (err) {
