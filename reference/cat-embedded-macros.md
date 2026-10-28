@@ -4,7 +4,7 @@ For the abilities flags cannot express. Reading game state, branching on who did
 what, or calling midi-qol's workflow utilities needs code, and about 40% of the
 abilities in this world's own library need exactly that.
 
-Written from CAT's own source at v0.1.3 (`lib/embeddedMacros.mjs`, `lib/event.mjs`)
+Written from CAT's own source at v0.1.4 (`lib/embeddedMacros.mjs`, `lib/event.mjs`)
 and from Chris's Premades' macros, which are the working examples.
 
 ---
@@ -93,7 +93,10 @@ decides what can still be changed and what is already decided:
 - `roll` / `damageRollComplete` — settled, again not adjustable.
 - `roll` / `itemRollFinished` — the whole use is done. Good for follow-up effects.
 - `move` / `actorMoved` — a token moved.
-- `combat` / `actorTurnStart`, `actorTurnEnd` — a combatant's turn.
+- `combat` / `preInitiative` — the combatant about to roll initiative, before its roll is
+  built (`combatant` is undefined when the roll will create it).
+- `combat` / `turnStart`, `turnEnd`, `everyTurn`, `combatStart`, `combatEnd` — turns and
+  combat boundaries.
 - `effect` / — an effect was created, deleted or expired.
 - `save`, `check`, `skill`, `tool`, `rest`, `time`, `aura`, `summon`, `region`,
   `token`, `hitDie`, `actor` — the other events.
@@ -165,18 +168,27 @@ already works is a better template than anything written here.
 
 ## 7. Pass names come from the enum — do not infer one
 
-CAT 0.1.3's passes live in `scripts/lib/constants.mjs` as `workflowPasses`. Read it. Known
-members include `preTargeting`, `preItemRoll`, `targeting`, `preambleComplete`,
-`attackRollConfig`, `attackRoll`, `attackRollBonuses`, `attackRollMissedBonuses`,
-`optionalBonusAttack`, `attackRollComplete`, `savesComplete`, `damageRoll`,
-`optionalBonusDamage`, `damageRollBonuses`, `damageRollComplete`, `utilityRoll`,
-`utilityRollBonuses`, `utilityRollComplete`, `damage`, `damageBonuses`,
+CAT declares its passes in `scripts/lib/constants.mjs` as **twelve separate enums**, one per
+event family: `workflowPasses`, `combatPasses`, `rollPasses`, `effectPasses`, `auraPasses`,
+`regionPasses`, `itemPasses`, `restPasses`, `timePasses`, `summonPasses`, `movementPasses`
+and `grapplePasses`. Read the one for the event you are attaching to — a name that is valid
+for one event is not valid for another.
+
+CAT 0.1.4's `workflowPasses` members are: `preTargeting`, `preItemRoll`, `targeting`,
+`preambleComplete`, `attackRollConfig`, `attackRoll`, `attackRollBonuses`,
+`attackRollMissedBonuses`, `optionalBonusAttack`, `attackRollComplete`, `savesComplete`,
+`damageRoll`, `optionalBonusDamage`, `damageRollBonuses`, `damageRollComplete`,
+`utilityRoll`, `utilityRollBonuses`, `utilityRollComplete`, `damage`, `damageBonuses`,
 `damageFlatReductions`, `damagePercentReductions`, `damageComplete`, `rollFinished`,
 `onHit`, `cleanup`.
 
 **There is no pass called `optionalDamage`** — the optional-damage pass is
 `optionalBonusDamage`, and the optional-attack one is `optionalBonusAttack`. A pass name you
 guessed is accepted where a name is expected and then never fires.
+
+**New in 0.1.4:** `combatPasses` gained `preInitiative` (the combatant about to roll
+initiative, before its roll is built). The rest of `combatPasses` are `turnStart`, `turnEnd`,
+`everyTurn`, `combatStart` and `combatEnd` — note there is no `actorTurnStart`/`actorTurnEnd`.
 
 ## 8. Creating an effect from a macro
 

@@ -1,7 +1,7 @@
 # CPR generic macro settings
 
 Every generic macro in Chris's Premades and the settings each accepts in
-`flags.cat.genericConfig`. Generated from CPR source at **2.1.3** by
+`flags.cat.genericConfig`. Generated from CPR source at **2.1.4** by
 `resources/generate-cpr-config.mjs` — do not hand-edit; re-run the generator.
 
 Nothing publishes this list. CPR declares it in code, on each generic's exported
@@ -37,7 +37,7 @@ Types: `checkbox` (boolean), `text`, `number`, `select`, `select-many` (array),
 `selectIdentifiers` (array of item identifiers). Default is what is used when the
 setting is absent.
 
-**56 generics, 297 settings.** A generic that takes no
+**61 generics, 328 settings.** A generic that takes no
 settings is not listed — it needs no configuration to attach.
 
 ---
@@ -75,6 +75,7 @@ settings is not listed — it needs no configuration to attach.
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `animation` | selectAnimation | `[object Object]` | Animation |
+| `areaOnly` | checkbox | `false` | Only play for activities that have an area. |
 
 ## `attackBonus`
 
@@ -105,6 +106,7 @@ settings is not listed — it needs no configuration to attach.
 | `workflowProperty` | text | `''` | Only offer this option when an earlier bonus has set this workflow property. |
 | `identifiers` | selectIdentifiers | `[]` | Limit this feature to a list of specific items. |
 | `attackType` | select | `''` | Limit this feature by attack type. |
+| `attackAbility` | select-many | `[]` | Limit this bonus to a list of abilities. |
 | `maxSize` | select | `''` | Only offer this option when every hit target is this size or smaller. |
 | `requiredItems` | selectIdentifiers | `[]` | Only offer this option when the actor has an item with one of these identifiers. |
 | `suppressedBy` | selectIdentifiers | `[]` | Do not offer this option when the actor has an item with one of these identifiers. |
@@ -112,6 +114,12 @@ settings is not listed — it needs no configuration to attach.
 | `selfAsTouch` | checkbox | `false` | When the activity's range is Self, roll it on the hit targets instead of the attacker. |
 | `riderNearbyRange` | number | `0` | The rider activity also targets creatures within this distance of the hit target. 0 targets the hit target only. |
 | `useActivityCosts` | checkbox | `false` | Use Activity Costs |
+
+## `auraDesignation`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `choose` | checkbox | `false` | Prompt for unaffected creatures on cast. When off, only enemies are affected. |
 
 ## `banish`
 
@@ -166,6 +174,12 @@ settings is not listed — it needs no configuration to attach.
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `conditions` | select-many | `[]` | Conditions |
+| `affects` | select | `self` | Remove conditions from the user of the activity or from its target. |
+| `count` | text | `1` | Formula for how many conditions can be removed per use. @scaling reads the activity's consumption scaling. |
+| `targetChooses` | checkbox | `false` | When removing from the target, the target's owner picks the conditions. |
+| `autoSingle` | checkbox | `false` | Skip the prompt when no more qualifying conditions are present than can be removed. |
+| `requireCondition` | checkbox | `true` | Cancel the use when the creature has none of the listed conditions. |
+| `reactionConditions` | select-many | `[]` | Conditions the creature can end by using its reaction. Its owner is asked after the roll. |
 
 ## `conditionAutoSave`
 
@@ -238,6 +252,12 @@ settings is not listed — it needs no configuration to attach.
 | `useActivityInfo` | checkbox | `true` | Icons, item name, and roll DC will be taken from the parent save activity. |
 | `replaceActivity` | checkbox | `true` | The parent activity roll will be discarded and replaced by the grapple macro. |
 
+## `heroicInspiration`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `affects` | select | `self` | Give Heroic Inspiration to the activity's user or to its targets. |
+
 ## `hide`
 
 | Setting | Type | Default | What it does |
@@ -307,6 +327,14 @@ settings is not listed — it needs no configuration to attach.
 | `riderNearbyRange` | number | `0` | The rider activity also targets creatures within this distance of the hit target. 0 targets the hit target only. |
 | `endSpell` | select | `never` | When the spell ends after the rider activity is rolled. |
 
+## `packTactics`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `attackType` | select | `attack` | Limit this feature by attack type. |
+| `range` | number | `5` | Nearby Range |
+| `benefit` | select | `self` | Who gains advantage when the conditions of this feature are met. |
+
 ## `preventDeath`
 
 | Setting | Type | Default | What it does |
@@ -333,6 +361,12 @@ settings is not listed — it needs no configuration to attach.
 |---|---|---|---|
 | `skipProne` | checkbox | `false` | Targets that are already prone or immune to it do not roll the save. The use is cancelled when no target is left. |
 
+## `proneOnHit`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `maxSize` | select | `''` | Targets larger than this size are not knocked prone. |
+
 ## `pullOnFail`
 
 | Setting | Type | Default | What it does |
@@ -354,6 +388,16 @@ settings is not listed — it needs no configuration to attach.
 | `animation` | selectAnimation | `[object Object]` | Animation played from the user to each target. The movement runs inside it. |
 
 ## `pushOnFail`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `distance` | text | `5` | Maximum distance moved, in feet. Accepts a formula. |
+| `choose` | checkbox | `false` | Prompt for the distance in 5 ft steps up to the maximum. When off, the target moves the full distance. |
+| `stopAdjacent` | checkbox | `false` | A pull never moves the target closer than adjacent to the user. |
+| `maxSize` | select | `''` | Targets larger than this size are not moved. |
+| `animation` | selectAnimation | `[object Object]` | Animation played from the user to each target. The movement runs inside it. |
+
+## `pushOnHit`
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -597,12 +641,24 @@ settings is not listed — it needs no configuration to attach.
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `conditions` | select-many | `[]` | Conditions |
+| `affects` | select | `self` | Remove conditions from the user of the activity or from its target. |
+| `count` | text | `1` | Formula for how many conditions can be removed per use. @scaling reads the activity's consumption scaling. |
+| `targetChooses` | checkbox | `false` | When removing from the target, the target's owner picks the conditions. |
+| `autoSingle` | checkbox | `false` | Skip the prompt when no more qualifying conditions are present than can be removed. |
+| `requireCondition` | checkbox | `true` | Cancel the use when the creature has none of the listed conditions. |
+| `reactionConditions` | select-many | `[]` | Conditions the creature can end by using its reaction. Its owner is asked after the roll. |
 
 ## `turnStartChoiceRemoveCondition`
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `conditions` | select-many | `[]` | Conditions |
+| `affects` | select | `self` | Remove conditions from the user of the activity or from its target. |
+| `count` | text | `1` | Formula for how many conditions can be removed per use. @scaling reads the activity's consumption scaling. |
+| `targetChooses` | checkbox | `false` | When removing from the target, the target's owner picks the conditions. |
+| `autoSingle` | checkbox | `false` | Skip the prompt when no more qualifying conditions are present than can be removed. |
+| `requireCondition` | checkbox | `true` | Cancel the use when the creature has none of the listed conditions. |
+| `reactionConditions` | select-many | `[]` | Conditions the creature can end by using its reaction. Its owner is asked after the roll. |
 
 ## `unhideActivities`
 

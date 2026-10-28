@@ -6,7 +6,7 @@ documentation it ships — says nothing about flags. Its real documentation is a
 GitHub wiki, which is not installed with the module.
 
 The shapes below were read out of CAT's own schema at the version this world runs
-(v0.1.3, `scripts/lib/macros.mjs`) and out of a stored document that uses it.
+(v0.1.4, `scripts/lib/macros.mjs`) and out of a stored document that uses it.
 
 ---
 

@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.14] - 2026-10-29
+
+Brings the reference in step with CAT 0.1.4 and CPR 2.1.4.
+
+### Changed
+
+- **`cpr-generic-config.md` regenerated at CPR 2.1.4** (the generator is deterministic, so this
+  is a clean re-run): 56 → 61 generics, 297 → 328 settings. New generics `auraDesignation`,
+  `heroicInspiration`, `packTactics`, `proneOnHit` and `pushOnHit`; `attackRider` gains
+  `attackAbility`; several others gain settings. Note that CPR 2.1.4 requires CAT 0.1.4.
+- **`cat-embedded-macros.md` updated for CAT 0.1.4.** Records the new `combatPasses` member
+  `preInitiative`, notes that CAT declares its passes as twelve separate per-event enums (so a
+  name valid for one event is not valid for another), and corrects `actorTurnStart` /
+  `actorTurnEnd` — which do not exist in CAT — to the real `turnStart` / `turnEnd` /
+  `everyTurn` / `combatStart` / `combatEnd`.
+- `cat-macro-flags.md` version note bumped to v0.1.4; its cited source files are unchanged in
+  0.1.4, so the content still holds.
+
 ## [0.6.13] - 2026-10-25
 
 Puts the "empty is not absence" rule on the tool that was actually misused.
