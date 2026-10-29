@@ -213,6 +213,10 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
       if (this.rendered) this.render();
     });
 
+    // Mirror a message added in the OTHER view (the sidebar tab and the popped-out tab are
+    // separate instances with their own message arrays and DOM).
+    Hooks.on(SimulacrumHooks.MESSAGE_ADDED, payload => this._mirrorMessage(payload));
+
     // Listen for tool confirmation requests
     Hooks.on('simulacrumToolConfirmationRequest', data => {
       this._showToolConfirmation(data);
@@ -933,15 +937,60 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
 
   async addMessage(role, content, display = null, noGroup = false) {
     // Queue the message addition to prevent race conditions
-    return this._messageQueue.add(() => this._addMessageImpl(role, content, display, noGroup));
+    return this._messageQueue.add(() =>
+      this._addMessageImpl({ role, content, display, noGroup, broadcast: true })
+    );
   }
 
-  async _addMessageImpl(role, content, display, noGroup) {
+  /**
+   * Apply a message added in the OTHER view, without re-broadcasting it.
+   *
+   * The sidebar tab and the popped-out tab are two instances with their own `messages` array
+   * and DOM, so a message added in one otherwise never reaches the other. Mirroring the
+   * already-resolved display keeps the receiving view identical, and `broadcast: false` stops
+   * the copy echoing back to the origin.
+   *
+   * @param {object} payload - The MESSAGE_ADDED payload
+   */
+  _mirrorMessage(payload) {
+    if (!payload || payload.origin === this) return; // this view already added it
+    void this._messageQueue.add(() =>
+      this._addMessageImpl({
+        role: payload.role,
+        content: payload.content,
+        display: payload.display,
+        noGroup: payload.noGroup,
+        broadcast: false,
+      })
+    );
+  }
+
+  /**
+   * Add one message to this view, and — unless this is a mirrored copy — tell the other view
+   * to add it too.
+   *
+   * @param {object} params
+   * @param {string} params.role
+   * @param {string} params.content
+   * @param {string|null} [params.display] - Pre-processed display HTML, if the caller has it
+   * @param {boolean} [params.noGroup]
+   * @param {boolean} [params.broadcast] - false when applying a mirrored copy, to stop an echo
+   */
+  async _addMessageImpl({ role, content, display = null, noGroup = false, broadcast = true }) {
     const processedDisplay = await resolveDisplay(role, content, display);
 
-    if (this._tryMergeAssistantMessage(role, content, processedDisplay, noGroup)) return;
+    const merged = this._tryMergeAssistantMessage(role, content, processedDisplay, noGroup);
+    if (!merged) await this._appendNewMessage(role, content, processedDisplay);
 
-    await this._appendNewMessage(role, content, processedDisplay);
+    if (broadcast) {
+      Hooks.callAll(SimulacrumHooks.MESSAGE_ADDED, {
+        origin: this,
+        role,
+        content,
+        display: processedDisplay,
+        noGroup,
+      });
+    }
   }
 
   _tryMergeAssistantMessage(role, content, processedDisplay, noGroup) {

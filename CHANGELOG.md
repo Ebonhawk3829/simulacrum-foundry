@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.15] - 2026-10-29
+
+Keeps the sidebar tab and the popped-out tab in step.
+
+### Fixed
+
+- **A message added in one view now appears in the other.** The sidebar tab and the popped-out
+  tab are two instances of the same application, each with its own message array and DOM. They
+  share the conversation store, but only tool cards and confirmations were broadcast between
+  them, so a user or assistant message added in one view never reached the other — the two
+  drifted apart until a view was rebuilt from the store (which is why the popout only "caught
+  up" when reopened). `_addMessageImpl` now emits a `simulacrum:messageAdded` hook carrying the
+  origin instance and the already-resolved display; the other instance mirrors it, rendering
+  exactly what the origin rendered, with `broadcast: false` so a copy cannot echo back.
+
+### Notes
+
+- The workspace extract pins were bumped to CAT 0.1.4 and CPR 2.1.4
+  (`refresh-extracts.mjs --write --manifest`) so they match the reference regenerated in 0.6.14.
+  The reference-integrity test compares the generated CPR file against that pin.
+
 ## [0.6.14] - 2026-10-29
 
 Brings the reference in step with CAT 0.1.4 and CPR 2.1.4.

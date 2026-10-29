@@ -21,6 +21,10 @@ export const SimulacrumHooks = Object.freeze({
   CONVERSATION_STARTED: 'simulacrum:conversationStarted',
   CONVERSATION_CLEARED: 'simulacrum:conversationCleared',
 
+  // A message was added to one view; other views mirror it so the sidebar tab and the
+  // popped-out tab stay in step (they are separate instances with separate message arrays).
+  MESSAGE_ADDED: 'simulacrum:messageAdded',
+
   // AI response hooks
   AI_RESPONSE_RECEIVED: 'simulacrum:aiResponseReceived',
 
