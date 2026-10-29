@@ -27,6 +27,7 @@ import { DocumentOwnershipTool } from '../tools/document-ownership.js';
 import { NotifyUserTool } from '../tools/notify-user.js';
 import { PreviewSpecTool } from '../tools/preview-spec.js';
 import { BuildAbilityTool } from '../tools/build-ability.js';
+import { GenerateIconTool } from '../tools/generate-icon.js';
 import { ReadAbilityRunsTool } from '../tools/read-ability-runs.js';
 import { ConfirmAbilityTool } from '../tools/confirm-ability.js';
 import { ReadReferenceTool } from '../tools/read-reference.js';
@@ -94,6 +95,7 @@ export class ToolRegistry {
         new NotifyUserTool(),
         new PreviewSpecTool(),
         new BuildAbilityTool(),
+        new GenerateIconTool(),
         new ReadAbilityRunsTool(),
         new ConfirmAbilityTool(),
         new ReadReferenceTool(),

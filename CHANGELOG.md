@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-10-29
+
+Lets an ability be given an icon in the same pass it is built.
+
+### Added
+
+- **`generate_icon` tool.** Generates a square item icon from a short subject and saves it to
+  `icons/simulacrum/`, returning the Foundry path to hand to `build_ability` as `img`. It uses
+  OpenRouter's Image API on the same key and endpoint host as the chat client, so no new
+  configuration is involved. The style, size (512) and framing are fixed so a generated set looks
+  like a set — only the subject varies — and the output is a full-bleed opaque tile, so there is no
+  transparency to key out. Billed per image; the per-call cost is reported back.
+- **`build_ability` accepts `img`.** A path from `generate_icon` (or found with `search_assets`) can
+  be set on the item at build time rather than in a separate update. `img` is written at the item's
+  top level and is excluded from the spec pass-through into `system`.
+- **Icon Generation Model setting**, defaulting to Google Nano Banana 2 (Gemini 3.1 Flash Image),
+  chosen for exact 512px square output. Any OpenRouter image model works.
+
 ## [0.6.15] - 2026-10-29
 
 Keeps the sidebar tab and the popped-out tab in step.

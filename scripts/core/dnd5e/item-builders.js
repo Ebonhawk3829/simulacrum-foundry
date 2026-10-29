@@ -29,6 +29,9 @@ const CONSUMED_KEYS = new Set([
   'name',
   'identifier',
   'itemType',
+  // `img` is a top-level document field, written by the build tool. Left out of this
+  // set it would pass through into `system.img`, where nothing reads it.
+  'img',
   'notes',
   'uses.max',
   'uses.period',

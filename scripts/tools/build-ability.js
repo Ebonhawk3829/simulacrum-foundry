@@ -145,6 +145,11 @@ const ABILITY_PARAMS = Object.freeze({
       'The dnd5e item type to create. Defaults to "feat". Use "weapon" for an attack that belongs on a weapon, "consumable" for a potion, "spell" for a cast activity, "equipment" for something worn.',
     enum: ITEM_TYPES,
   },
+  img: {
+    type: 'string',
+    description:
+      'Path to the icon image for the item, e.g. the "path" returned by generate_icon or a file found with search_assets. Written to the item\'s top-level img field. Omit to let Foundry use its type default.',
+  },
   previewToken: {
     type: 'string',
     description:
@@ -379,6 +384,7 @@ export class BuildAbilityTool extends BaseTool {
       name,
       identifier: getSpecString(spec, 'identifier') || deriveIdentifier(name),
       itemType: firstOf(params.itemType, getSpecString(spec, 'itemType')) ?? 'feat',
+      img: firstOf(params.img, getSpecString(spec, 'img')),
       activities: this._normaliseActivities(firstOf(params.activities, spec.activities) ?? []),
       effects: firstOf(params.effects, spec.effects) ?? [],
       scripts: firstOf(params.scripts, spec.scripts) ?? [],
@@ -506,7 +512,7 @@ export class BuildAbilityTool extends BaseTool {
   }
 
   async _write(actor, payload) {
-    const { identifier, name, itemType, spec, activities, effects, scripts, flags, replace } =
+    const { identifier, name, itemType, spec, activities, effects, scripts, flags, replace, img } =
       payload;
 
     const existing = actor.items.find(
@@ -514,6 +520,9 @@ export class BuildAbilityTool extends BaseTool {
     );
 
     const update = { name, system: buildItemSystem(spec, identifier) };
+    // `img` is a top-level document field, not a system field: setting it inside
+    // `system` is accepted and then ignored, so it is applied here instead.
+    if (img) update.img = img;
 
     const itemFlags = this._itemFlags(spec, flags, scripts);
     if (itemFlags) update.flags = itemFlags;
@@ -574,6 +583,7 @@ export class BuildAbilityTool extends BaseTool {
           itemType,
           actorUuid: actor.uuid,
           identifier,
+          img: item.img,
           replacedActivities: replace,
           needsTesting: true,
           activities: (item.system.activities?.contents ?? []).map(a => ({
