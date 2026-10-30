@@ -4,7 +4,7 @@ For the abilities flags cannot express. Reading game state, branching on who did
 what, or calling midi-qol's workflow utilities needs code, and about 40% of the
 abilities in this world's own library need exactly that.
 
-Written from CAT's own source at v0.1.4 (`lib/embeddedMacros.mjs`, `lib/event.mjs`)
+Written from CAT's own source at v0.1.6 (`lib/embeddedMacros.mjs`, `lib/event.mjs`)
 and from Chris's Premades' macros, which are the working examples.
 
 ---
@@ -52,11 +52,17 @@ build_ability({
 The builder syntax-checks every script before writing anything, so a script that
 cannot parse is refused rather than stored.
 
-`embeddedMacros` lives on the **item**. As of 0.1.3 CAT collects an item's macros and
-an activity's macros of the same event and pass **separately** (an activity's are
-grouped under an `activity.` key), so they no longer replace one another — both run.
-Put a script on the item when it should apply to every use, and on a specific activity
-only when it should not.
+`embeddedMacros` must live on the **ITEM**. An activity-level `embeddedMacros` does
+**not fire** — not at any event or pass — even though CAT's schema accepts it, its
+`hasCatFlag` returns true for it, and its `getActorTriggers` builds a Trigger for it.
+The source reads as if it should work; observation disagrees, so treat an activity-level
+script as dead and author on the item. (The related-but-opposite result: `flags.cat.macros`,
+the fn-macro references, **do** work at activity level — that is the `cat-macro-flags.md`
+§4 distinction, and the two results must not be merged.)
+
+A third host **does** fire: an **active applied effect** on the actor carries its own
+`embeddedMacros`, run with `actor` = the effect's bearer. It is the only way to give a
+debuff logic that runs on the victim's turn without an actor flag or a world macro.
 
 ## 2. What the script can see
 
@@ -81,6 +87,27 @@ a `move` event has no attack roll to report:
 **The scope is large and worth inspecting rather than guessing.** Every CAT utility
 is also injected, and `constants` holds the enums those utilities expect. When you
 need a name you are unsure of, log the scope and read back what arrived.
+
+### Verify a macro's data accessors against a live object
+
+When modernising a legacy macro, verify EVERY data accessor against a live object — do not carry
+the legacy field names over on trust. A wrong accessor fails silently, because the loop body just
+skips; the only symptom is that nothing happened.
+
+The real shape of a midi `workflow.damageList` entry, read from a live forced run:
+
+    dl.damageDetail                  [{value, damage, type, formula, midiCategory}]   // per-type
+    dl.damageDetails.combinedDamage  the same array, keyed by damage category
+    dl.combinedDamage                undefined
+    also: actorUuid, targetUuid, saved, isHit, wasHit, oldHP, newHP, hpDamage, totalDamage, rawDamageDetail
+
+Do it by running the ability once with a forced hit/save-failure, dumping `Object.keys(obj)`, and
+writing the accessor against what is actually there — reading the object's OWN KEYS beats reading
+any example. Make the accessor tolerant when a shape has varied across versions, and log the type
+names found when a lookup misses, so a silent skip becomes diagnosable:
+
+    const candidates = [...(Array.isArray(dl.damageDetail) ? dl.damageDetail : []), ...(dl.damageDetails?.combinedDamage ?? [])];
+    if (!necrotic) { log('no necrotic entry; types were ' + candidates.map(c => c?.type)); continue; }
 
 ## 3. Events and passes
 
@@ -140,21 +167,33 @@ answer to that comes from the test loop, not from this file.
 
 ## 5. Making it observable
 
-The test loop needs to see what the script saw. Two habits:
+**Console output from an embedded macro does NOT reach the tool that runs your
+scripts.** `console.log` / `console.warn` inside an embedded macro — and inside a
+world-hooks macro — are **not** captured by `run_javascript`'s console, so "no output"
+is never evidence that a macro did not run. Every conclusion drawn from silent stubs
+is unfounded, including a working item reported as broken.
+
+Assert on an **observable side effect**, which a script CAN read back:
 
 ```js
-async function attackRoll({ workflow, log }) {
-  // log() writes one prefixed line to the console, which is what the user reads
-  // back to you when they say "I pressed it and this happened".
-  log(`reckless: advantage from ${workflow.advantageReasons?.join(', ') ?? 'none'}`);
-}
+await actor.setFlag('world', 'diagResult', 'itemRollFinished');   // then read it back
+await effectUtils.createEffects(actor, [effectData]);             // then read actor.effects
+// a token move (read its x/y), or a ChatMessage (compare game.messages.size)
 ```
 
-- **Log the decision, not the outcome.** "advantage was set because the actor was
-  raging" is diagnosable; "damage was 14" is not.
-- **Prefer observable effects over silent state.** If the ability is supposed to
-  apply a condition, applying it through a utility makes it show up in the recorded
-  run; setting a variable does not.
+Two habits:
+
+- **Log the decision, not the outcome** — and read it from a flag, not the console.
+  "advantage was set because the actor was raging" is diagnosable; "damage was 14" is not.
+- **Prefer observable effects over silent state.** If the ability applies a condition,
+  applying it through a utility makes it show up in the recorded run; setting a variable
+  does not.
+
+Related, and the same lesson for testing: a macro that `await`s a **pointer click** (an
+interactive picker) cannot be verified by script at all — a scripted run cannot deliver a
+`pointerup`, so the macro hangs and the token never moves even when it is firing correctly.
+Interactive macros must be tested by hand; say so rather than reporting a script failure as
+a fault.
 
 ## 6. Before writing one, check whether a generic already does it
 
@@ -174,7 +213,7 @@ event family: `workflowPasses`, `combatPasses`, `rollPasses`, `effectPasses`, `a
 and `grapplePasses`. Read the one for the event you are attaching to — a name that is valid
 for one event is not valid for another.
 
-CAT 0.1.4's `workflowPasses` members are: `preTargeting`, `preItemRoll`, `targeting`,
+CAT 0.1.6's `workflowPasses` members are: `preTargeting`, `preItemRoll`, `targeting`,
 `preambleComplete`, `attackRollConfig`, `attackRoll`, `attackRollBonuses`,
 `attackRollMissedBonuses`, `optionalBonusAttack`, `attackRollComplete`, `savesComplete`,
 `damageRoll`, `optionalBonusDamage`, `damageRollBonuses`, `damageRollComplete`,
@@ -187,8 +226,24 @@ CAT 0.1.4's `workflowPasses` members are: `preTargeting`, `preItemRoll`, `target
 guessed is accepted where a name is expected and then never fires.
 
 **New in 0.1.4:** `combatPasses` gained `preInitiative` (the combatant about to roll
-initiative, before its roll is built). The rest of `combatPasses` are `turnStart`, `turnEnd`,
-`everyTurn`, `combatStart` and `combatEnd` — note there is no `actorTurnStart`/`actorTurnEnd`.
+initiative, before its roll is built). The rest of `combatPasses` enum members are
+`turnStart`, `turnEnd`, `everyTurn`, `combatStart` and `combatEnd`.
+
+**An actor-level embedded macro stores the SCOPE-COMPOSED pass name, not the bare enum
+member.** The enum lists only `turnStart`/`turnEnd`; at runtime CAT builds the actor name
+by `"actor" + pass.capitalize()` and matches the stored value LITERALLY, so an actor-level
+macro must store `actorTurnStart` / `actorTurnEnd` (and `sceneTurnStart`/`nearbyTurnStart`
+for those scopes). An earlier claim in this section that there is "no
+`actorTurnStart`/`actorTurnEnd`" was **wrong**, and it produced a false conclusion: it came
+from a text search of CAT's minified bundle, where `"actor" + t` never appears as a literal.
+A grep over a minified bundle cannot prove a runtime name is absent — read the code path
+that builds the value instead.
+
+**New in 0.1.5:** the actor-roll enum now covers `hitDie` alongside `check`, `save`, `skill`
+and `tool`, and its scope carries `denomination`. A hit-die roll runs only `situational`,
+`bonus` and `post`. At `situational`, `options.maximize` rolls the die at its maximum,
+`options.minimum` replaces the rules' minimum, `options.parts` adds formula parts and
+`options.multiplier` multiplies the total.
 
 ## 8. Creating an effect from a macro
 

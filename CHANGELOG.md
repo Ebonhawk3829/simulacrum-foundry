@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-10-30
+
+Brings the reference in step with CAT 0.1.6 / CPR 2.1.6, corrects the docs against the latest session
+lessons, and ships an upstream changelog the agent can read.
+
+### Added
+
+- **`upstream-changelog.md`**, declared in the module's reference list — the CAT/CPR changes since
+  the last sync, each with the flag, generic or field that makes an item relevant, opening with a
+  review checklist. It is the yardstick for asking, in world, whether existing abilities need
+  updating.
+
+### Changed
+
+- **Reference synced to CAT 0.1.6 / CPR 2.1.6.** `cpr-generic-config.md` regenerated (62 generics,
+  337 settings); the CAT version notes in `cat-macro-flags.md` and `cat-embedded-macros.md` moved
+  to 0.1.6.
+
+### Fixed
+
+- Corrections against the session lessons: CAT `embeddedMacros` are **item-only** (activity-level
+  does not fire); console output from an embedded macro is not captured (assert on observable
+  state); actor-level pass names are scope-composed (`actorTurnStart`); `isTargeted` is never
+  emitted; `flags.dae.stackable` has **six** options; `-=key` is a silent no-op (use `unsetFlag`);
+  an activity's `identifier` is derived from its name (set `midiProperties.identifier`); `movement.all`
+  is inert in 6.x; an effect change's type lives in `type`, not `mode`; an activity's effect link
+  needs the **created** effect id.
+- New notes folded in: a feat has no item-level `activation`/`range`/`target`; `-self` excludes the
+  source from its own area; `traits.di.value = "healing"` is live; the script-facing concentration
+  shapes; an item's type cannot be changed by update; clone a known-good document on a valueless
+  validation failure; copying a document to a new id; verifying a macro's data accessors; and
+  reproducing the real scope when testing.
+
 ## [0.7.0] - 2026-10-29
 
 Lets an ability be given an icon in the same pass it is built.

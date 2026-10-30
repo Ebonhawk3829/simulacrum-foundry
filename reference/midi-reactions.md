@@ -37,7 +37,7 @@ reads `reactionTypes` in `utils.ts`:
 | Activity activation (`triggerType`) | `reaction` label it matches |
 |---|---|
 | `reaction` / `reactionhit` | `isHit` |
-| `reactiontargeted` | `isTargeted` |
+| `reactiontargeted` | `isTargeted` *(declared but never emitted — see below)* |
 | `reactionattacked` | `isAttacked` |
 | `reactiondamage` | `isDamaged` |
 | `reactionheal` | `isHealed` |
@@ -49,6 +49,15 @@ reads `reactionTypes` in `utils.ts`:
 | `reactionsavefail` | `isSaveFail` |
 | `reactionsavesuccess` | `isSaveSuccess` |
 | `reactionmoved` | `isMoved` |
+
+**`isTargeted` is never emitted.** `reactionTypes` declares `reactiontargeted ->
+"isTargeted"`, but scanning every `doReactions(...)` call site in 14.6.4 shows none ever
+passes `reactiontargeted`, so `reaction === "isTargeted"` never becomes true. For "being
+targeted by an attack", use `reaction === "preAttack"` — declared before the roll, the right
+moment for a defensive reaction — optionally narrowed:
+`reaction === "preAttack" && (item.actionType === "mwak" || item.actionType === "msak")`.
+`isTargeted` **is** a real midi MACRO PASS ("Target is targeted but before item is rolled");
+it is simply not a reaction trigger. Two vocabularies sharing one name.
 
 ## 3. Reactions PROMPT by default — no flag needed
 

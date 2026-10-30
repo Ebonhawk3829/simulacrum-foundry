@@ -257,7 +257,9 @@ kind of change that makes an existing effect behave differently without an error
 ## 8. What this file is not
 
 - **Not a full DAE flag reference.** `flags.dae.*` also carries `stackable`,
-  `macroRepeat` and `transfer`. Those are named here only where they affect expiry.
+  `macroRepeat` and `transfer`. Those are named here only where they affect expiry. Note that
+  `stackable` is a **six-value select**, not the boolean an older note implied — the full list,
+  and what `noneName` does on a match, is in `dnd5e-6.0-fields.md` §7.
 - **Not verified against a live world.** Everything above was read from DAE's source
   at v14.6.3 and dnd5e's at release-6.0.6. The migration map is DAE's own and the
   expiry list is dnd5e's own, but no effect using these values has been created and

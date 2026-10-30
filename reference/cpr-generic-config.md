@@ -1,7 +1,7 @@
 # CPR generic macro settings
 
 Every generic macro in Chris's Premades and the settings each accepts in
-`flags.cat.genericConfig`. Generated from CPR source at **2.1.4** by
+`flags.cat.genericConfig`. Generated from CPR source at **2.1.6** by
 `resources/generate-cpr-config.mjs` — do not hand-edit; re-run the generator.
 
 Nothing publishes this list. CPR declares it in code, on each generic's exported
@@ -37,7 +37,7 @@ Types: `checkbox` (boolean), `text`, `number`, `select`, `select-many` (array),
 `selectIdentifiers` (array of item identifiers). Default is what is used when the
 setting is absent.
 
-**61 generics, 328 settings.** A generic that takes no
+**62 generics, 337 settings.** A generic that takes no
 settings is not listed — it needs no configuration to attach.
 
 ---
@@ -62,20 +62,6 @@ settings is not listed — it needs no configuration to attach.
 | `rollActivity` | selectActivity | `''` | Roll this activity when used. |
 | `rollItem` | checkbox | `false` | Roll this item when used. |
 | `targets` | number | `1` | Any value less than one will count as unlimited. |
-
-## `advancedMeleeAttack`
-
-| Setting | Type | Default | What it does |
-|---|---|---|---|
-| `activityId` | selectActivity | `''` | Activity |
-| `animation` | selectAnimation | `[object Object]` | Animation |
-
-## `areaAnimation`
-
-| Setting | Type | Default | What it does |
-|---|---|---|---|
-| `animation` | selectAnimation | `[object Object]` | Animation |
-| `areaOnly` | checkbox | `false` | Only play for activities that have an area. |
 
 ## `attackBonus`
 
@@ -279,6 +265,15 @@ settings is not listed — it needs no configuration to attach.
 | `identifier` | text | `''` | Identifier |
 | `period` | select | `initiative` | Recovery Period |
 | `formula` | text | `''` | Formula for the uses recovered. Leave empty to recover all uses. |
+
+## `modifyNextDamage`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `mode` | select | `maximize` | Mode |
+| `itemTypes` | select-many | `[]` | Item Types |
+| `maxSpellLevel` | number | `9` | Max Spell Level |
+| `consume` | checkbox | `true` | Remove After Use |
 
 ## `movementAnimation`
 
@@ -499,6 +494,13 @@ settings is not listed — it needs no configuration to attach.
 | `requireEmpty` | checkbox | `true` | Block the restore activity while uses remain. |
 | `offerRestore` | checkbox | `true` | When another activity needs a use and none remain, offer to run the restore activity first. |
 
+## `rolledDuration`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `formula` | text | `1d4` | Formula |
+| `units` | select | `hour` | Duration Units |
+
 ## `saveBonus`
 
 | Setting | Type | Default | What it does |
@@ -574,7 +576,10 @@ settings is not listed — it needs no configuration to attach.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `animation` | selectAnimation | `[object Object]` | Animation |
+| `animation` | selectAnimation | `[object Object]` | Plays from the caster to each target. |
+| `includeSelf` | checkbox | `false` | Animate Self Utility |
+| `areaAnimation` | selectAnimation | `[object Object]` | Plays on the area, or around the caster if there is none. |
+| `areaOnly` | checkbox | `false` | Skip the area animation for activities without an area. |
 
 ## `summonModifier`
 
@@ -674,6 +679,15 @@ settings is not listed — it needs no configuration to attach.
 | `events` | select-many | `[]` | Use this activity after these events. Short Rest also fires after a long rest. |
 | `poolCondition` | select | `''` | Only use this activity when the items whose uses it recovers are in this state. |
 | `confirm` | checkbox | `false` | Prompt to Use |
+
+## `weaponAnimation`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `activityId` | selectActivity | `''` | Only animate this activity. Leave empty for all of them. |
+| `advanced` | checkbox | `false` | Play the Advanced Animation instead. Its options add blood, screen shake and thrown attacks. |
+| `animation` | selectAnimation | `[object Object]` | Animation |
+| `advancedAnimation` | selectAnimation | `[object Object]` | Advanced Animation |
 
 ---
 

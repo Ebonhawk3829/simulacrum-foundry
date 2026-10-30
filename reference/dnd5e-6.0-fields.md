@@ -103,6 +103,22 @@ Prefer `item.createActivity(type, data)` and let dnd5e build the class, assign a
 id and set `sort`. It also throws `"<type> not found in CONFIG.DND5E.activityTypes"`
 for an unknown type, which is the one loud failure available in this area.
 
+Two more traps when reaching an activity through the live document:
+
+- **`createActivity` returns a PLACEHOLDER id, not the stored one.** Called on an in-memory
+  item it returned `.id === "app-104"` while the real stored key was `QPLP6noMDCZiERrb`, so a
+  flag written to `system.activities.app-104.flags…` did nothing and the activity then read as
+  empty; the stray `app-104` key sits beside the real one in `_source.system.activities`. Re-read
+  `item._source.system.activities` and key to the real id; on a live world item
+  `item.updateActivity(realId, {...})` writes correctly.
+- **`item.system.activities` is an `ActivityCollection`, not a plain object.** `Object.values(...)`
+  and `Object.entries(...)` return `[]`, which reads as "the write vanished" when it in fact
+  succeeded. Use `.contents`, `.map()`, `.get(id)`, or read `_source.system.activities` for the
+  stored shape. When a mapped readback looks empty, dump the raw stored flag before concluding.
+- **A flag value must be a FLAT array** — for `embeddedMacros`,
+  `[{ name, event, pass, macros: [{ macro, priority }] }]`. An array-of-arrays stores without
+  complaint, reads back with `.name === null`, and never fires.
+
 Effects are the opposite and go at the **top level**: they are an embedded
 `ActiveEffect` collection on the item (`item.effects`), not `system.effects`.
 Searching 612 items in the Chris's Premades packs found `effects[]` at the top
@@ -128,6 +144,28 @@ errors. If the ability is a plain "up to N creatures" with no area, that count
 goes in `target.affects.count` and `target.template.type` stays empty.
 
 `RangeField.value` is a **formula** field, so a bare number must be stringified.
+
+**A `feat` has no item-level `activation`, `range` or `target`** — those live only on activities,
+and a write to them on the item is silently ignored. A feat's schema is activities, damage, uses,
+advancement, description, identifier, source, cover, crewed, enchant, prerequisites, properties,
+requirements, type. Put range/target/activation on the activity, never the item.
+
+### Excluding the source from its own area effect
+
+To keep the source creature out of its own area/emanation, put **`-self`** in
+`activity.target.affects.special`:
+
+```js
+activity.target.affects.special = '-self'   // semicolon-separated: '-self;humanoids' also works
+```
+
+midi reads it in its template targeting:
+`const ignoreSelf = (activity?.target?.affects.special ?? "").split(";").includes("-self");`
+An empty `special` on a self-anchored emanation catches the source too (observed as
+`targets: 2` when only one other creature was present). The trap: dnd5e's
+`midiProperties.AoETargetTypeIncludeSelf` looks like exactly the right toggle but is **inert** —
+zero occurrences in both midi-qol and dnd5e source. There is no "include self" switch; you exclude
+explicitly with `-self`.
 
 ---
 
@@ -315,10 +353,30 @@ DAE.effectMatchesSource(effect, uuid)
 
 Also in 14.6.2: `lastArg.origin` is deprecated → **`lastArg.source`** (+ `lastArg.systemOrigin`);
 `flags.dae.legacyApplication` is renamed **`flags.dae.applicationMode`**
-(`default`/`dnd5e`/`legacy`, unset follows the world setting); a boolean
-`flags.dae.stackable` now means `false` = none / `true` = multi; `flags.dae.deleteOrigin`
+(`default`/`dnd5e`/`legacy`, unset follows the world setting); `flags.dae.deleteOrigin`
 applies **only to transfer effects**; and `dae.eval(...)` now evaluates **in dnd5e
 formula fields** with that field's full roll data, not only at change-application.
+
+### `flags.dae.stackable` has SIX options — the boolean is deprecated, not the list
+
+`flags.dae.stackable` is a **select with six values**, not a boolean. An earlier note here
+recorded only `false` = none / `true` = multi — that is DAE's **deprecated** input, auto-migrated
+on write by DAE's own `preCreate`, not the real option list. Read the list from DAE's own
+`lang/en.json` (`dae.StackableOptions`); their descriptions are the authority:
+
+    noneName              effects do not stack by effect NAME **and** effect ORIGIN
+    noneNameOnly          effects do not stack by effect name
+    none                  effects do not stack by effect origin
+    multi                 stacking effects apply the effect multiple times
+    count                 each application increases the stack count by 1
+    countDeleteDecrement  apply +1 stack, deleting decrements (removed at 0 stacks)
+
+`noneName` — the usual "one instance of this debuff per source" world value — **deletes the OLD
+effect and keeps the NEW one** on a match (unless `options.toggleEffect` is set, which disables
+the existing one and aborts the new one). Its match test is
+`effect.origin && efOrigin === effect.origin && ef.name === effect.name` — **name AND origin
+together**, so two same-named effects from different items do not collide. Check both before
+predicting a clash.
 
 ---
 
@@ -365,6 +423,13 @@ Note the asymmetry: an effect is found either by `flags.cat.identifier` **or** b
 `name.slugify()`, so an effect's identifier flag is optional for lookup but the
 item's is not.
 
+**An activity's identifier is different: STRICTLY derived from its NAME, and NOT
+settable.** Writing `identifier` on an activity is silently ignored — a save activity named
+"Midi Save" slugs to `midi-save` no matter what you write. To give an activity a stable id, set
+**`midiProperties.identifier`** (a real, writable field alongside `automationOnly` and
+`otherActivityCompatible`) and look it up by checking both:
+`a.midiProperties?.identifier === "my-id" || a.identifier === "my-id"`.
+
 ---
 
 ## 10. Vocabulary values (6.x)
@@ -389,6 +454,14 @@ teleport transform utility`. `teleport` is the 6.x addition.
 
 `exhaustion` is a **level**, not a boolean — it takes a numeric value, and
 dnd5e stores it under `system.attributes.exhaustion`.
+
+**`healing` is not a damage type, but `traits.di.value = "healing"` is LIVE.** `healing` is
+absent from `CONFIG.DND5E.damageTypes` (the list above), yet it still blocks healing in 6.x — it
+moved to its own registry, `CONFIG.DND5E.healingTypes` (`healing`, `temphp`, `maximum`,
+`vitality`). The immunity picker's `configKey` is `damageTypes`, so it is not offered in the
+sheet, but the value works: `system.traits.di.value = ["healing"]` stops regained HP. Do not
+"migrate" it away as a dead 5.x key — dnd5e's `applyDamage` skips any entry whose type is in
+`healingTypes`, so it is the correct expression of "this creature can't regain hit points".
 
 ### Which bonus paths moved in 6.x
 
@@ -534,6 +607,17 @@ a blank "keep it" option. It does **not** partition concentration per token. On 
 shared by several linked tokens, `endConcentration()` with no argument ends **all** of them,
 and a concentration save from damage is one set of checks for the actor.
 
+**The script-facing concentration shapes.** A concentration effect has **no `dependentOn` of its
+own** — everything points AT it — and is identified by `statuses` containing `"concentrating"` or
+`system.type === "concentrating"`. One concentration effect governs EVERY target its spell sits
+on, so cluster by the concentration effect's uuid **across all targets** or a multi-target Bless
+prompts once per creature. The effect can live on an actor **outside** the area; walking
+`dependentOn` outward finds it. The creature that pays a slot is the **spell's caster**, not
+necessarily whoever holds the effect. Deleting the concentration effect takes its dependents with
+it through dnd5e's registry; a dangling `dependentOn` should be treated as unlinked so the spell
+effect still ends. A spell effect's source is `flags.dnd5e.item.uuid`, its level
+`flags.dnd5e.spellLevel` (falling back to `system.level`).
+
 ## 13. Writing into embedded collections, and the traps that fail silently
 
 - **`activity.effects[]._id` must be EXACTLY 16 alphanumeric characters.** A 15-character or
@@ -551,9 +635,32 @@ and a concentration save from damage is one set of checks for the actor.
 - **`duration.units` must be PLURAL** ("seconds", "turns", "minutes"). An empty create return
   means a silent validation failure.
 - **`actor.update` with dotted flag paths coerces flags to strings.** Use `setFlag`/`unsetFlag`.
-- **To DELETE a flag key, use the `-=key` idiom**: `{"flags.midi-qol.-=onUseMacroName": null}`.
-  A plain dotted write merges and will not remove it.
+- **To DELETE a flag key, use `unsetFlag`, not the `-=key` idiom.** `item.unsetFlag(scope, key)`
+  removes it; the `-=key` form (`{"flags.midi-qol.-=onUseMacroName": null}`) was measured as a
+  **silent no-op** on this world — it reports success and leaves the key in place. Treat `-=key`
+  as "may work", not "will work", and ALWAYS read the flag back after deleting: never trust a
+  flag deletion's return value. (A plain dotted write merges and will not remove it either.)
+- **An effect change's type lives in `type`, not `mode`.** `mode` is a read-only derived getter
+  and is not persisted. Rebuilding changes from `{key, mode, value, priority}` (e.g. while
+  remapping keys during a sweep) silently DROPS `type` and coerces every rewritten change to
+  `add` (mode 2). That is not cosmetic: midi's own marker for
+  `flags.midi-qol.actions.reactionsMax`/`bonusActionsMax` uses `override`, and `add 0` sums
+  instead of forcing 0, so the condition silently fails to disable reactions/bonus actions.
+  Never build a change from scratch — read `effect._source.system.changes`, deep-clone it, mutate
+  what you need, and read back `type` (not just `value`) after writing.
 - **A numeric index in a dot-path turns an array into an object.** Avoid indexed dot-paths.
+- **An item's TYPE cannot be changed by update — delete and recreate.** `item.update({type:
+  "spell"})` returns and changes nothing: Foundry fixes the data model at construction from the
+  type. Before recreating, scan items, actor/effect flags and descriptions for the OLD id — a new
+  document gets a new id (and a feat listing its options by UUID does not necessarily include the
+  item you are replacing).
+- **When a hand-authored payload fails validation WITHOUT naming a field, clone a known-good
+  document instead of retrying variations.** Read a working item of the same type,
+  `foundry.utils.deepClone(doc.toObject())`, strip `_id`/`_stats`/`folder` at EVERY level (see the
+  copy section below), mutate what you need, then `actor.createEmbeddedDocuments("Item", [out])`.
+  A clone is schema-valid by construction and carries the flags/activity scaffolding a hand-written
+  payload leaves out; pick a source that already has the shape you want (a Save modelled on the
+  world's existing Save arrives with the right activity type, consumption and rider wiring).
 
 ### An activity's effect link DOES apply effects
 
@@ -561,6 +668,50 @@ and a concentration save from damage is one set of checks for the actor.
 on a natural failed save. It is a supported mechanism — use it. (An earlier claim that it was
 "decorative" was wrong, driven by a single negative test that misread `wf.appliedEffects`,
 which is `undefined` by design. Never overturn a mechanism from one observation.)
+
+**But the `_id` must be the CREATED effect's id — a hand-authored one is regenerated.** Foundry
+regenerates `_id` on create, so a link written from the id you authored (e.g.
+`"HbPoisoned000001"`) points at nothing and the activity applies NO effect — silently: the save
+rolls and the chat card looks right, but the target gets no condition. After creating the
+effects, find each by its `flags.cat.identifier` and write the REAL id:
+
+```js
+const id = item.effects.contents.find(e => e.flags?.cat?.identifier === 'hair-blades-poisoned').id;
+await item.update({ ['system.activities.<saveId>.effects']: [{ _id: id, onSave: false }] });
+```
+
+Then ALWAYS assert the link resolves:
+`linked.every(l => item.effects.contents.some(a => a.id === l._id))`. Same family as the
+`createActivity` placeholder-id trap and the 16-character rule above: an id you wrote is not an
+id that exists, and the failure is total but silent. Also: do not diagnose a midi workflow from
+`wf.saves` after `completeActivityUse` has resolved — the set can read empty because the workflow
+has moved past it, which reads as "the save never rolled". Judge from what RESULTED.
+
+### Copying a document to a new id — the four pointers that break
+
+Recreating a document under a new id is the most error-prone operation here; each of these is a
+silent failure (observed on Find Familiar):
+
+- **Its effects still point at it.** A concentration effect carries `@Embed[Actor.<id>.Item.<itemId>]`
+  in its description plus `origin`, `flags.dnd5e.item.uuid/.id`, `flags.dnd5e.activity.uuid` and
+  `system.origin.item`. Replace the item and every one dangles — symptom: "failed to embed
+  content". Reconcile by source item after the swap (drop effects whose `flags.dnd5e.item.id` is
+  not on the new form; remap the rest).
+- **Description links with a leading dot are SIBLING references.** `@UUID[.<itemId>]` resolves on
+  the original and dangles on the copy. Rewrite each to an absolute `Actor.<id>.Item.<newId>` from
+  an old→new id map taken as the copies are created.
+- **Nested `_id`s in copied content.** Cloning and stripping `_id` only at the root leaves nested
+  items carrying the source's ids, and the next deletion throws `Item "<id>" does not exist!` even
+  though it succeeds. Strip `_id`, `_stats` and `folder` at EVERY level.
+- **Status conditions re-created under a fresh id.** dnd5e/DAE key the canonical status effect on
+  `staticID("dnd5e"+status)` (`dnd5einvisible00`); a restored copy sits BESIDE it and the panel
+  shows the status twice. `toggleStatusEffect("invisible", {active:true})` yields exactly ONE — one
+  is the correct count.
+
+Two fields that are **not** interchangeable: a sheet PORTRAIT is `actor.img`, `prototypeToken.texture`
+is TOKEN art, and a PLACED token's `texture.src` is its own override a prototype write never reaches
+(update existing tokens on the TokenDocument). And an injected `token` in a CAT embedded macro is
+already a **TokenDocument**, not a placeable: `token.parent` is the scene, `.document` is `undefined`.
 
 ## 14. Things not confirmed here
 

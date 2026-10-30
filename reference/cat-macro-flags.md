@@ -6,7 +6,7 @@ documentation it ships — says nothing about flags. Its real documentation is a
 GitHub wiki, which is not installed with the module.
 
 The shapes below were read out of CAT's own schema at the version this world runs
-(v0.1.4, `scripts/lib/macros.mjs`) and out of a stored document that uses it.
+(v0.1.6, `scripts/lib/macros.mjs`) and out of a stored document that uses it.
 
 ---
 
@@ -93,7 +93,7 @@ Seen on a real item (`Awakened Mind` from CPR's 2024 features pack):
 | `genericConfig` | configuration for a generic macro, e.g. which conditions it uses |
 | `automation` | marks the document as supplied by an automation, for the Cat Kit |
 
-**Every generic's settings are listed in `cpr-generic-config.md`** — all 56 of them,
+**Every generic's settings are listed in `cpr-generic-config.md`** — all 62 of them,
 with the type, the default, and CPR's own description of each. Read that rather than
 guessing a setting name.
 
@@ -122,16 +122,23 @@ own source for what it accepts.
 
 ## 4. Where the flags can live
 
-`flags.cat` may be on the **item** or on an **activity**. In the Awakened Mind
-example both are used: the item carries `flags.cat.macros.save` and the
-`genericConfig`, while its activity carries `flags.cat.automation`.
+`flags.cat.macros` (fn-macro / generic REFERENCES) may sit on the **item** or on an
+**activity** — both fire. `flags.cat.embeddedMacros` (inline scripts you author) is
+**ITEM ONLY**: stored on an activity it is accepted, stored, and read by CAT's own
+source, yet it does **not** fire. That split is the correction to this section — see
+§1 of `cat-embedded-macros.md` for the observed evidence. A third host, added
+2026-10-29, also fires its own embedded macros: an **active applied effect** on the
+actor, which is the only way to give a debuff logic that runs on the victim's turn.
+
+In the Awakened Mind example both are used: the item carries `flags.cat.macros.save`
+and the `genericConfig`, while its activity carries `flags.cat.automation`.
 
 Since 0.1.3 the two placements are collected **separately**: an activity's macros are
 grouped under an `activity.` key, so an activity macro and an item macro of the same
 event, pass and name no longer collapse to a single winner — **both run**. An
 item-level `macros.roll` and an activity-level `macros.roll` are additive now, not a
-conflict to resolve. To run a macro for one specific activity, put it on that
-activity; to run it for every use of the item, put it on the item. (Related 0.1.3
+conflict to resolve. To run a referenced macro for one specific activity, put it on
+that activity; to run it for every use of the item, put it on the item. (Related 0.1.3
 fixes: a linked actor with several tokens runs its scene/nearby/level macros once, and
 an applied **enchantment** only fires its macros while `effect.active`.)
 
@@ -147,8 +154,9 @@ The reliable route is a real document, because it cannot go stale:
 The generic macro names are real and worth knowing, because they name the *shape* of
 an automation rather than one spell: `attackRider`, `extraAttack`, `contestedCheck`,
 `conditionAutoSave`, `choiceRemoveCondition`, `additionalTargets`, `banish`,
-`bladeSpell`, `damageBonusToOneRoll`, `multiSingleTarget`, `reduceMaxHP`. These are
-registered by CPR and configured per-item through `genericConfig`.
+`bladeSpell`, `damageBonusToOneRoll`, `multiSingleTarget`, `reduceMaxHP`,
+`weaponAnimation`, `modifyNextDamage`, `rolledDuration`. These are registered by CPR
+and configured per-item through `genericConfig`.
 
 ## 6. Where a follow-up macro belongs
 
