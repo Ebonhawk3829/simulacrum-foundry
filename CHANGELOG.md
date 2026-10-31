@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.3] - 2026-11-01
+
+Adds a Simple Quest reference, read from the module source and cross-checked against its wiki.
+
+### Added
+
+- **`simple-quest.md`**, declared in the module's reference list — how the module is put together:
+  the page types (`simple-quest.<type>`), the folder `simpleQuestDir`/`icon` flags and what becomes a
+  tab, the quest objective model (`objectiveState` / `objectiveSecrets`, keyed by a slug of the item
+  text), the map `markers` / `measure` / `pinsLocked` / `fowMask` flags and `sceneToMap`, era/event,
+  achievement `awardedTo`, loot and the RSA dependency, the world settings and keybindings, every
+  text enricher (`@time` / `@QUEST` / `@LORE` / `@MAP` / `@COUNT` / `@REPUTATION` / `@TTM`), and the
+  `ui.simpleQuest` and `game.modules.get("simple-quest").api` script surfaces. Read from Simple Quest
+  **5.3.0**, with the places the source and the wiki disagree called out.
+
+### Changed
+
+- `read_reference`'s description and the domain prompt's resource list now name the Simple Quest
+  material, so the agent knows it is there to read.
+
 ## [0.7.2] - 2026-10-31
 
 Follows midi-qol 14.6.6 and DAE 14.6.5, folding their changes into the reference and the upstream

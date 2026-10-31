@@ -55,7 +55,7 @@ Do not write a field you have not confirmed the shape of. A wrong field name usu
 
 export const AUTOMATION_RESOURCES = `WHAT YOU HAVE - read before writing, rather than guessing:
 
-read_reference searches the material that explains how these modules and this system actually work: the dnd5e 6.x field guide, the CAT macro flag shapes, the CPR generic settings (every generic and every setting it accepts), the DAE effect expiry vocabulary, the midi-qol reaction trigger and condition vocabulary, this world's own conventions and correction list, and the documentation shipped with installed modules. Reach for it before authoring an activity or setting a flag.
+read_reference searches the material that explains how these modules and this system actually work: the dnd5e 6.x field guide, the CAT macro flag shapes, the CPR generic settings (every generic and every setting it accepts), the DAE effect expiry vocabulary, the midi-qol reaction trigger and condition vocabulary, how this world runs Simple Quest (its page types, enrichers and script API), this world's own conventions and correction list, and the documentation shipped with installed modules. Reach for it before authoring an activity or setting a flag.
 
 inspect_document_schema gives the live shape of any document and list_document_schemas lists what exists. This is the source of truth when the reference is silent.
 
