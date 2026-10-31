@@ -201,6 +201,13 @@ The naming is misleading: `onSave` is not the damage setting, it is the
 
 `_id` must match an id on an effect document embedded in the same item.
 
+**midi 14.6.5 adds *Statuses Applied* on the activity** — `midiProperties.statuses`, an array of
+`{ id, specialDuration, onSave }`. It puts statuses on the targets **directly** (as the token HUD
+does) rather than via an effect carrying them, and each entry takes an *On Save* choice. They go to
+the same targets as the activity's effects, and "whatever the save" now goes **only to the
+creatures that were hit** (an effect applied "whatever the save" used to also reach creatures an
+attack missed). A creature that already has the status keeps it.
+
 ---
 
 ## 5. `attack.flat` is a different field from `attack.ability`
@@ -356,6 +363,24 @@ Also in 14.6.2: `lastArg.origin` is deprecated → **`lastArg.source`** (+ `last
 (`default`/`dnd5e`/`legacy`, unset follows the world setting); `flags.dae.deleteOrigin`
 applies **only to transfer effects**; and `dae.eval(...)` now evaluates **in dnd5e
 formula fields** with that field's full roll data, not only at change-application.
+
+### DAE 14.6.4: Replacement, `##`, and effect conditions
+
+- **A change with no Replacement is now filled from the caster** in dnd5e application mode, as
+  Legacy/Origin did: `@itemUuid`, `@itemId`, `@utilityRollTotal` are the caster's (they used to
+  stay as text), and `@tokenUuid`/`@token`/`@actorUuid` are the caster's — while `##tokenUuid` and
+  `##actorUuid` remain the **target's**, as written. Every target reference is replaced now
+  (`@targetUuid` used twice replaced only the first; `@targetActorUuid` used to be corrupted). A
+  `##` reference on an item effect is converted to `@` **only when the effect is applied** (to an
+  actor, or an applied enchantment), not when it is added to or duplicated on an item.
+- **The compendium menu's effect-application entries and the item *Effect application* dialog are
+  replaced by *DAE: Convert changes to Origin replacement*** — it sets every change with no
+  Replacement in an item's applied effects to Origin, after a confirmation. API:
+  `DAE.convertToOriginReplacement(document, { dryRun })`.
+- **`flags.dae.conditionFlags.<statusId>`** lets an effect give the conditions its statuses cause
+  values (merged from every active effect carrying that status), e.g.
+  `{ hiding: { "my-module": { dc: 17 } } }`.
+- A `system.traits.size` change can now be **Add/Subtract/Upgrade/Downgrade**, not only Override.
 
 ### `flags.dae.stackable` has SIX options — the boolean is deprecated, not the list
 
@@ -518,7 +543,7 @@ fail/success/min/max/advantage (with CAT active, a Stealth check ignored
 chosen one with the first one's ability (Acrobatics with Strength); and a tool's check
 activity read the flags for the tool's *default* ability rather than the tool item's own.
 On 14.6.3 the fields were right for saves, attacks and single-skill checks and wrong for
-the rest; on 14.6.4 they are right throughout.
+the rest; on 14.6.4 they are right throughout, and 14.6.5/14.6.6 left them unchanged.
 
 ---
 

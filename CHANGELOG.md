@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.2] - 2026-10-31
+
+Follows midi-qol 14.6.6 and DAE 14.6.5, folding their changes into the reference and the upstream
+changelog.
+
+### Changed
+
+- **Reference synced to midi-qol 14.6.6 / DAE 14.6.5** (midi 14.6.5 requires DAE ≥14.6.4 and is
+  dnd5e **6.0.x only**, max 6.0.999). The extracts are re-pinned and refreshed;
+  `upstream-changelog.md` gains midi 14.6.5–14.6.6 and DAE 14.6.4–14.6.5 sections and three new
+  review-checklist items.
+- `dnd5e-6.0-fields.md` adds a **DAE 14.6.4** subsection (Replacement, `##`, `conditionFlags`,
+  `convertToOriginReplacement`) and the midi **Statuses Applied** (`midiProperties.statuses`) note;
+  `cat-macro-flags.md` §6 gains the 14.6.5 onUseMacroName semantics; `dae-effect-expiry.md` and
+  `midi-reactions.md` have their version cites and the `expiry-reason` refinements updated.
+
+### Fixed
+
+- The CHEATSHEET's version pins and notes now read midi 14.6.6 / DAE 14.6.5 / CAT 0.1.6 / CPR 2.1.6.
+
 ## [0.7.1] - 2026-10-30
 
 Brings the reference in step with CAT 0.1.6 / CPR 2.1.6, corrects the docs against the latest session

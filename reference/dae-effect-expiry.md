@@ -6,7 +6,7 @@ documentation in its release archive, and the flag that answers the question is 
 a dnd5e field — so nothing else in this reference covers it.
 
 Everything here was read out of DAE's own source at the version this world runs
-(v14.6.3), not from a wiki or from memory. DAE reworked expiry across 14.6.1–14.6.3 —
+(v14.6.5), not from a wiki or from memory. DAE reworked expiry across 14.6.1–14.6.4 —
 the changes that matter are marked below and collected in §7.
 
 ---
@@ -214,7 +214,7 @@ An unset per-effect value defers to the world's global action. This is worth kno
 before writing an automation that assumes the effect is gone: on a world configured
 to `"update"`, the effect is still present and merely disabled.
 
-## 7. What DAE 14.6.1–14.6.3 changed about expiry
+## 7. What DAE 14.6.1–14.6.4 changed about expiry
 
 Collected from DAE's changelog for the patches this world added, because each is the
 kind of change that makes an existing effect behave differently without an error:
@@ -247,7 +247,10 @@ kind of change that makes an existing effect behave differently without an error
 - **Effect expiry action** (delete vs disable, §6) is per-effect via
   `CONFIG.ActiveEffect.expiryAction`, world setting as fallback.
 - **`expiry-reason`** is injected into Foundry v14's expiry operations so a macro can
-  tell why an effect was removed (`duration-expired:turnStart`, `dae:expired:…`).
+  tell why an effect was removed (`duration-expired:turnStart`, `dae:expired:…`). Two 14.6.4
+  refinements: an effect expiring under *Mark Expired*/Suppress now passes the **expiry's own**
+  reason (previously `effect-disabled`), and one whose duration runs out with time passing
+  outside combat now reports `duration-expired:updateWorldTime` (previously `…:turnStart`).
 - **`hasExpiry`/`hasDuration` were wrong** for an expiry-only effect (reported false)
   and a no-duration effect (reported true) until 14.6.3; both are exported, so if
   anything consults them, the answer changed.
@@ -261,7 +264,7 @@ kind of change that makes an existing effect behave differently without an error
   `stackable` is a **six-value select**, not the boolean an older note implied — the full list,
   and what `noneName` does on a match, is in `dnd5e-6.0-fields.md` §7.
 - **Not verified against a live world.** Everything above was read from DAE's source
-  at v14.6.3 and dnd5e's at release-6.0.6. The migration map is DAE's own and the
+  at v14.6.5 and dnd5e's at release-6.0.6. The migration map is DAE's own and the
   expiry list is dnd5e's own, but no effect using these values has been created and
   observed in this world yet.
 

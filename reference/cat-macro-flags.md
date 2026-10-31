@@ -185,6 +185,13 @@ the claim that a space after the comma breaks later entries** — the source tri
 entries comma-separated and read the parsed macro list back rather than trusting either
 report.
 
+### OnUse macro names (midi 14.6.5)
+
+- A **blank** onUse macro name means the item's **own** macro (the used activity's, else the
+  item's; for an effect change, the effect's activity's, else its item's). An item with a macro but
+  **no** onUse macros runs the macro after active effects.
+- An `onUseMacroName` effect change with **no pass** is ignored and reported.
+
 ### CAT embedded macro shape, restated
 
 `{name, event, pass, macros: [{macro, priority}]}` — `macros` holds ONE entry plus its
