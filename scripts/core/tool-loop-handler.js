@@ -40,6 +40,19 @@ const RESTATEMENT_MIN_TOKENS = 25;
 
 /** Fraction of shared words at which two replies count as the same answer. */
 const RESTATEMENT_THRESHOLD = 0.75;
+
+/**
+ * Fraction of the SHORTER reply's words that may reappear in the other and still count as
+ * the same answer.
+ *
+ * The loop shows the text the model writes alongside a tool call, then the text it writes
+ * once the tool has run, and it habitually restates the second as a longer, reworded version
+ * of the first. Those two can score well under RESTATEMENT_THRESHOLD on set overlap — the
+ * extra words grow the union and drag it down — while reusing almost every word of the
+ * shorter one. Containment catches that case: on a real reworded restatement it scored 0.90
+ * where set overlap scored 0.50, against 0.28 for a genuinely different reply.
+ */
+const RESTATEMENT_CONTAINMENT_THRESHOLD = 0.85;
 const TOOL_RETRY_STATUS_PREFIX = 'tool-retry';
 
 /**
@@ -743,7 +756,9 @@ export function isRestatement(a, b) {
   }
 
   const union = left.length + right.length - shared;
-  return union > 0 && shared / union >= RESTATEMENT_THRESHOLD;
+  const setOverlap = union > 0 ? shared / union : 0;
+  const containment = shared / Math.min(left.length, right.length);
+  return setOverlap >= RESTATEMENT_THRESHOLD || containment >= RESTATEMENT_CONTAINMENT_THRESHOLD;
 }
 
 /** Sent when the model replies with text instead of calling `end_loop`. */

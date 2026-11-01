@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.4] - 2026-11-01
+
+Stops the assistant repeating an answer it already showed. The tool loop displays the text the
+model writes alongside a tool call, and the text it writes once the tool has run; the model
+habitually restates the second as a longer, reworded version of the first, and the guard meant
+to drop that copy only matched near-identical wording — so the answer was read twice.
+
+### Fixed
+
+- Restatement detection now also measures **containment** (how much of the shorter reply's
+  wording reappears in the longer one) at a 0.85 threshold, alongside the existing 0.75
+  set-overlap check. A reworded restatement that scored 0.50 on set overlap and was shown twice
+  now scores 0.90 and is dropped; a genuinely different reply still measures 0.28 and is kept.
+  (`scripts/core/tool-loop-handler.js`)
+
 ## [0.7.3] - 2026-11-01
 
 Adds a Simple Quest reference, read from the module source and cross-checked against its wiki.

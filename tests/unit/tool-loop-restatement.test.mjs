@@ -29,8 +29,23 @@ const DIFFERENT = [
   'than the end, which matters if the creature is removed from combat mid-round.',
 ].join(' ');
 
+/** The same answer regrown at much greater length — the shape a reworded restatement takes. */
+const EXPANDED = [
+  ANSWER,
+  'Separately, while I was in there I checked the other token deltas on the scene and they',
+  'were clean, so this was the only one carrying the invalid subtype. Nothing else needs',
+  'changing, and no other document references the effect by its id.',
+].join(' ');
+
 test('a reworded repeat of the same answer is a restatement', () => {
   assert.equal(isRestatement(RESTATED, ANSWER), true);
+});
+
+test('a longer restatement of the same answer is a restatement', () => {
+  // The second copy is expanded, so set overlap falls well below the direct threshold while
+  // containment stays high — the exact case a plain overlap check missed.
+  assert.equal(isRestatement(EXPANDED, ANSWER), true);
+  assert.equal(isRestatement(ANSWER, EXPANDED), true);
 });
 
 test('the identical answer is a restatement', () => {
