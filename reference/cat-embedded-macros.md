@@ -173,13 +173,28 @@ world-hooks macro — are **not** captured by `run_javascript`'s console, so "no
 is never evidence that a macro did not run. Every conclusion drawn from silent stubs
 is unfounded, including a working item reported as broken.
 
-Assert on an **observable side effect**, which a script CAN read back:
+Assert on an **observable side effect** a script CAN read back — but leave it on a host that
+**outlives the event**:
 
 ```js
-await actor.setFlag('world', 'diagResult', 'itemRollFinished');   // then read it back
-await effectUtils.createEffects(actor, [effectData]);             // then read actor.effects
+// A summon- or token-scoped macro's own actor DIES with its token, taking the flag with it.
+// Write the record to the BASE actor instead:
+await game.actors.get('<casterActorId>').setFlag('world', 'diagResult', 'itemRollFinished');
+await effectUtils.createEffects(actor, [effectData]);   // then read actor.effects (host outlives the read)
 // a token move (read its x/y), or a ChatMessage (compare game.messages.size)
 ```
+
+**The trap, observed:** for an unlinked token, `actor` in macro scope is a synthetic document that
+is deleted with its token, so a diagnostic written to it survives only as long as the actor does.
+That is fine for an ordinary roll — the actor outlives it — but it silently loses everything for
+anything summon- or token-scoped, because that is exactly when the host disappears. The Grasping
+Vine pull macro wrote its log to the summoned vine's own token actor; the spell ended, the token
+and its synthetic actor were deleted, and the log went with them — a failed ability with NO
+retrievable evidence, indistinguishable from "the macro never ran". Write diagnostics to the BASE
+actor (`game.actors.get('<casterActorId>')`), or the base actor generally when the evidence must
+survive a token being deleted, the scene changing, or the effect ending. (The `actor` / `token.actor`
+scope is still the right thing for READING — who am I, what am I carrying; it is only unreliable as
+a place to LEAVE a record.)
 
 Two habits:
 

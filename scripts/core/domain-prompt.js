@@ -55,7 +55,7 @@ Do not write a field you have not confirmed the shape of. A wrong field name usu
 
 export const AUTOMATION_RESOURCES = `WHAT YOU HAVE - read before writing, rather than guessing:
 
-read_reference searches the material that explains how these modules and this system actually work: the dnd5e 6.x field guide, the CAT macro flag shapes, the CPR generic settings (every generic and every setting it accepts), the DAE effect expiry vocabulary, the midi-qol reaction trigger and condition vocabulary, how this world runs Simple Quest (its page types, enrichers and script API), this world's own conventions and correction list, and the documentation shipped with installed modules. Reach for it before authoring an activity or setting a flag.
+read_reference searches the material that explains how these modules and this system actually work: the dnd5e 6.x field guide, the dnd5e text enrichers, the CAT macro flag shapes, the CPR generic settings (every generic and every setting it accepts), the DAE effect expiry vocabulary, the midi-qol reaction trigger and condition vocabulary, how this world runs Simple Quest (its page types, enrichers and script API), this world's own conventions and correction list, and the documentation shipped with installed modules. Reach for it before authoring an activity or setting a flag.
 
 inspect_document_schema gives the live shape of any document and list_document_schemas lists what exists. This is the source of truth when the reference is silent.
 
@@ -83,9 +83,9 @@ You keep two files in a folder outside the world, so a reset does not erase them
 
 When you learn something that should change future behaviour, propose a lesson in your reply and record it with write_lesson. The user is asked to confirm it before it is saved, so state the lesson and why it matters. The user may also ask you to record a lesson or a history entry directly - do it then without waiting to be asked twice.
 
-Two traps in reading and writing these files:
-- read_memory TRUNCATES them (they are single-line JSON) and its query search can return zero matches for text that IS present. To read one in full use fetch("/simulacrum/<file>") - only that route works ("/Data/..." and "/data/..." 404). history.md is OLDEST-FIRST on disk; read_memory returns newest-first.
-- append_history is read-then-write and its read TRUNCATES at 200,000 characters. Once a file exceeds that, every append keeps the first 200,000 characters, adds your entry, and PERMANENTLY DISCARDS the rest, reporting success. CHECK THE FILE LENGTH BEFORE APPENDING. After any write, re-read and assert the length GREW and the previous entry survived. lessons.md uses the same cap.`;
+Two things about these files:
+- THEY ARE MARKDOWN, split into \`## \` sections — a lesson or a history entry is one section. read_memory with no arguments returns the index (lesson headings and how much history there is); section "lessons" returns that file whole; section "history" returns the most recent entries (pass limit to widen); and query substring-searches both files. A section read is capped at 1,000,000 characters and says "[truncated at ...]" when it hits the cap; only a file larger than that needs fetch("/simulacrum/<file>") to read in full (the "/Data/..." and "/data/..." routes 404). On disk history.md is oldest-first.
+- A WRITE REPLACES NOTHING THAT CAME BEFORE. append_history reads the whole history file and appends, and write_lesson rewrites the lessons file whole; neither truncates the file, and both report the new byte length. The only limits are on a SINGLE body — a history entry is trimmed to 40,000 characters and a lesson body to 30,000 — so keep one entry well under that, or its tail is cut silently. After a write, re-read and confirm the earlier content survived.`;
 
 export const AUTOMATION_APPROACH = `AN APPROACH THAT WORKS (an example, not a requirement):
 

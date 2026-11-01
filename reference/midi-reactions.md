@@ -118,16 +118,41 @@ Diagnostic consequence: a sight-gated reaction is absent in a dry run on a scene
 monsters stay hidden until initiative. Check `token.document.hidden` before suspecting the
 condition.
 
-## 8. midi cannot offer a bystander's reaction
+## 8. A reaction a BYSTANDER must answer: five parts (world-hooks, not a midi reaction)
 
-`ReactionFilter` charges the wrong actor. An ability where an **ally** is the target needs a
-world-hooks approach instead of a midi reaction.
+midi cannot offer a bystander's reaction — `ReactionFilter` charges the wrong actor — so an ability
+where a creature OTHER than the trigger's subject decides whether to spend something (Silvery Barbs
+`UVGJ9gEL1yn7dQ1n`, Counterspell `s16A9YqUGh0Q8CI8`) is a **world-hooks** macro instead. Five
+parts, in order; each one fails **silently**.
+
+1. **Candidates come from TOKEN actors on the scene, never `game.actors`.** An unlinked token's
+   actor is a different document with the same id, so it is absent from `game.actors`. Use
+   `canvas.tokens.placeables` (current scene) or every `scene.tokens[].actor` (cross-scene) — see
+   `world-conventions.md` §4.
+2. **"Available to cast" is its own test, not "has the item".** The spell must be castable NOW:
+   `method` `atwill`/`innate` need charges (no `uses.max` = unlimited, else `uses.value > 0`);
+   otherwise `prepared >= 1` (0 unprepared, 1 prepared, 2 always-prepared) AND a usable slot at or
+   above the spell's level, or `spells.pact.value > 0`. An unprepared caster must NOT be offered it.
+3. **Prompt EXPLICIT ownership only.** `actor.testUserPermission(u, "OWNER")` honours the `default`
+   ownership entry, and every PC in this world carries `default: 3`, so it returns true for EVERY
+   connected user and the prompt then renders on every client — including whoever was hit. Filter
+   `k !== "default"`, prefer non-GM owners, fall back to an active GM when no owning player is
+   online; leave the `default` key itself alone. Diagnostic tell: the dialog TITLE is correct (it
+   resolves from `entry.actorId`) while the DISTRIBUTION is wrong — that combination means this bug.
+4. **The race.** Announce over a socket; first claim wins; the arbiter (lowest-id active GM) is the
+   single point that spends the slot and the reaction, so two simultaneous answers cannot both be
+   paid. The workflow client holds midi's workflow open until the race is decided.
+5. **Fire the REAL activity** with `MidiQOL.completeActivityUse`, so midi renders its own card and
+   the player enacts the roll. A hand-rolled `new Roll()` resolves instantly and skips the player —
+   that is what Insect Shield did wrong first time. This is midi's call, not CAT's
+   `workflowUtils.completeActivityUse`; they are different namespaces.
 
 ---
 
 ## What this file is not
 
 - **Not the reaction UI.** The `ReactionDialog` layout, the timeout setting and
-  `getReactionSetting(player)` (who is even offered the prompt) are not reproduced here.
+  `getReactionSetting(player)` (who midi offers a prompt to) are not reproduced here — §8 is about a
+  prompt you build yourself for a bystander, not midi's own.
 - **Not a full `reactionTypes` dump.** The table above is every label as of 14.6.6; read
   `reactionTypes` in `utils.ts` if midi adds one.

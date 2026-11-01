@@ -203,6 +203,43 @@ event**.
 
 Do not "fix" it on the item — CAT resolves the slot itself.
 
+### Summon-scoped work lives on the CASTER'S item, not the summon
+
+For work that runs when a summon is created or removed (cleanup, a follow-up), five parts:
+
+1. **What marks an item as summon-managed is the CONFIG, not the macro reference.** The predicate
+   is the mere presence of `doc.flags.cat.genericConfig.cat.summon`. Attaching only
+   `flags.cat.macros.summon = [{source:'cat', identifier:'summon', rules:'all'}]` does NOTHING —
+   the flags look right and no placement is confined. Both halves are needed, exactly as CPR's
+   Spiritual Weapon has them. `genericConfig.cat.summon` takes `activityId`, `range`, `identifier`,
+   `replaceExisting`, `maxDistance`, `disposition`, `size`, `initiative`, `dismissAtZero`,
+   `hostileOnParentEnd`, `summons: [{profile, name}]`, plus the follow-up keys `followUpActivityId`,
+   `followUpTiming`, `followUpRange`, `followUpTargets`, `followUpConsume`. `range` is what confines
+   placement; `replaceExisting` enforces one summon at a time.
+2. **Placement confinement comes from CAT's `aimDestination` — dnd5e 6's own `#placeSummons` has
+   NO range constraint at all.** CAT's `SummonsManager.placeSummon` calls
+   `cat.utils.tokenUtils.aimDestination(ownerToken, { range: t, ... })`, where `t` is the generic's
+   `range`, falling back to the activity's `range.value`, then 5. It is the SAME mechanism this
+   world's Find Familiar macro hand-rolls (`aimDestination(gTok, { range: FF_RANGE })`). To confine
+   a summon, use the generic and set `range`, rather than writing a crosshair by hand.
+3. **The macro belongs on the item that SUMMONS.** CAT's `SummonEvent` builds its trigger from
+   `this.summon.sourceDocument` — the ITEM that created the summon — and only pushes it if that
+   document has a CAT flag. So author the follow-up on the summoning item, not the summoned actor's
+   items. `summonPasses` (0.1.6) = `preCreate`, `create`, `preDelete`, `delete`, `placed`,
+   `removed`; concentration-end may route through `delete` OR `removed`, so attach to both and make
+   the body idempotent.
+4. **An activity left on the summoner measures range from the summoner.** midi measures an
+   activity's range from the chat SPEAKER's token (the item's owning actor), and there is no
+   speaker/token override in `completeActivityUse`. Putting the attack on the summoned actor makes
+   the measurement correct, at the cost of spending the SUMMON'S action economy, not the
+   summoner's — a deliberate trade.
+5. **Attributing an effect to a summon that is being deleted.** At `summon`/`delete` time the
+   summon's actor and items are being removed, so `fromUuidSync` on them returns null and an effect
+   looks unattributable. Scope by uuid SUBSTRING matching — against `effect.origin`,
+   `flags.dnd5e.item.uuid`, `flags.dnd5e.activity.uuid`, `flags.dae.itemUuid`, `flags.dae.activity`
+   — with the uuids captured BEFORE the deletion. Refuse to delete by name alone when no uuid is
+   available; a loose name match can strip an unrelated effect from the same named ability.
+
 ## 7. What this file is not
 
 - **The settings are in another file.** This covers attaching a macro; what each

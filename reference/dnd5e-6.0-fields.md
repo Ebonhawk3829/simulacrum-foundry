@@ -298,6 +298,24 @@ An ActiveEffect on the item carries mechanisms, not outcomes:
 `system.changes` is where the *intent* goes. `flags` is where *module behaviour*
 goes, and each module reads its own scope.
 
+**A condition the effect IS vs a condition the effect APPLIES — do NOT do both.** The line above
+("there is NO `statuses.*` change key in DAE") is a statement about CHANGE KEYS, not about how an
+effect confers a condition, and it is easy to over-read. Two separate live mechanisms:
+
+- **The effect IS the condition** → the ActiveEffect's own top-level **`statuses`** field, e.g.
+  `statuses: ["frightened"]`. This is what dnd5e/DAE key on `staticID("dnd5e"+status)` and what the
+  token HUD shows — the normal way.
+- **The effect APPLIES a condition as a side effect of being active** → the change key
+  `macro.StatusEffect` (or its twin `StatusEffect`, registered to the same handler).
+
+An effect carrying BOTH produces a second, DAE-created status effect alongside the one the
+`statuses` field already gives — the same "two effects, one condition" shape that caused the double
+Descend prompt. The counter-check that catches it in seconds: read a working sibling effect's
+`statuses` and `changes` and match its shape. A world census found **101 effects using `statuses`
+only, 0 using `macro.StatusEffect` only, and exactly 1 using both — the one just written**. If the
+effect just IS a condition, `statuses` alone; if it merely APPLIES one while active,
+`macro.StatusEffect` alone; never both.
+
 ### The 6.x trap: whose values fill an effect's `@` references
 
 dnd5e 6 gives every effect change a **Replacement** setting — Origin, Target or

@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.5] - 2026-11-01
+
+Brings the shipped reference and the system prompt back in line with what live use has taught, and
+fixes a stale belief that led the agent to treat its own memory as capped at 200,000 characters.
+
+### Fixed
+
+- The system prompt no longer claims `append_history` / `lessons.md` truncate at 200,000 characters
+  (nor calls them single-line JSON). The memory files are markdown; writes read the whole file and
+  lose nothing; the only limits are a 1,000,000-character context read and 40,000 / 30,000
+  characters per entry body. (`scripts/core/domain-prompt.js`)
+
+### Added
+
+- **`dnd5e-enrichers.md`** — dnd5e text enrichers and inline rolls, previously owned by no reference
+  file: roll enrichers need document context, `extended`, the ampersand as the multi-part separator,
+  the leading-dot `[[/item .<id>]]`, and the shipped dialects to copy.
+
+### Changed
+
+- `world-conventions.md` — weapon mastery rewritten to the three-part test plus CAT's
+  `weaponMastery` setting; §4 expanded to the actor-vs-token-actor rule (iterate tokens; union pool
+  deduped by uuid; write the pool you read).
+- `midi-reactions.md` — §8 replaced with the five-part bystander reaction (world-hooks).
+- `cat-embedded-macros.md` §5 — diagnostics must be written to a host that outlives the event.
+- `cat-macro-flags.md` §6 — summon-scoped macros live on the caster's item.
+- `dnd5e-6.0-fields.md` §7 — the `statuses` vs `macro.StatusEffect` split; never both.
+- `upstream-changelog.md` — midi-qol live-use notes (Condition Editor, Over Time editor, Dice So
+  Nice, mounted creatures using their mount's space).
+
 ## [0.7.4] - 2026-11-01
 
 Stops the assistant repeating an answer it already showed. The tool loop displays the text the

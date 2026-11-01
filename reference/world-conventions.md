@@ -62,14 +62,37 @@ one kind of bearer. The world's own examples to copy: Silvery Barbs
 (`if (t.document.disposition === triggerToken.document.disposition) continue;`) and Counterspell
 against the caster's token.
 
-### 4. Unlinked tokens have their own actor; edits go to the BASE actor
+### 4. Unlinked tokens have their own actor — iterate TOKENS, and write to the pool you read
 
-Editing through `token.actor` on an unlinked token writes a **delta override** — it fixes
-that one token and leaves the base actor and every sibling token unchanged. Deleting a delta
-key writes a **tombstone**. Fix the **base** actor, then refresh the token.
+An UNLINKED token has its **own synthetic actor document**. `t.actor` and
+`game.actors.get(t.actorId)` are **different documents with the same actor id**: verified live, a
+token actor's uuid reads `Scene.<scene>.Token.<token>.Actor.<id>` while the base reads `Actor.<id>`,
+and `t.actor === game.actors.get(t.actorId)` is `false`. In this world 67 of 244 tokens are unlinked.
 
-Linked tokens (`prototypeToken.actorLink: true`) share **ONE** actor, so a damage, effect,
-condition or reaction-counter test affects ALL of them.
+Consequences:
+
+- An effect or flag written to `t.actor` is **invisible** to any scan of `game.actors`, and vice
+  versa (observed for one actor id: `tokenActorEffectCount: 1, baseActorEffectCount: 0`).
+- `t.actor` exists only while its token is placed. Delete the token and the synthetic actor — and
+  anything written to it — is gone, so "there is no marker" does not mean "there is no
+  condition/state". Persist on the **bearer** when the state must outlive the target.
+- Editing through `t.actor` writes a **delta override** (fixing that one token, leaving the base
+  actor and every sibling token unchanged); deleting a delta key writes a **tombstone**. Linked
+  tokens (`prototypeToken.actorLink: true`) instead share **ONE** actor, so a damage, effect,
+  condition or reaction-counter test affects ALL of them.
+
+FOR ANYTHING ON THE TABLE — targeting, being hit, being in range, a marker riding on a creature, a
+prompt about a token on the scene — **iterate tokens, not actors**: `canvas.tokens.placeables` for
+the current scene, or every `scene.tokens[].actor` across scenes. When in doubt use a **UNION pool**
+(`game.actors` PLUS each scene token's actor, deduped by **uuid**, not id — id is shared between a
+token actor and its base). Read and write the **same** pool, or the write lands somewhere the read
+never looks; that exact asymmetry — write `t.actor`, scan `game.actors` — is what made Vow of
+Enmity's transfer return with no prompt and no error at all. Prefer the token's actor for anything
+placeable, and the base actor only when the change must apply to every copy (then refresh the token).
+
+**Never conclude "nothing found" from one pool.** An empty `game.actors` scan is a statement about
+that pool, not about the world. The tell that you have this bug: everything works on linked tokens
+(player characters) and silently does nothing on monsters — which are exactly the unlinked ones.
 
 ### 5. Teleport routes — both are valid; do NOT convert one into the other
 
@@ -83,12 +106,37 @@ midi's — so audit both when reading one.
 
 ---
 
-## Weapon mastery (the real shape)
+## Weapon mastery: two mechanisms, and a three-part test
 
-`system.mastery` on the weapon holds only the **KEY** ("sap"/"topple"/"vex") — a label,
-nothing acts on it. The behaviour is a `transfer: false` ActiveEffect **on the weapon item**,
-linked from the attack activity. Weapon **clones** drop non-attack activities and their
-effects, so check whether a mastery survived a clone rather than assuming it was never there.
+`system.mastery` on a weapon holds only the **KEY** ("sap"/"topple"/"vex"). That key is a
+**label, not a usable property**: a weapon can carry "slow" while its bearer holds no mastery
+with it, and then nothing should act on it at all. Do not read a key as "this dangles and must
+be implemented" — that inference is wrong.
+
+**Automation is wanted only when ALL THREE hold:**
+
+1. the actor has a **Weapon Mastery** feature;
+2. on the sheet under **Configure Weapons**, that weapon's **Mastery** checkbox is enabled;
+3. a weapon of that type is in the inventory.
+
+Anything short of all three is inert **by the rules** and needs no automation.
+
+For the automation we author, the behaviour is a `transfer: false` ActiveEffect **on the weapon
+item**, linked from the attack activity via `activity.effects[]._id`. Weapon **clones** drop
+non-attack activities and their effects, so check whether a mastery survived a clone rather than
+assuming it was never there.
+
+**Ours identify by NAME, not by `flags.cat.identifier`.** An identifier lookup will not find them
+— read the weapon's `activities[].effects[]._id`, then the item's own effects. An audit that
+searches identifiers reports them absent when they are present.
+
+**CAT 0.1.6 can apply weapon mastery itself**, under the **Weapon Mastery** setting
+(`cat.weaponMastery`: `none` | `pc` | `npc` | `both`, default `pc`). Where CAT applies the
+property AND the weapon carries our hand-built effect, the same mastery lands **twice** —
+confirmed in play on Sap: two effects on one actor. This world sets `none`, which suppresses the
+collision but does not make it impossible: the default is `pc`, so re-enabling the setting (or a
+future change to its default) reintroduces a second application alongside ours. Check all three
+parts of the test **plus the setting** before adding, keeping or removing either mechanism.
 
 ---
 

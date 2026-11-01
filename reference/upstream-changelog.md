@@ -119,6 +119,27 @@ Run these searches, then read each hit's `flags.cat`:
 - New animation: **Weapon Attack** (a swing/throw/shot from the base weapon and ammunition, tinted
   for non-physical damage).
 
+## midi-qol — live-use notes (observed 2026-11-01; version unpinned)
+
+Behaviour changes seen in play, not yet tied to a released version number.
+
+- **The Midi Condition Editor** (the button and window are now named that) no longer fills an empty
+  condition with `true`, shows the flag key only for effect changes, and no longer offers Macro
+  Autocomplete's visual block editor (which rewrote a condition as a statement, `true;`). CAT's
+  quick-conditions button sits between the condition field and midi's editor button.
+- **Over Time editor — Saves remaining / Fails remaining.** For an over-time effect on an actor, the
+  editor shows the progress of `saveCount` (*Saves required* / *Fails required*) and lets a GM
+  correct it. The configured counts are unchanged; consecutive counts still reset to them.
+- **Dice So Nice.** midi now passes the actor on its rolls, so a player-owned actor's own dice
+  appearance is used (with DSN's *Force character owner appearance* = All), as DSN does for its own
+  rolls. Previously every midi roll used the rolling user's dice and no actor.
+- **Mounted creatures use their mount's space** (Mechanics, on by default): a rider's range and
+  reach, and distances to it, are measured from its **mount's** space. A rider is a token with
+  `flags.midi-qol.mount` set to its mount's token id, or a Rideable rider (familiars included);
+  grappled tokens and riders moving within their mount keep their own space. **Relevant to the
+  perimeter-distance convention** (`midi-reactions.md` §6): a distance to a mounted rider now comes
+  from the mount.
+
 ## midi-qol 14.6.6
 
 - Hosting: updates are served from GitLab Pages. Sample items only otherwise (Flaming Sphere, and
