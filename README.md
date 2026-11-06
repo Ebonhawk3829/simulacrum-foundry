@@ -45,10 +45,11 @@ It does not guess field names. It has tools for:
   any document, straight from the system.
 - **`search_documents`** — working examples in compendiums. A similar spell that
   already works is the best template there is.
-- **`read_memory`** — its own persistent notes: the **lessons** it has learned and
-  the **session history** of what it built and discovered. These live outside the
-  world (`Data/simulacrum/`), so they survive a world reset. It records history as it
-  works and proposes lessons for you to confirm before they are saved.
+- **`read_memory`** — its own persistent notes: the **lessons** it has learned, the
+  **session history** of what it built and discovered, and your **read-before-any-write**
+  instructions. These live outside the world (`Data/simulacrum/`), so they survive a
+  world reset. It records history as it works, proposes lessons for you to confirm before
+  they are saved, and reads any `READ-BEFORE-ANY-WRITE.md` you keep there before it writes.
 
 ## Requirements
 

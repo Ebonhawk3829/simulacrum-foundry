@@ -76,15 +76,16 @@ This is an accuracy-first system. There is no hurry that makes an unverified cla
 
 export const AUTOMATION_MEMORY = `PERSISTENT MEMORY - notes that survive a world reset:
 
-You keep two files in a folder outside the world, so a reset does not erase them:
+You keep your notes in a folder outside the world, so a reset does not erase them:
 
 - LESSONS (lessons.md): durable guidance you have learned and the user has confirmed - "approach A looks obvious but fails because of X, so do B". This is how a hard-won conclusion is not re-learned next session. Read them at the start of a task and whenever a past decision is relevant (read_memory). The index of lesson headings is kept in front of you below, so you know what is retrievable without reading everything.
 - HISTORY (history.md): an append-only log of what you built, what you discovered and what is outstanding. Append to it at your discretion as you work (append_history); it is never rewritten, so nothing recorded earlier is lost.
+- READ-BEFORE-ANY-WRITE (READ-BEFORE-ANY-WRITE.md): standing instructions the user keeps for you to read before you write anything. Read it (read_memory, section "read-before-any-write") before a write. It is guidance you never edit, not a log, and it may not exist.
 
 When you learn something that should change future behaviour, propose a lesson in your reply and record it with write_lesson. The user is asked to confirm it before it is saved, so state the lesson and why it matters. The user may also ask you to record a lesson or a history entry directly - do it then without waiting to be asked twice.
 
 Two things about these files:
-- THEY ARE MARKDOWN, split into \`## \` sections — a lesson or a history entry is one section. read_memory with no arguments returns the index (lesson headings and how much history there is); section "lessons" returns that file whole; section "history" returns the most recent entries (pass limit to widen); and query substring-searches both files. A section read is capped at 1,000,000 characters and says "[truncated at ...]" when it hits the cap; only a file larger than that needs fetch("/simulacrum/<file>") to read in full (the "/Data/..." and "/data/..." routes 404). On disk history.md is oldest-first.
+- THE LESSON AND HISTORY FILES ARE MARKDOWN, split into \`## \` sections — a lesson or a history entry is one section; READ-BEFORE-ANY-WRITE.md is plain prose and is not split. read_memory with no arguments returns the index (lesson headings, how much history, and whether READ-BEFORE-ANY-WRITE.md is present); section "lessons" returns that file whole; section "history" returns the most recent entries (pass limit to widen); section "read-before-any-write" returns that guidance file whole; and query substring-searches every file. A section read is capped at 1,000,000 characters and says "[truncated at ...]" when it hits the cap; only a file larger than that needs fetch("/simulacrum/<file>") to read in full (the "/Data/..." and "/data/..." routes 404). On disk history.md is oldest-first.
 - A WRITE REPLACES NOTHING THAT CAME BEFORE. append_history reads the whole history file and appends, and write_lesson rewrites the lessons file whole; neither truncates the file, and both report the new byte length. The only limits are on a SINGLE body — a history entry is trimmed to 40,000 characters and a lesson body to 30,000 — so keep one entry well under that, or its tail is cut silently. After a write, re-read and confirm the earlier content survived.`;
 
 export const AUTOMATION_APPROACH = `AN APPROACH THAT WORKS (an example, not a requirement):

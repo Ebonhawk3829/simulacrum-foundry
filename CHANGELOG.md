@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.7] - 2026-11-06
+
+Adds the user's **READ-BEFORE-ANY-WRITE.md** memory file to the agent's view: it is listed in
+the live memory index and can be read through `read_memory`.
+
+### Added
+
+- `read_memory` gains a **`read-before-any-write`** section that returns `READ-BEFORE-ANY-WRITE.md`
+  whole (absent reads as an empty case, not an error), includes the file in its index and in
+  `query` searches, and names it in the tool description.
+- The live **MEMORY INDEX** in the system prompt now reports whether `READ-BEFORE-ANY-WRITE.md`
+  is present and its size, with a reminder to read it before any write.
+- The persistent-memory prompt now describes the file: the user's standing instructions,
+  read-only, not split into `## ` sections, and possibly absent.
+
 ## [0.7.6] - 2026-11-06
 
 Follows **CAT 0.1.7** and **CPR 2.1.7**, folding their changes into the reference and the upstream

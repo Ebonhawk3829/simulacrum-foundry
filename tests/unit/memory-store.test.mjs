@@ -143,3 +143,41 @@ test('write_lesson reports whether it added or updated', async () => {
   assert.equal(body.action, 'added');
   assert.match(body.file, /lessons\.md/);
 });
+
+test('read-before-any-write is surfaced in the index, searched, and read whole', async () => {
+  const guidance = 'Never write without checking in first.\n';
+  const files = {
+    'simulacrum/READ-BEFORE-ANY-WRITE.md': guidance,
+    'simulacrum/lessons.md': '## Use sourceStart\n\nbody\n',
+  };
+
+  const store = await withMemory(files, async () => {
+    const s = new MemoryStore();
+    return { summary: await s.summary(), text: await s.readBeforeWrite() };
+  });
+  assert.equal(store.summary.readBeforeWriteBytes, guidance.length);
+  assert.equal(store.text, guidance);
+
+  const index = JSON.parse(
+    (await withMemory(files, () => new ReadMemoryTool().execute({}))).content
+  );
+  assert.deepEqual(index.readBeforeWrite, { bytes: guidance.length });
+
+  const section = JSON.parse(
+    (await withMemory(files, () => new ReadMemoryTool().execute({ section: 'read-before-any-write' })))
+      .content
+  );
+  assert.equal(section.bytes, guidance.length);
+  assert.match(section.text, /checking in/);
+
+  const search = JSON.parse(
+    (await withMemory(files, () => new ReadMemoryTool().execute({ query: 'checking in' }))).content
+  );
+  assert.equal(search.matches[0].path, 'READ-BEFORE-ANY-WRITE.md');
+});
+
+test('an absent read-before-any-write file is null in the index, not an error', async () => {
+  const body = JSON.parse((await withMemory({}, () => new ReadMemoryTool().execute({}))).content);
+  assert.equal(body.readBeforeWrite, null);
+  assert.equal(body.ok, true);
+});

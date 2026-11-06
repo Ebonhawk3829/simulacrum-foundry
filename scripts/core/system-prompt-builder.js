@@ -80,11 +80,16 @@ async function buildMemoryIndex() {
     const lessons = summary.lessonTitles.length
       ? summary.lessonTitles.map(title => `- ${title}`).join('\n')
       : '(none recorded yet)';
+    const readBeforeWrite = summary.readBeforeWriteBytes
+      ? `READ-BEFORE-ANY-WRITE.md: ${summary.readBeforeWriteBytes} characters — read it (read_memory, section "read-before-any-write") before any write.`
+      : 'READ-BEFORE-ANY-WRITE.md: not present.';
 
     return [
       'MEMORY INDEX (live)',
       '',
-      `Store: ${summary.location}lessons.md and history.md. Call read_memory to read any of it.`,
+      `Store: ${summary.location}lessons.md, history.md and READ-BEFORE-ANY-WRITE.md. Call read_memory to read any of it.`,
+      '',
+      readBeforeWrite,
       '',
       'Lessons recorded:',
       lessons,

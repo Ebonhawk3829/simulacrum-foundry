@@ -1,7 +1,7 @@
 /**
  * Memory Store — the agent's durable notes.
  *
- * Two files, one place, deliberately outside the world tree:
+ * One place, deliberately outside the world tree:
  *
  * - `lessons.md` — durable guidance the agent has learned and the user has
  *   confirmed: "approach A looks obvious, but it fails because of X, so do B
@@ -9,6 +9,9 @@
  *   reset, which is the whole point of keeping it.
  * - `history.md` — an append-only log written at the agent's discretion: what was
  *   built, what was discovered, what is still outstanding.
+ * - `READ-BEFORE-ANY-WRITE.md` — standing instructions the user keeps in the same
+ *   folder, to be read before any write. Read-only: this store never edits it, and
+ *   it is not section-parsed. Its absence is not an error.
  *
  * WHY OUTSIDE THE WORLD
  *
@@ -38,9 +41,10 @@ const SOURCE = 'data';
 /** Folder inside the data directory. Not inside `worlds/`, so resets miss it. */
 const DIR = 'simulacrum';
 
-/** The two files, and their route names. */
+/** The files, and their route names. */
 const LESSONS = 'lessons.md';
 const HISTORY = 'history.md';
+const READ_BEFORE_WRITE = 'READ-BEFORE-ANY-WRITE.md';
 
 /**
  * Cap a single CONTEXT read, so one bloated log cannot flood the model's context. The file
@@ -182,6 +186,15 @@ export class MemoryStore {
   }
 
   /**
+   * The user's standing instructions, to be read before any write. Read-only and not
+   * section-parsed: it is prose the user maintains, not an entry log.
+   * @returns {Promise<string>} The file text, or '' when there is none.
+   */
+  async readBeforeWrite() {
+    return this._read(READ_BEFORE_WRITE);
+  }
+
+  /**
    * Lesson headings, for the always-visible index. Titles only: the agent needs to
    * know what is retrievable without paying for the whole file every turn.
    * @returns {Promise<Array<{title: string, lines: number}>>}
@@ -198,12 +211,17 @@ export class MemoryStore {
    * @returns {Promise<{location: string, lessonTitles: string[], historyEntries: number, historyBytes: number}>}
    */
   async summary() {
-    const [lessons, history] = await Promise.all([this._readRaw(LESSONS), this._readRaw(HISTORY)]);
+    const [lessons, history, readBeforeWrite] = await Promise.all([
+      this._readRaw(LESSONS),
+      this._readRaw(HISTORY),
+      this._readRaw(READ_BEFORE_WRITE),
+    ]);
     return {
       location: this.location,
       lessonTitles: parseSections(lessons).map(s => s.title),
       historyEntries: parseSections(history).length,
       historyBytes: history.length,
+      readBeforeWriteBytes: readBeforeWrite.length,
     };
   }
 
