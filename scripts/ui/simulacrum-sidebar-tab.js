@@ -217,6 +217,10 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
     // separate instances with their own message arrays and DOM).
     Hooks.on(SimulacrumHooks.MESSAGE_ADDED, payload => this._mirrorMessage(payload));
 
+    // A structural change (clear, edit-rewind, rollback) is a removal, which cannot be
+    // mirrored like an append: every view rebuilds its display from the shared conversation.
+    Hooks.on(SimulacrumHooks.MESSAGES_CHANGED, () => this._rebuildLogFromCore());
+
     // Listen for tool confirmation requests
     Hooks.on('simulacrumToolConfirmationRequest', data => {
       this._showToolConfirmation(data);
@@ -727,11 +731,13 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
     return label;
   }
 
-  async _syncFromCoreConversation() {
+  async _syncFromCoreConversation(force = false) {
     // Prevent syncing while the agent is actively processing.
     // This avoids race conditions where a stale Core State (triggered by a document update hook)
     // overwrites the live DOM updates (like Tool Cards) that the ChatHandler is managing.
-    if (this.isProcessing()) {
+    // A structural change (clear, rewind, rollback) passes force: the shared conversation is
+    // authoritative then, and every view must match it.
+    if (!force && this.isProcessing()) {
       return;
     }
 
@@ -755,6 +761,21 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
 
   async _loadConversationHistoryOnInit() {
     return this._syncFromCoreConversation();
+  }
+
+  /**
+   * Rebuild this view's log from the shared conversation after a structural change.
+   *
+   * Fires on MESSAGES_CHANGED for every view, including the one that made the change; a
+   * rebuild is idempotent, so the originator simply re-renders the same result. It runs
+   * through the message queue so it cannot interleave with a mirrored append and leave a
+   * duplicate or a stale line behind.
+   */
+  async _rebuildLogFromCore() {
+    return this._messageQueue.add(async () => {
+      await this._syncFromCoreConversation(true);
+      if (this.rendered) await this.render({ parts: ['log'] });
+    });
   }
 
   async _postRender(_context, options) {
@@ -1243,10 +1264,27 @@ export class SimulacrumSidebarTab extends HandlebarsApplicationMixin(AbstractSid
     });
   }
 
-  rollbackUserMessage() {
+  /**
+   * Drop the prompt that produced a failed send, in every view.
+   *
+   * The conversation is the source of truth: removing it there and letting MESSAGES_CHANGED
+   * rebuild each view keeps the sidebar tab and the popout in step, and stops a retry
+   * resending a prompt the conversation still held. Falls back to a local pop if there is
+   * no conversation yet.
+   */
+  async rollbackUserMessage() {
+    const conversation =
+      this.chatHandler?.conversationManager ??
+      (await import('../core/simulacrum-core.js')).SimulacrumCore?.conversationManager;
+
+    if (conversation?.rewindLastUserMessage) {
+      conversation.rewindLastUserMessage(); // emits MESSAGES_CHANGED → every view rebuilds
+      return;
+    }
+
     if (this.messages.length > 0 && this.messages[this.messages.length - 1]?.role === 'user') {
       this.messages.pop();
-      this.render({ parts: ['log'] });
+      await this.render({ parts: ['log'] });
     }
   }
 

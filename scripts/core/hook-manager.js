@@ -25,6 +25,12 @@ export const SimulacrumHooks = Object.freeze({
   // popped-out tab stay in step (they are separate instances with separate message arrays).
   MESSAGE_ADDED: 'simulacrum:messageAdded',
 
+  // The message list changed structurally rather than by an append — a clear, or a turn
+  // dropped by edit-and-resend or a send-error rollback. Because the views hold their own
+  // display arrays, an append can be mirrored but a removal cannot: each view rebuilds its
+  // display from the shared conversation when this fires.
+  MESSAGES_CHANGED: 'simulacrum:messagesChanged',
+
   // AI response hooks
   AI_RESPONSE_RECEIVED: 'simulacrum:aiResponseReceived',
 

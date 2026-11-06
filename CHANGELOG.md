@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.8] - 2026-11-06
+
+Keeps every view in step when the log changes by **removal**, not just by append.
+
+### Fixed
+
+- **A message dropped in one view is dropped in all of them.** The sidebar tab and the
+  popped-out/detached tab are separate instances with their own message arrays, and only
+  additions were mirrored (`MESSAGE_ADDED`). Clearing the conversation, discarding a turn with
+  edit-and-resend, or rolling a prompt back after a send error changed one view and the shared
+  conversation but left the other view showing messages the conversation no longer held — which
+  then broke the edit control there, because matching a prompt to its turn overshot and the
+  click did nothing. A new `MESSAGES_CHANGED` hook is fired by `ConversationManager.rewindFrom()`
+  and `clear()`; every view rebuilds its log from the shared conversation on it, serialized
+  through the message queue so it cannot race a mirrored append.
+- `rollbackUserMessage()` now removes the failed prompt from the **conversation**
+  (`ConversationManager.rewindLastUserMessage()`), so every view drops it and a retry does not
+  resend it — instead of popping it from one view only.
+- Clearing now also drops queued prompts in every view: `CONVERSATION_CLEARED` was defined and
+  listened for but never actually fired, so it now fires from `ConversationManager.clear()`.
+
+### Changed
+
+- `tests/baselines/file-sizes.json` — `scripts/ui/simulacrum-sidebar-tab.js` recorded at 1946
+  lines. The grandfathered entry had gone stale (the file was already 1908 against a 1687
+  baseline before this change), so the size gate was failing; the entry is refreshed as the
+  reviewed acceptance the gate asks for.
+
+### Added
+
+- Unit coverage for the structural-change announcement (`rewindFrom`, `clear`) and for
+  `rewindLastUserMessage`.
+
 ## [0.7.7] - 2026-11-06
 
 Adds the user's **READ-BEFORE-ANY-WRITE.md** memory file to the agent's view: it is listed in

@@ -9,6 +9,7 @@
 import { defaultTokenizer } from '../utils/tokenizer.js';
 import { createLogger, isDebugEnabled } from '../utils/logger.js';
 import { interactionLogger } from './interaction-logger.js';
+import { SimulacrumHooks } from './hook-manager.js';
 
 const logger = createLogger('Conversation');
 const MAX_COMPACTION_ROUNDS = 10;
@@ -113,7 +114,29 @@ class ConversationManager {
     this.messages = [...this.activeMessages];
     this._recalculateTokens();
     this._triggerStateChange();
+    this._emitMessagesChanged();
     return true;
+  }
+
+  /**
+   * Drop the last user message and everything after it.
+   *
+   * Used when a turn errors: the prompt is restored to the input for a retry, so it must
+   * leave the conversation too — otherwise the retry would send it twice, and the other
+   * views would keep showing a prompt the conversation no longer holds.
+   *
+   * @returns {boolean} Whether anything was dropped
+   */
+  rewindLastUserMessage() {
+    for (let index = this.activeMessages.length - 1; index >= 0; index--) {
+      if (this.activeMessages[index].role === 'user') return this.rewindFrom(index);
+    }
+    return false;
+  }
+
+  /** Tell every view the message list changed structurally, so each rebuilds its display. */
+  _emitMessagesChanged() {
+    globalThis.Hooks?.callAll?.(SimulacrumHooks.MESSAGES_CHANGED, { source: 'conversation' });
   }
 
   /**
@@ -340,6 +363,10 @@ class ConversationManager {
 
     // Trigger auto-save if callback is provided
     this._triggerStateChange();
+
+    // Every view rebuilds empty, and queued prompts (whose context is now gone) are dropped.
+    this._emitMessagesChanged();
+    globalThis.Hooks?.callAll?.(SimulacrumHooks.CONVERSATION_CLEARED, { source: 'conversation' });
   }
 
   /**
