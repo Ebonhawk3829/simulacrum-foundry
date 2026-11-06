@@ -6,7 +6,7 @@ documentation it ships — says nothing about flags. Its real documentation is a
 GitHub wiki, which is not installed with the module.
 
 The shapes below were read out of CAT's own schema at the version this world runs
-(v0.1.6, `scripts/lib/macros.mjs`) and out of a stored document that uses it.
+(v0.1.7, `scripts/lib/macros.mjs`) and out of a stored document that uses it.
 
 ---
 
@@ -225,7 +225,7 @@ For work that runs when a summon is created or removed (cleanup, a follow-up), f
 3. **The macro belongs on the item that SUMMONS.** CAT's `SummonEvent` builds its trigger from
    `this.summon.sourceDocument` — the ITEM that created the summon — and only pushes it if that
    document has a CAT flag. So author the follow-up on the summoning item, not the summoned actor's
-   items. `summonPasses` (0.1.6) = `preCreate`, `create`, `preDelete`, `delete`, `placed`,
+   items. `summonPasses` (0.1.7) = `preCreate`, `create`, `preDelete`, `delete`, `placed`,
    `removed`; concentration-end may route through `delete` OR `removed`, so attach to both and make
    the body idempotent.
 4. **An activity left on the summoner measures range from the summoner.** midi measures an

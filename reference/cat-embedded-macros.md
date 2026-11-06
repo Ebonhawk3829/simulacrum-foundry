@@ -4,7 +4,7 @@ For the abilities flags cannot express. Reading game state, branching on who did
 what, or calling midi-qol's workflow utilities needs code, and about 40% of the
 abilities in this world's own library need exactly that.
 
-Written from CAT's own source at v0.1.6 (`lib/embeddedMacros.mjs`, `lib/event.mjs`)
+Written from CAT's own source at v0.1.7 (`lib/embeddedMacros.mjs`, `lib/event.mjs`)
 and from Chris's Premades' macros, which are the working examples.
 
 ---
@@ -228,7 +228,7 @@ event family: `workflowPasses`, `combatPasses`, `rollPasses`, `effectPasses`, `a
 and `grapplePasses`. Read the one for the event you are attaching to — a name that is valid
 for one event is not valid for another.
 
-CAT 0.1.6's `workflowPasses` members are: `preTargeting`, `preItemRoll`, `targeting`,
+CAT 0.1.7's `workflowPasses` members are: `preTargeting`, `preItemRoll`, `targeting`,
 `preambleComplete`, `attackRollConfig`, `attackRoll`, `attackRollBonuses`,
 `attackRollMissedBonuses`, `optionalBonusAttack`, `attackRollComplete`, `savesComplete`,
 `damageRoll`, `optionalBonusDamage`, `damageRollBonuses`, `damageRollComplete`,

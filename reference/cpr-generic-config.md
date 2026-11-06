@@ -1,7 +1,7 @@
 # CPR generic macro settings
 
 Every generic macro in Chris's Premades and the settings each accepts in
-`flags.cat.genericConfig`. Generated from CPR source at **2.1.6** by
+`flags.cat.genericConfig`. Generated from CPR source at **2.1.7** by
 `resources/generate-cpr-config.mjs` — do not hand-edit; re-run the generator.
 
 Nothing publishes this list. CPR declares it in code, on each generic's exported
@@ -37,18 +37,21 @@ Types: `checkbox` (boolean), `text`, `number`, `select`, `select-many` (array),
 `selectIdentifiers` (array of item identifiers). Default is what is used when the
 setting is absent.
 
-**62 generics, 337 settings.** A generic that takes no
-settings is not listed — it needs no configuration to attach.
+**69 generics: 64 with settings, 5 with none (346 settings total).**
 
 ---
 
 ## `actionDismissal`
+
+Deletes the item once its roll finishes. Bound on an item. Fires on `itemRollFinished`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `activityId` | selectActivity | `''` | Activity |
 
 ## `additionalTargets`
+
+Prompts to add nearby tokens as extra targets of a matching item, then rolls this item or an activity. Bound on an item. Fires on `actorTargeting`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -65,6 +68,8 @@ settings is not listed — it needs no configuration to attach.
 
 ## `attackBonus`
 
+Offers a bonus formula on a d20 roll. Bound on an effect, an activity or an item.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `bonus` | text | `''` | Formula added to the roll when this bonus is taken. |
@@ -79,6 +84,8 @@ settings is not listed — it needs no configuration to attach.
 | `attackType` | select | `''` | Limit this feature by attack type. |
 
 ## `attackRider`
+
+Offers this activity as an optional damage bonus on a hit, then rolls it on the hit targets. Bound on an activity. Fires on `actorOptionalBonusDamage` and `actorRollFinished`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -103,17 +110,23 @@ settings is not listed — it needs no configuration to attach.
 
 ## `auraDesignation`
 
+Aura filter that only passes creatures grappled by the aura's source. Selected as an aura's `filter`. Fires on `filter`. / export const grappledBySource = { rules: 'all', version: '2.1.3', aura: [ { pass: 'filter', macro: grappled, priority: 50 } ] }; function summoner({source, target}) { return summonUtils.getSummonData(source)?.owner === target; } /** Aura filter that only passes the summoner of the aura's source. Selected as an aura's `filter`. Fires on `filter`. / export const summonerOfSource = { rules: 'all', version: '2.1.3', aura: [ { pass: 'filter', macro: summoner, priority: 50 } ] }; function notDesignated({source, target, sourceToken, targetToken, descriptor}) { const designated = source.flags['chris-premades']?.auraDesignated?.[descriptor.id]; if (!designated) return tokenUtils.isEnemy(sourceToken, targetToken); return !designated.includes(target.uuid); } /** Aura filter that skips the creatures the caster designated when casting the spell, or the caster's allies when nothing was designated. Selected as an aura's `filter`. Fires on `filter`. / export const notDesignatedBySource = { rules: 'all', version: '2.1.4', aura: [ { pass: 'filter', macro: notDesignated, priority: 50 } ] }; async function designate({document: item, workflow}) { if (workflow.activity.id !== item.system.activities.contents[0]?.id) return; const identifier = documentUtils.getIdentifier(item); const key = 'auraDesignated.' + identifier; if (!automationUtils.getGenericConfigValue(item, 'chris-premades', 'auraDesignation', 'choose')) { if (workflow.actor.flags['chris-premades']?.auraDesignated?.[identifier]) await documentUtils.setFlag(workflow.actor, 'chris-premades', key, null); return; } await designateCreatures(item, workflow, workflow.actor, 'CHRISPREMADES.Macros.Generic.AuraDesignation.Prompt', key); } /** Before the spell's aura is created, prompts the caster for creatures it leaves unaffected; the caster is always one. Without `choose`, nothing is designated and the filter leaves out the caster's allies. Pair with the `notDesignatedBySource` aura filter on an aura effect whose identifier matches the item's. Bound on an item. Fires on `itemPreambleComplete` for the item's first activity.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `choose` | checkbox | `false` | Prompt for unaffected creatures on cast. When off, only enemies are affected. |
 
 ## `banish`
 
+Hides the affected actor's tokens while the effect exists and reveals them when it is deleted. Bound on an effect. Fires on `created` and `deleted`. An effect flagged `flags.cat.banish.permanent` that runs its full duration leaves the tokens hidden.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `animation` | selectAnimation | `[object Object]` | Animation |
 
 ## `bladeSpell`
+
+Makes an attack with one of the caster's equipped weapons against a single target, then applies on-hit riders. Bound on an item. Fires on `itemRollFinished`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -150,12 +163,16 @@ settings is not listed — it needs no configuration to attach.
 
 ## `checkModifier`
 
+Adds d20 modifiers to a roll and rerolls it. Bound on an effect or an item. Fires on `actorBonus`.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `modifier` | text | `''` | modifier |
 | `ability` | select-many | `[]` | Abilities |
 
 ## `choiceRemoveCondition`
+
+Prompts to remove listed conditions from the user or its target once the roll finishes. Bound on an activity. Fires on `activityPreTargeting` and `activityRollFinished`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -169,6 +186,8 @@ settings is not listed — it needs no configuration to attach.
 
 ## `conditionAutoSave`
 
+Makes the actor automatically succeed on saves against activities that apply one of the listed conditions. Bound on an item. Fires on `actorTargetSituational`.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `conditions` | select-many | `[]` | Conditions |
@@ -177,6 +196,8 @@ settings is not listed — it needs no configuration to attach.
 
 ## `contestedCheck`
 
+Rolls a check for the user and sets the activity's check DC to the result. Bound on an activity. Fires on `activityTargeting` and `activityPreambleComplete`.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `sourceSkills` | select-many | `[]` | Skills the user contests with. The highest total is rolled. The activity's own check is the target's side. |
@@ -184,7 +205,22 @@ settings is not listed — it needs no configuration to attach.
 | `advantageMaxSize` | select | `''` | Roll the contest with advantage when every target is this size or smaller. |
 | `sizeCheck` | select | `''` | Remove targets that are too large or immune for this grapple or shove. |
 
+## `contextAdvantage`
+
+Before a listed ability check, saving throw, skill or tool check, CAT asks whether to roll it with advantage. Bound on an item or an effect. Fires on `actorContext`. An item must be equipped, and attuned if it needs attunement.
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `check` | select-many | `[]` | Check Abilities |
+| `save` | select-many | `[]` | Save Abilities |
+| `skill` | select-many | `[]` | Skills |
+| `tool` | select-many | `[]` | Tools |
+| `statuses` | select-many | `[]` | Blocking Conditions |
+| `label` | text | `''` | Label |
+
 ## `damageBonusToOneRoll`
+
+Offers a damage bonus on a matching damage or healing roll. Bound on an effect or an item. Fires on `actorOptionalBonusDamage`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -212,12 +248,16 @@ settings is not listed — it needs no configuration to attach.
 
 ## `endIfUnaffected`
 
+Ends concentration on the spell when the roll left no creature affected. Bound on an item or an activity. Fires on `itemRollFinished` and `activityRollFinished`.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `condition` | select | `failedSave` | End concentration on the spell when the roll has this outcome. |
 | `activityId` | selectActivity | `''` | Only check uses of this activity. Leave empty to check every activity. |
 
 ## `extraAttack`
+
+Splits a number of attacks with another item among nearby enemies once the roll finishes. Bound on an activity. Fires on `activityRollFinished`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -227,7 +267,18 @@ settings is not listed — it needs no configuration to attach.
 | `identifier` | text | `unarmed-strike` | Identifier of the attack item. |
 | `animation` | selectAnimation | `[object Object]` | Animation |
 
+## `firearm`
+
+Firearm rules. A natural roll at or below the misfire score turns the attack into a miss and damages the firearm, and a damaged or broken firearm can't attack. Weapon properties: `explosive` makes creatures within 5 feet of each hit target save (Dex, DC 8 + Dex + proficiency) or take 1d8 Fire; `recoil` blocks attacks beyond the weapon's normal range for the rest of the turn after an attack in combat; `blaring` gives Disadvantage on Stealth until the start of the user's next turn. Bound on an item. Fires on `itemPreTargeting`, `itemPreambleComplete`, `itemAttackRollComplete` and `itemRollFinished`. The item's `repair` activity rolls a tinker's tools check against 8 + the misfire score; a failure breaks the firearm.
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `misfire` | number | `0` | Misfire Score |
+| `unproficientPenalty` | number | `1` | Misfire Increase Without Proficiency |
+
 ## `grapple`
+
+Attempts to grapple each target before the activity rolls. Bound on an activity. Fires on `activityPreItemRoll`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -240,11 +291,15 @@ settings is not listed — it needs no configuration to attach.
 
 ## `heroicInspiration`
 
+Gives Heroic Inspiration to the activity's user or its targets. Bound on an activity. Fires on `activityPreTargeting` and `activityRollFinished`. Creatures that already have Heroic Inspiration or are not characters are skipped, and the use is cancelled when nobody is left.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `affects` | select | `self` | Give Heroic Inspiration to the activity's user or to its targets. |
 
 ## `hide`
+
+Applies a hide effect to the user once the roll finishes, unless any target failed its save. Bound on an activity. Fires on `activityRollFinished`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -260,6 +315,8 @@ settings is not listed — it needs no configuration to attach.
 
 ## `itemRecovery`
 
+Enchants another item on the actor with an extra uses recovery entry. Bound on an item. Fires on `created`, `medkit`, and `munched`.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `identifier` | text | `''` | Identifier |
@@ -267,6 +324,8 @@ settings is not listed — it needs no configuration to attach.
 | `formula` | text | `''` | Formula for the uses recovered. Leave empty to recover all uses. |
 
 ## `modifyNextDamage`
+
+Maximizes or doubles the bearer's next damage roll. Bound on an effect. Fires on `actorDamageRollComplete`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -277,6 +336,8 @@ settings is not listed — it needs no configuration to attach.
 
 ## `movementAnimation`
 
+Prompts for locations within range once the roll finishes, then moves the user's token through them. Bound on an activity. Fires on `activityRollFinished`.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `selectLocationsAnimation` | selectAnimation | `[object Object]` | Selection Animation |
@@ -285,12 +346,16 @@ settings is not listed — it needs no configuration to attach.
 
 ## `moveRegion`
 
+Name a placed region after its spell and show the spell's move activity until the region is gone. @param {object} region Placed region. @param {object} item Spell that placed it. @param {string} moveIdentifier Identifier of the activity that moves the region. @returns {Promise<void>} / export async function prepareMovableRegion(region, item, moveIdentifier) { await documentUtils.update(region, {name: item.name}); const move = itemUtils.getActivityByIdentifier(item, moveIdentifier); if (!move) return; const unhideEffect = await itemUtils.unhideActivities(item, [move.id], {ids: true, favorite: true}); if (unhideEffect) await documentUtils.makeDependent(region, [unhideEffect]); } export async function syncRegionLights(region) { const {x, y} = getRegionCenter(region); const updates = region.parent.lights.filter(light => light.flags.dnd5e?.dependentOn === region.uuid && (light.x !== x || light.y !== y)).map(light => ({_id: light.id, x, y})); if (updates.length) await documentUtils.updateEmbeddedDocuments(region.parent, 'AmbientLight', updates); } function getPlacedRegion(activity, scene) { return regionUtils.getPlacedRegions(scene, activity).at(-1); } async function use({document, workflow}) { const newRegion = workflow.template; if (!newRegion) return; const config = automationUtils.getGenericConfigValues(document, 'chris-premades', 'moveRegion', configKeys); const identifier = documentUtils.getIdentifier(workflow.item); const sourceActivity = workflow.item.system.activities.get(config.sourceActivityId); if (!sourceActivity) { await documentUtils.deleteDocument(newRegion); return Logging.addMacroWarning('CPR', identifier, 'CHRISPREMADES.Macros.Generic.MoveRegion.NoSourceActivity', {notify: 'warn'}); } const region = getPlacedRegion(sourceActivity, newRegion.parent); if (!region) { await documentUtils.deleteDocument(newRegion); return Logging.addMacroWarning('CPR', identifier, 'CHRISPREMADES.Macros.Generic.MoveRegion.NoRegion'); } if (config.maxRange) { const oldArea = regionUtils.getArea(region); const newArea = regionUtils.getArea(newRegion); const distance = Math.hypot(newArea.x - oldArea.x, newArea.y - oldArea.y) / region.parent.dimensions.distancePixels; if (distance > config.maxRange) { await documentUtils.deleteDocument(newRegion); return Logging.addMacroWarning('CPR', identifier, 'CHRISPREMADES.Macros.Generic.MoveRegion.TooFar', {notify: true, format: {maxRange: config.maxRange}}); } } const {shapes, elevation, levels} = newRegion.toObject(); await documentUtils.deleteDocument(newRegion); await documentUtils.update(region, {shapes, elevation, levels}); await syncRegionLights(region); } /** Moves the region an earlier activity placed to the area this activity places, then deletes the new area. Bound on an activity. Fires on `activityRollFinished`. Lights made dependent on the region follow it to its new centre.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `sourceActivityId` | selectActivity | `''` | Activity that placed the region this activity moves. |
 | `maxRange` | number | `0` | Furthest the region's centre can move from its old centre. 0 ignores distance. |
 
 ## `multiSingleTarget`
+
+Splits a rolled number of single-target attacks among the selected targets. Bound on an item. Fires on `itemRollFinished`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -306,11 +371,15 @@ settings is not listed — it needs no configuration to attach.
 
 ## `negateDamageFromEffect`
 
+Negates the item's damage to targets that carry one of the listed effects. Bound on an item. Fires on `itemDamageComplete`.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `identifiers` | selectIdentifiers | `[]` | Identifiers |
 
 ## `nextHitRider`
+
+Adds bonus damage to the next hit, then rolls a rider activity on the target and removes the effect. With no bonus, the next hit only triggers the rider. Bound on an effect. Fires on `actorOptionalBonusDamage` and `actorRollFinished`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -324,6 +393,8 @@ settings is not listed — it needs no configuration to attach.
 
 ## `packTactics`
 
+Grants advantage on attack rolls if an ally is near the target. - `attackType`: Limit this feature to the selected attack type. - `range`: The target must be within this distance from any token that would grant advantage. - `benefit`: Which character gains advantage when conditions are met.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `attackType` | select | `attack` | Limit this feature by attack type. |
@@ -331,6 +402,8 @@ settings is not listed — it needs no configuration to attach.
 | `benefit` | select | `self` | Who gains advantage when the conditions of this feature are met. |
 
 ## `preventDeath`
+
+Offers to use this item when a hit would drop the actor to 0 hit points, keeping the actor alive. Bound on an item. Fires on `targetDamageComplete`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -344,6 +417,8 @@ settings is not listed — it needs no configuration to attach.
 
 ## `proficiencyChoice`
 
+Prompts for a skill or tool for each target and applies an effect built around the choice. Bound on an activity. Fires on `activityRollFinished`. With no targets, the user is prompted instead.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `effect` | selectEffect | `''` | Effect applied to each target. The {key} placeholder in its change keys becomes the chosen skill or tool path. |
@@ -352,11 +427,15 @@ settings is not listed — it needs no configuration to attach.
 
 ## `proneOnFail`
 
+Knocks prone each target that failed the save. Bound on an activity. Fires on `activityPreItemRoll`, `activityPreambleComplete` and `activityRollFinished`.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `skipProne` | checkbox | `false` | Targets that are already prone or immune to it do not roll the save. The use is cancelled when no target is left. |
 
 ## `proneOnHit`
+
+Knocks prone each target that was hit. Bound on an activity. Fires on `activityRollFinished`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -384,6 +463,8 @@ settings is not listed — it needs no configuration to attach.
 
 ## `pushOnFail`
 
+Moves targets toward or away from the user once the roll finishes. Bound on an activity. Fires on `activityRollFinished`.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `distance` | text | `5` | Maximum distance moved, in feet. Accepts a formula. |
@@ -404,6 +485,8 @@ settings is not listed — it needs no configuration to attach.
 
 ## `redirectAttack`
 
+Offers to redirect an attack against the user to another nearby creature. Bound on an item. Fires on `targetTargeting`. Nothing is offered once the user's reaction is spent.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `activityId` | selectActivity | `''` | Activity rolled when the attack is redirected. Leave blank to use the item. |
@@ -414,6 +497,8 @@ settings is not listed — it needs no configuration to attach.
 | `requireCover` | checkbox | `false` | Only offer the redirect while the creature being attacked has cover from the attacker. |
 
 ## `reduceMaxHP`
+
+Reduces the hit point maximum of targets by the damage dealt or by a rolled formula. Bound on an activity. Fires on `activityRollFinished`. Nothing happens when no target was hit. Repeat uses add to the existing reduction from the same activity. A target whose reduction reaches its hit point maximum is marked dead.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -427,6 +512,8 @@ settings is not listed — it needs no configuration to attach.
 
 ## `reflectOnHit`
 
+Rolls an activity from the effect's source item, or the item a transferred effect sits on, against each creature that hits the effect's bearer with an attack. Bound on an effect. Fires on `targetAttackRollComplete`, so it runs before the attack's damage is applied. Each hit bearer reflects once, from its same-named effect with the highest cast level.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `rollActivity` | selectActivity | `''` | Activity on the effect's source item rolled against the attacker, at the level the effect was cast. |
@@ -437,6 +524,8 @@ settings is not listed — it needs no configuration to attach.
 | `animation` | selectAnimation | `[object Object]` | Animation |
 
 ## `rerollCheckWithBonus`
+
+Rerolls a d20 roll with an added bonus and keeps the new result. Bound on an item. Fires on `actorBonus`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -488,6 +577,8 @@ settings is not listed — it needs no configuration to attach.
 
 ## `restoreUses`
 
+Controls when this item's restore activity can be used, and offers it when the item runs out of uses. Bound on an item. Fires on `itemPreTargeting`. The restore activity is blocked while no uses are spent. When the offered restore runs, the original activity is used again afterwards.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `restoreActivity` | selectActivity | `''` | Activity that restores this item's uses. Leave blank to use the first activity that restores a use of this item. |
@@ -495,6 +586,8 @@ settings is not listed — it needs no configuration to attach.
 | `offerRestore` | checkbox | `true` | When another activity needs a use and none remain, offer to run the restore activity first. |
 
 ## `rolledDuration`
+
+Rolls the effect's duration when it is created. Bound on an effect. Fires on `created`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -523,12 +616,16 @@ settings is not listed — it needs no configuration to attach.
 
 ## `saveToEndWhenFar`
 
+Rolls a save at the end of the creature's turn while it is far from the effect's source. Bound on an effect. Fires on `actorTurnEnd`. A successful save removes the effect.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `distance` | number | `30` | The save is offered only when the creature ends its turn farther than this from the effect's source. |
 | `rollActivity` | selectActivity | `''` | Save activity on the source item rolled at the end of the creature's turn. A success removes this effect. |
 
 ## `selectDamageType`
+
+Prompts for a damage type and applies it to every damage roll. With `atCast`, the choice is made once when the spell is cast. Bound on an item. Fires on `itemPreambleComplete` and `itemDamageRoll`. No prompt is shown when fewer than two types are available.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -561,6 +658,8 @@ settings is not listed — it needs no configuration to attach.
 
 ## `specialItemUse`
 
+Uses an activity from another of the user's items once the roll finishes. Bound on an activity. Fires on `activityRollFinished`. The item and activity are prompted for when more than one qualifies.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `identifiers` | selectIdentifiers | `[]` | Items this feature can use. When set, item types are ignored. |
@@ -574,6 +673,8 @@ settings is not listed — it needs no configuration to attach.
 
 ## `spellAnimation`
 
+Plays an animation at each target and an animation over the placed area once the roll finishes. Bound on an item. Fires on `itemRollFinished`.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `animation` | selectAnimation | `[object Object]` | Plays from the caster to each target. |
@@ -582,6 +683,8 @@ settings is not listed — it needs no configuration to attach.
 | `areaOnly` | checkbox | `false` | Skip the area animation for activities without an area. |
 
 ## `summonModifier`
+
+Modifies summons as they are created. Bound on an item. Fires on `actorPreCreate`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -592,6 +695,8 @@ settings is not listed — it needs no configuration to attach.
 | `confirm` | checkbox | `false` | Prompt to Use |
 
 ## `targetCreatureTypes`
+
+Removes targets that do not match the configured creature types. Bound on an item. Fires on `itemTargeting`. Targets without an actor are always removed.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -606,6 +711,8 @@ settings is not listed — it needs no configuration to attach.
 
 ## `teleport`
 
+Teleports the user, or each target that failed its save, once the roll finishes. Bound on an activity. Fires on `activityRollFinished`. Provide preselected targets by setting the workflow property `chris-premades.teleportCompanions` to an array of token ids or token documents.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `targets` | select | `self` | Teleport the user, each target that failed its save, or the user to a space near one of the targets. Range is measured from the user, or from the chosen target for Near a Target. |
@@ -615,6 +722,7 @@ settings is not listed — it needs no configuration to attach.
 | `companions` | number | `0` | How many allies within Companion Range the user may bring along. They keep their position relative to the user. |
 | `companionRange` | number | `5` | Companion Range |
 | `companionMaxSize` | checkbox | `false` | Companions No Larger Than User |
+| `visitedThisTurn` | checkbox | `false` | On a self teleport, only allow spaces the user occupied earlier this turn. |
 | `excludeUser` | checkbox | `false` | On a self teleport, remove the user from the activity's targets. Use for areas centred on the space the user leaves. |
 | `animation` | selectAnimation | `[object Object]` | Animation |
 
@@ -667,12 +775,16 @@ settings is not listed — it needs no configuration to attach.
 
 ## `unhideActivities`
 
+Unhides activities on the effect's origin item while the effect exists. Bound on an effect. Fires on `preCreated`.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `activityIds` | selectActivities | `[]` | Activities |
 | `favorite` | checkbox | `false` | Favorite Activities |
 
 ## `useOnEvent`
+
+Uses this activity after a rest or at the start or end of its owner's turn. Bound on an activity. Fires on `actorShort`, `actorLong`, `actorTurnStart` and `actorTurnEnd`. Nothing happens when the activity's costs cannot be paid, and turn events skip an incapacitated owner.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -682,12 +794,39 @@ settings is not listed — it needs no configuration to attach.
 
 ## `weaponAnimation`
 
+Plays an attack animation from the attacker to each target after the attack roll, or after the saves for a weapon's save activity such as a cone or burst of fire. Bound on an item. Fires on `itemAttackRollComplete` and `itemSavesComplete`. Set the workflow property `skipWeaponAnimation` to turn off.
+
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `activityId` | selectActivity | `''` | Only animate this activity. Leave empty for all of them. |
 | `advanced` | checkbox | `false` | Play the Advanced Animation instead. Its options add blood, screen shake and thrown attacks. |
 | `animation` | selectAnimation | `[object Object]` | Animation |
 | `advancedAnimation` | selectAnimation | `[object Object]` | Advanced Animation |
+
+## Generics with no settings
+
+Attached by `identifier` alone — they take no `genericConfig`:
+
+### `immuneAutoSucceed`
+
+Targets succeed on checks or saves from this activity if it would apply a condition to which they are immune. Bound on an activity. Fires on `activityPreambleComplete`.
+
+### `inheritCastLevel`
+
+Uses a follow-up activity at the level the concentration spell was cast at, without the configuration dialog. A number in the concentration effect's `flags.cat.castLevelBonus` raises that level. Bound on an activity. Fires on `activityPreTargeting`.
+
+### `removeRegion`
+
+Deletes the effect it is bound on at the next turn. Bound on an effect. Fires on `actorEveryTurn`.
+
+### `storedItem`
+
+Turns a patch or card into the item or creatures it stores when it is used. Bound on an item. Fires on `itemRollFinished`. The item stores its contents in `flags.cat.storedItem`: `uuid` of an item or actor, plus `quantity`, `updates` for an item, or `count` for creatures.
+
+### `useOnDeath`
+
+Uses this item when its owner gains the dead status. Bound on an item. Fires on `actorCreated`. Unequipped items are skipped.
+
 
 ---
 

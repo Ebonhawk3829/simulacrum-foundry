@@ -14,16 +14,22 @@ HOW TO USE
 - Each entry names the mechanism and a **Look for** line: the key to search the world for
   (`document_search` over items, or a scan of `flags.cat` / `flags.cat.genericConfig`).
 - A **Breaking** entry means an existing item may now behave differently, or not at all.
-- This file is **rewritten at each sync**, not appended. It is the delta since the pinned version.
+- This file is **rewritten at each sync**, not appended. It covers the delta back to the last
+  reference regeneration, so older entries here are kept only while an item built before the
+  current sync could still be affected by them.
 
 PINNED
 
-- Reference synced to **CAT 0.1.6**, **CPR 2.1.6**, **midi-qol 14.6.6** and **DAE 14.6.5**
-  (CPR 2.1.6 requires CAT 0.1.6; midi 14.6.5 requires DAE ≥14.6.4 and is dnd5e **6.0.x only**, max
+- Reference synced to **CAT 0.1.7**, **CPR 2.1.7**, **midi-qol 14.6.6** and **DAE 14.6.5**
+  (CPR 2.1.7 requires CAT 0.1.7; midi 14.6.5 requires DAE ≥14.6.4 and is dnd5e **6.0.x only**, max
   6.0.999 — dnd5e 6.1 breaks midi's damage card).
-- Previous sync: CAT 0.1.4 / CPR 2.1.4; midi 14.6.4 / DAE 14.6.3. Everything below is CAT
-  0.1.5–0.1.6, CPR 2.1.5–2.1.6, midi 14.6.5–14.6.6 and DAE 14.6.4–14.6.5.
-- The full generic settings list for the current CPR is in `cpr-generic-config.md` (regenerated).
+- Previous sync: **CAT 0.1.6 / CPR 2.1.6** (midi 14.6.6 / DAE 14.6.5). Everything below is CAT
+  0.1.5–0.1.7, CPR 2.1.5–2.1.7, midi 14.6.5–14.6.6 and DAE 14.6.4–14.6.5. The change this sync is
+  **CAT 0.1.7 and CPR 2.1.7** at the top; the 0.1.5–0.1.6 / 2.1.5–2.1.6 and midi/DAE entries are
+  retained because an item built before this sync can still hit them.
+- The full generic settings list for the current CPR is in `cpr-generic-config.md` (regenerated at
+  **2.1.7** — now **64 generics, 346 settings**; `contextAdvantage` and `firearm` are new, and
+  `teleport` gained `visitedThisTurn`).
 
 ---
 
@@ -31,32 +37,84 @@ PINNED
 
 Run these searches, then read each hit's `flags.cat`:
 
-- [ ] Any `flags.cat.genericConfig['chris-premades']` using **`areaAnimation`** or
-      **`advancedMeleeAttack`** — both are BREAKING renames in CPR 2.1.5 (below).
-- [ ] Any macro referencing **`constants.massApplyExcludeSources`** (→ `contentSources`),
-      **`animationUtils.getModuleAnimations`** (→ `getModuleAnimationNotices`), or
-      **`itemUtils.getBaseWeaponLabel`** (new).
-- [ ] Any **weapon** whose mastery behaviour is a hand-built effect linked from its attack activity
-      — CAT 0.1.6 now applies weapon mastery itself (setting: Weapon Mastery), so the hand-built
-      effect may double up or become redundant.
-- [ ] Any **movement** macro that could use the new `origin` field on move events.
-- [ ] Any CPR item that should now use the new generics **`modifyNextDamage`**, **`rolledDuration`**
-      or **`weaponAnimation`**.
-- [ ] Any macro that splices text into a usage card's `content` — midi 14.6.5 turns that into a note
-      at the bottom of the card (with a warning); use `MidiQOL.addCardNote` to place it deliberately.
-- [ ] Any item relying on an effect applied "whatever the save" reaching **missed** creatures — it
-      now goes only to targets that were hit; and anything hand-applying a status that
-      **Statuses Applied** (`midiProperties.statuses`) now does directly.
-- [ ] Any DAE item effect with **no Replacement** — 14.6.4 fills its workflow references from the
-      caster; the *Effect application* dialog is replaced by *Convert changes to Origin replacement*.
+- [ ] **CPR attack riders** — any item with `flags.cat.genericConfig['chris-premades'].attackRider`
+      (or an attack-rider automation). As of CPR **2.1.7** a rider is offered **only while the item
+      is equipped**, and attuned when it needs attunement. An unequipped or unattuned item no longer
+      offers its rider — a rider that "stopped firing" is this, not a broken build.
+- [ ] **`ignoreCover` and `damageBonusToOneRoll`** — the same **equip/attune gate** now applies
+      (2.1.7). Additionally a cantrip-only `damageBonusToOneRoll` now also reaches the **weapon attack
+      of a blade cantrip** (e.g. True Strike), where before it applied to the spell attack only.
+- [ ] **CPR `teleport` generic** — 2.1.7 adds `visitedThisTurn` (a **self** teleport may only land on
+      spaces the user occupied earlier this turn). Off by default; check any teleport generic that
+      should adopt it.
+- [ ] **CPR generics that are new or moved** — new: **`firearm`**, **`immuneAutoSucceed`**,
+      **`contextAdvantage`**, **`storedItem`**. Gone: the legacy barbarian **`dangerSense`**, totem
+      **`bearAspect`** and warlock **`unarguableWizardry`** macros, replaced by **`contextAdvantage`**.
+      Anything referencing the removed identifiers is stale.
+- [ ] **CAT summons** — CAT's `summon` generic gained a **One creature** choice (entry/profile with an
+      optional label) and a **Dismiss Activity**. Check whether a summon item should adopt either.
+- [ ] **Placed-region activities** — an activity's placed area can now carry **Adjust Darkness Level**,
+      **Modify Movement Cost** and **Suppress Weather** behaviors (CatKit *Placed Region* tab).
+- [ ] **CPR firearms** — firearms are now a base weapon type with the **Firearms** proficiency; the
+      2014 Exandria firearms gained **Reload**/**Repair** activities. Check any hand-built reload or
+      repair feature against what CPR now automates.
+- [ ] **Weapon mastery** (from CAT 0.1.6) — a weapon whose mastery is a hand-built effect can double
+      up with CAT's own application under the **Weapon Mastery** setting; this world sets it `none`.
+      See `world-conventions.md` for the three-part test.
+- [ ] **Animation renames** (CPR 2.1.5, still current) — any `flags.cat.genericConfig['chris-premades']`
+      using **`areaAnimation`** or **`advancedMeleeAttack`**: both are BREAKING renames (→
+      `spellAnimation` / `weaponAnimation`).
+- [ ] **CAT API renames** (0.1.5, still current) — any macro referencing
+      **`constants.massApplyExcludeSources`** (→ `contentSources`) or
+      **`animationUtils.getModuleAnimations`** (→ `getModuleAnimationNotices`).
+- [ ] **Movement macros** — move events now pass the token's **`origin`** (CAT 0.1.6).
+- [ ] **Usage-card `content`** (midi 14.6.5) — any macro that spliced text into a card's `content`:
+      it now becomes a note at the bottom of the card (with a warning). Use `MidiQOL.addCardNote`.
+- [ ] **Statuses Applied** (midi 14.6.5) — anything hand-applying a status that
+      `midiProperties.statuses` now does directly; and any effect applied "whatever the save" now
+      reaches only **hit** targets.
+- [ ] **DAE Replacement** (14.6.4) — any DAE item effect with **no Replacement**: its workflow
+      references are now filled from the caster. See `dnd5e-6.0-fields.md` §7.
 
 ---
+
+## CAT 0.1.7
+
+### Update notes
+- **Summons — One creature choice.** A summon activity can offer the user a single entry, or a single
+  profile of the activity; entries can carry a **Label** for that choice. **Look for:** any item with
+  `flags.cat.macros` containing `{ source: 'cat', identifier: 'summon' }`, or
+  `flags.cat.genericConfig.cat.summon` — decide whether the *One creature* choice belongs on it.
+- **Summons — Dismiss Activity.** Using it dismisses the item's summons. **Look for:** the same
+  summon-generic items; a summon that should be dismissable may want it attached.
+- **Placed-region behaviors.** An activity can add **Adjust Darkness Level**, **Modify Movement Cost**
+  and **Suppress Weather** behaviors to its placed area; the activity CatKit's *Placed Region* tab
+  lists and edits them. **Look for:** activities that place a region (their region-behavior data, or
+  a CatKit region tab). Purely additive.
+- **Mass apply — Switch All Sources / Switch All Rules.** UI only; *Switch All Rules* applies the
+  2014 or 2024 automation where one exists.
+
+### API additions (only relevant to macros we author)
+- `tokenUtils.teleportToken` and `tokenUtils.aimDestination` take **`allowedPoints`** — a list of
+  token centres the destination must match. **Look for:** macros calling either.
+- `compendiumUtils.getDocumentByName` and `automationUtils.getCompendiumDocumentByName` take an
+  optional **`rules`** option and match only documents with those rules. **Look for:** macros doing
+  compendium lookups by name.
+- New automation config type **`documentMap`** (rows of name → document, optional count;
+  `documentType` to limit drops, `count: true` to show the count). **Look for:** macros with config UI.
+
+### Bug fixes (no audit needed)
+- Patch for a **dnd5e 6.0.x bug that 6.1.0 removes**: activities remember their range, activation,
+  duration and target after the card is created. On 6.1 the system does this itself, so the patch is
+  a no-op there.
+- Pushed and pulled tokens stop short of a space another token occupies.
 
 ## CAT 0.1.6
 
 ### Settings
 - **Weapon Mastery** (new): CAT applies the mastery property chosen for a weapon attack, for player
-  characters by default.
+  characters by default. **Look for:** a weapon whose mastery is a hand-built effect linked from its
+  attack activity — CAT can now apply it too, and the two can double up (see `world-conventions.md`).
 - **Advanced Weapon Proficiency** (new): advanced weapon types only offer their masteries to
   characters with an Advanced Weapon Proficiency feature (Grim Hollow).
 - Version warnings: the GM is warned when a dependency needs a newer version; the Troubleshooter
@@ -90,6 +148,38 @@ Run these searches, then read each hit's `flags.cat`:
   getter; and **hit-die roll passes** (`situational`, `bonus`, `post`) under descriptor key
   `hitDie` — `situational` can set `options.maximize`/`minimum`/`parts`/`multiplier`.
 
+## CPR 2.1.7  (requires CAT 0.1.7)
+
+### Changed behaviour — the audit items
+- **Attack riders are offered only while the item is equipped**, and attuned when it needs attunement.
+  **Look for:** `flags.cat.genericConfig['chris-premades'].attackRider` (and attack-rider automations)
+  on weapons/gear that are not always equipped.
+- **`ignoreCover` and `damageBonusToOneRoll` skip items that aren't equipped** (or attuned when they
+  need attunement). **Look for:** those two generics in `flags.cat.genericConfig['chris-premades']`.
+- **Cantrip-limited damage bonuses now also apply to a blade cantrip's weapon attack** (True Strike).
+  **Look for:** a `damageBonusToOneRoll` config limited to cantrips.
+- **`weaponAnimation` also animates a weapon's save activities** (a cone or burst of fire).
+  **Look for:** `weaponAnimation` on weapons that have save activities.
+
+### New generics
+- **`firearm`** (settings: `misfire`, `unproficientPenalty`): a natural roll at or below the misfire
+  score misses and damages the firearm; a damaged or broken firearm can't attack. Its Repair activity
+  rolls a Tinker's Tools check, and a failure breaks the firearm. It also applies the Recoil, Blaring
+  and Explosive properties.
+- **`contextAdvantage`** (settings: `check`, `save`, `skill`, `tool`, `statuses`, `label`): before a
+  chosen roll CAT asks whether to roll with advantage; chosen conditions stop the offer. This is what
+  the removed `dangerSense` / `bearAspect` / `unarguableWizardry` macros use now.
+- **`immuneAutoSucceed`** and **`storedItem`** — no settings; not listed in `cpr-generic-config.md`.
+
+### Automated content (build templates, not audits)
+- Firearms system: base weapon type + **Firearms** proficiency, eleven new weapon properties; 2014
+  Exandria firearms gain **Reload**/**Repair** activities.
+- 2014/2024 **Bard** subclasses; 2014/2024 **Healer** feat; ~80 items; *Stabilize* action; Shield
+  Guardian *Bound*; *Eldritch Eddy* summon.
+
+### Other generic/teleport changes
+- `teleport` gains **`visitedThisTurn`** (self teleport only to spaces occupied earlier this turn).
+
 ## CPR 2.1.6  (requires CAT 0.1.6)
 
 - Weapon Mastery is applied by **CAT**; Battering Roots offers Push or Topple through it.
@@ -118,6 +208,36 @@ Run these searches, then read each hit's `flags.cat`:
 - Many potions and oils (2014 and 2024); Maximize Damage / Double Damage for crit and fumble tables.
 - New animation: **Weapon Attack** (a swing/throw/shot from the base weapon and ammunition, tinted
   for non-physical damage).
+
+---
+
+## dnd5e 6.1.0 (pre-release) — NOT adopted; the gate is midi-qol
+
+- **Do not load the live world on 6.1.0.** midi-qol (through 14.6.7) caps dnd5e at **6.0.999**, and
+  its own 14.6.5 notes say 6.1 "changes damage application in ways that break midi's damage card."
+  CAT/CPR/DAE already allow 6.1 on paper; midi is the only blocker.
+- **Nothing to audit yet.** CAT 0.1.7's 6.0.x range/activation/duration patch is a no-op on 6.1, and
+  no item behaviour changes until the system is actually adopted.
+- **When 6.1 *is* adopted**, these are the audit targets (derived from the 6.0.6…6.1.0 diff):
+  - **Damage application rework** (`#4874`/`#7612`): new ignore/downgrade rules for immunity,
+    resistance and vulnerability; `applicationOptions` on the damage message; "ALL" now decomposes per
+    damage type. **Look for:** anything reading or writing `workflow.damageDetail`/`damageList`, the
+    damage application tray, or traits via `system.traits.dr/di/dv`.
+  - **Enchantment riders** (`#6357`/`#6592`): riders can sit on an enchantment active effect
+    (`rider.effects`/`items`/`activities`, `system.collectRiders`); nested riders flatten under the
+    root activity. **Look for:** enchantment automations and rider effects.
+  - **Activity `like`/`isLike`** (`#7523`): `getByType` also returns "like" activities. **Look for:**
+    workflows branching on `activity.type`.
+  - **Summon origin/target replacement** (`#7425`) and activity-type-conditional summon damage rules
+    (`#7652`). **Look for:** CAT/CPR summon generics and DAE Replacement.
+  - **Falling-damage resistance** (`#7334`): a new `damageResistanceTypes` category and special trait
+    sub-categories. **Look for:** damage-trait automations.
+  - **Antimagic region behavior** (`#5874`); `magicAvailable` moved to `ItemDataModel`. **Look for:**
+    region automations and `magicAvailable` checks.
+  - The legacy `system.bonuses.*` shim (`ActiveEffect5e.SHIM_FIELDS`) is still present in 6.1 and is
+    due for removal at **6.2**, not here.
+
+---
 
 ## midi-qol — live-use notes (observed 2026-11-01; version unpinned)
 

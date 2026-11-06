@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.6] - 2026-11-06
+
+Follows **CAT 0.1.7** and **CPR 2.1.7**, folding their changes into the reference and the upstream
+changelog, and moves the verified Foundry build to 14.370.
+
+### Changed
+
+- **Reference synced to CAT 0.1.7 / CPR 2.1.7** (CPR 2.1.7 requires CAT 0.1.7). The curated extracts
+  were re-pinned and refreshed.
+- `cpr-generic-config.md` — regenerated, and the generator now lists **every** generic, not only
+  those that take settings: **69 generics (64 with settings, 5 with none, 346 settings total)**, each
+  with a one-line description taken from CPR's own JSDoc. The new `contextAdvantage`, `firearm`,
+  `immuneAutoSucceed` and `storedItem` are all visible, the no-setting generics that were previously
+  unlisted (`inheritCastLevel`, `removeRegion`, `useOnDeath`) now appear, and the changed
+  `weaponAnimation` reads correctly ("or after the saves for a weapon's save activity"). The changed
+  `ignoreCover` ships no upstream JSDoc, so its equip/attune gate is covered in `upstream-changelog.md`.
+- `upstream-changelog.md` — rewritten for the CAT 0.1.7 / CPR 2.1.7 delta, with a precise **Look for**
+  line for each change so the agent can search the world: attack riders are now offered only while
+  the item is equipped (and attuned when it needs attunement); `ignoreCover` and `damageBonusToOneRoll`
+  gained the same equip/attune gate, and a cantrip-only `damageBonusToOneRoll` now reaches a blade
+  cantrip's weapon attack; the new `firearm`, `immuneAutoSucceed`, `contextAdvantage` and `storedItem`
+  generics; CAT summons' **One creature** choice and **Dismiss Activity**; and activity region
+  behaviors (Adjust Darkness Level, Modify Movement Cost, Suppress Weather). It also adds a **dnd5e
+  6.1.0 (pre-release)** section: midi-qol caps the system at 6.0.999 and its damage card is known to
+  break on 6.1, so 6.1.0 is not adoptable yet.
+- `cat-macro-flags.md`, `cat-embedded-macros.md` — version pins moved to CAT 0.1.7. `macros.mjs` and
+  `embeddedMacros.mjs` are unchanged; only `event.mjs` moved, adding the current `pass` to the event
+  context macros receive.
+- `README.md` — requirements updated to `midi-qol` 14.6.6 / `dae` 14.6.5 / `cat` 0.1.7 / `chris-premades`
+  2.1.7, verified on Foundry 14.370.
+- `module.json` — verified compatibility moved to Foundry 14.370.
+
 ## [0.7.5] - 2026-11-01
 
 Brings the shipped reference and the system prompt back in line with what live use has taught, and
