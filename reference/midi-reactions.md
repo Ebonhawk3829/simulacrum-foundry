@@ -4,7 +4,7 @@ Reactions are midi-qol's, not dnd5e's. dnd5e has an activation type called `reac
 what makes an ability actually *offered* in response to something is midi's. None of this
 was in any shipped reference.
 
-Read out of midi-qol's source at the version this world runs (14.6.6), in
+Read out of midi-qol's source at the version this world runs (14.6.8), in
 `src/module/utils.ts` (`reactionTypes`, `reactionTriggerLabelFor`, `doReactions`,
 `ReactionDialog`) and `src/module/activities/MidiActivityMixin.ts` (`useConditionText`,
 `reactionCondition`).
@@ -51,7 +51,7 @@ reads `reactionTypes` in `utils.ts`:
 | `reactionmoved` | `isMoved` |
 
 **`isTargeted` is never emitted.** `reactionTypes` declares `reactiontargeted ->
-"isTargeted"`, but scanning every `doReactions(...)` call site in 14.6.6 shows none ever
+"isTargeted"`, but scanning every `doReactions(...)` call site in 14.6.8 shows none ever
 passes `reactiontargeted`, so `reaction === "isTargeted"` never becomes true. For "being
 targeted by an attack", use `reaction === "preAttack"` — declared before the roll, the right
 moment for a defensive reaction — optionally narrowed:
@@ -154,5 +154,5 @@ parts, in order; each one fails **silently**.
 - **Not the reaction UI.** The `ReactionDialog` layout, the timeout setting and
   `getReactionSetting(player)` (who midi offers a prompt to) are not reproduced here — §8 is about a
   prompt you build yourself for a bystander, not midi's own.
-- **Not a full `reactionTypes` dump.** The table above is every label as of 14.6.6; read
+- **Not a full `reactionTypes` dump.** The table above is every label as of 14.6.8; read
   `reactionTypes` in `utils.ts` if midi adds one.

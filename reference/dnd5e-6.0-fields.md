@@ -554,6 +554,12 @@ Concentration, death and initiative have their own: `system.attributes.concentra
 Also note `flags.midi-qol.optional.<name>.<rollType>` **without** the `.all` suffix is no
 longer rewritten to `.all` — write `flags.midi-qol.optional.<name>.<rollType>.all`.
 
+The optional bonus's **AC** key is slated to be renamed: `flags.midi-qol.optional.<name>.ac` will
+become `…<name>.acOnAttack`, and DAE 14.6.7 added the `*`-segment field mapping that will carry the
+migration. It is **not active yet** — midi 14.6.8 still reads `.ac` and nothing registers the mapping
+— so keep writing `.ac` for now. The other optional roll types (`save`, `check`, `skill`, `damage`,
+`attack`) are unchanged. See `upstream-changelog.md`.
+
 **These fields were partly broken until 14.6.4.** midi 14.6.3 shipped them with three
 check-activity bugs, all fixed in 14.6.4: a skill or tool check could lose the roller's
 fail/success/min/max/advantage (with CAT active, a Stealth check ignored
@@ -561,7 +567,7 @@ fail/success/min/max/advantage (with CAT active, a Stealth check ignored
 chosen one with the first one's ability (Acrobatics with Strength); and a tool's check
 activity read the flags for the tool's *default* ability rather than the tool item's own.
 On 14.6.3 the fields were right for saves, attacks and single-skill checks and wrong for
-the rest; on 14.6.4 they are right throughout, and 14.6.5/14.6.6 left them unchanged.
+the rest; on 14.6.4 they are right throughout, and 14.6.5–14.6.8 left them unchanged.
 
 ---
 

@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.9] - 2026-11-08
+
+Syncs the reference to **midi-qol 14.6.8** and **DAE 14.6.7** (from 14.6.6 / 14.6.5).
+
+### Changed
+
+- `upstream-changelog.md` — the PINNED block now reads CAT 0.1.7 / CPR 2.1.7 / midi **14.6.8** / DAE
+  **14.6.7**, the old "live-use notes" became a proper **midi-qol 14.6.7** section, and **midi 14.6.8**
+  (the GitHub move; installing midi now pulls DAE 6) and **DAE 14.6.7 / 14.6.6** were added. New
+  review-checklist entries: mounted creatures and distance (midi 14.6.7), the `mx` critical-damage
+  fix, and the optional AC key (DAE 14.6.7).
+- `dnd5e-6.0-fields.md` — the optional-AC note. `flags.midi-qol.optional.<name>.ac` is *slated* to
+  become `.acOnAttack` and DAE 14.6.7 added the `*`-segment field mapping to carry it, but it is **not
+  active yet**: nothing registers the mapping and midi 14.6.8 still reads `.ac`, so keep writing `.ac`.
+- `midi-reactions.md` (banner → 14.6.8) and `dae-effect-expiry.md` (banner → 14.6.7) — the labels
+  only; the reaction and expiry content was re-checked against the new tags and is unchanged.
+- `README.md` requirements → `midi-qol` 14.6.8 / `dae` 14.6.7.
+- The curated extracts were re-pinned and refreshed (11 files: 7 midi, 4 DAE). midi and DAE **moved to
+  GitHub** in this range, so their tags were fetched from GitHub into the GitLab clones before the
+  refresh; the DAE extract also lost the duplicate `flags.midi-qol.*Condition` field specs.
+
 ## [0.7.8] - 2026-11-06
 
 Keeps every view in step when the log changes by **removal**, not just by append.

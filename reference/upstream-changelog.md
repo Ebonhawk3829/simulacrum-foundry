@@ -20,15 +20,16 @@ HOW TO USE
 
 PINNED
 
-- Reference synced to **CAT 0.1.7**, **CPR 2.1.7**, **midi-qol 14.6.6** and **DAE 14.6.5**
-  (CPR 2.1.7 requires CAT 0.1.7; midi 14.6.5 requires DAE ≥14.6.4 and is dnd5e **6.0.x only**, max
-  6.0.999 — dnd5e 6.1 breaks midi's damage card).
-- Previous sync: **CAT 0.1.6 / CPR 2.1.6** (midi 14.6.6 / DAE 14.6.5). Everything below is CAT
-  0.1.5–0.1.7, CPR 2.1.5–2.1.7, midi 14.6.5–14.6.6 and DAE 14.6.4–14.6.5. The change this sync is
-  **CAT 0.1.7 and CPR 2.1.7** at the top; the 0.1.5–0.1.6 / 2.1.5–2.1.6 and midi/DAE entries are
-  retained because an item built before this sync can still hit them.
+- Reference synced to **CAT 0.1.7**, **CPR 2.1.7**, **midi-qol 14.6.8** and **DAE 14.6.7**
+  (CPR 2.1.7 requires CAT 0.1.7; midi 14.6.8 requires DAE ≥14.6.4 and is dnd5e **6.0.x only**, max
+  6.0.999 — dnd5e 6.1 breaks midi's damage card). midi and DAE both **moved to GitHub** at 14.6.8 /
+  14.6.6: the manifest is now a GitHub `latest-dnd6` release, and installing midi pulls DAE 6.
+- Previous sync: **CAT 0.1.7 / CPR 2.1.7** (midi 14.6.6 / DAE 14.6.5). Everything below is CAT
+  0.1.5–0.1.7, CPR 2.1.5–2.1.7, midi 14.6.5–14.6.8 and DAE 14.6.4–14.6.7. The change this sync is
+  **midi 14.6.7 and 14.6.8, and DAE 14.6.6 and 14.6.7**; the older CAT/CPR entries and the
+  midi 14.6.5 / DAE 14.6.4 ones are retained because an item built before this sync can still hit them.
 - The full generic settings list for the current CPR is in `cpr-generic-config.md` (regenerated at
-  **2.1.7** — now **64 generics, 346 settings**; `contextAdvantage` and `firearm` are new, and
+  **2.1.7** — **64 generics, 346 settings**; `contextAdvantage` and `firearm` are new, and
   `teleport` gained `visitedThisTurn`).
 
 ---
@@ -75,6 +76,19 @@ Run these searches, then read each hit's `flags.cat`:
       reaches only **hit** targets.
 - [ ] **DAE Replacement** (14.6.4) — any DAE item effect with **no Replacement**: its workflow
       references are now filled from the caster. See `dnd5e-6.0-fields.md` §7.
+- [ ] **Optional-bonus AC key** (DAE 14.6.7, *not yet active*) — DAE's field mappings now accept a `*`
+      for one path segment; the changelog's example is `flags.midi-qol.optional.*.ac` →
+      `flags.midi-qol.optional.*.acOnAttack`. **No module registers that mapping yet and midi 14.6.8
+      still reads `.ac`**, so nothing is renamed on this stack. Watch `flags.midi-qol.optional.<name>.ac`
+      for when a midi that renames the key ships; it will then be auto-mapped to `.acOnAttack` (with a
+      one-off deprecation warning). The other optional keys are unchanged.
+- [ ] **Mounted creatures & distance** (midi 14.6.7) — a rider's range and reach, and distances to it,
+      come from its **mount's** space (Mechanics, on by default). **Look for:** any ability that
+      measures range/reach/distance to a creature that may be mounted (`flags.midi-qol.mount`, a
+      Rideable rider).
+- [ ] **`mx` critical-damage formulas** (midi 14.6.7) — *Double Rolled Damage* now doubles dice
+      written with midi's `mx` modifier (`1d4mx2`), which previously mis-rolled as `1d4x2`. **Look
+      for:** any damage formula using `mx`.
 
 ---
 
@@ -239,32 +253,49 @@ Run these searches, then read each hit's `flags.cat`:
 
 ---
 
-## midi-qol — live-use notes (observed 2026-11-01; version unpinned)
+## midi-qol 14.6.8
 
-Behaviour changes seen in play, not yet tied to a released version number.
+- **midi-qol has moved to GitHub** (`github.com/tposney/midi-qol`): updates and downloads come from
+  its releases, and the manifest is `…/releases/download/latest-dnd6/module.json`. An installed copy
+  moves over on update. **Look for:** any world or deploy tooling that still pins the old GitLab
+  manifest URL.
+- **Installing midi-qol now installs DAE 6** (its GitHub `dnd6` release) rather than DAE for dnd5e
+  5.x from foundryvtt.com. pt-BR translation updated.
 
-- **The Midi Condition Editor** (the button and window are now named that) no longer fills an empty
-  condition with `true`, shows the flag key only for effect changes, and no longer offers Macro
-  Autocomplete's visual block editor (which rewrote a condition as a statement, `true;`). CAT's
-  quick-conditions button sits between the condition field and midi's editor button.
-- **Over Time editor — Saves remaining / Fails remaining.** For an over-time effect on an actor, the
-  editor shows the progress of `saveCount` (*Saves required* / *Fails required*) and lets a GM
-  correct it. The configured counts are unchanged; consecutive counts still reset to them.
-- **Dice So Nice.** midi now passes the actor on its rolls, so a player-owned actor's own dice
-  appearance is used (with DSN's *Force character owner appearance* = All), as DSN does for its own
-  rolls. Previously every midi roll used the rolling user's dice and no actor.
+## midi-qol 14.6.7
+
+Seen in play before the release; the notes below are the release notes.
+
 - **Mounted creatures use their mount's space** (Mechanics, on by default): a rider's range and
   reach, and distances to it, are measured from its **mount's** space. A rider is a token with
   `flags.midi-qol.mount` set to its mount's token id, or a Rideable rider (familiars included);
   grappled tokens and riders moving within their mount keep their own space. **Relevant to the
   perimeter-distance convention** (`midi-reactions.md` §6): a distance to a mounted rider now comes
-  from the mount.
+  from the mount. **Look for:** abilities that measure range/reach/distance to a creature that may be
+  mounted.
+- **The Midi Condition Editor** (the button and window are now named that) no longer fills an empty
+  condition with `true`, shows the flag key only for effect changes, and no longer offers Macro
+  Autocomplete's visual block editor (which rewrote a condition as a statement, `true;`). CAT's
+  quick-conditions button sits between the condition field and midi's editor button. Activity
+  condition fields (*Use Condition*, *Active Effect Condition*) are plain text fields again — the
+  Foundry dice Formula Editor button (λ) no longer shows. **Look for:** activities whose condition was
+  written through the old editor (a `true;`-style statement).
+- **Over Time editor — Saves remaining / Fails remaining.** For an over-time effect on an actor the
+  editor shows the progress of `saveCount` (*Saves required* / *Fails required*) and lets a GM correct
+  it. The configured counts are unchanged; consecutive counts still reset to them.
+- **Dice So Nice.** midi passes the actor on its rolls, so a player-owned actor's own dice appearance
+  is used (with DSN's *Force character owner appearance* = All), as DSN does for its own rolls;
+  previously every midi roll used the rolling user's dice and no actor. Cosmetic.
+- **Fixed: *Double Rolled Damage* critical damage** never doubled the dice — dnd5e rolled its own die
+  class, which didn't know midi's `mx` modifier, so `1d4mx2` was read as `1d4x2` (explode on 2).
+  **Look for:** critical-damage formulas using `mx`.
+- Fixed: the *Secret Squirrel* quick setup and the hints for *Hide NPC names* / *Auto apply item
+  effects* no longer name modules with no Foundry 14 release.
 
 ## midi-qol 14.6.6
 
-- Hosting: updates are served from GitLab Pages. Sample items only otherwise (Flaming Sphere, and
-  several NPC features). The *Move roll formula to tooltip* deprecation warning appears once, not
-  several times per load.
+- Hosting only (updates served from GitLab Pages, before the GitHub move). Sample items: *Flaming
+  Sphere* and several NPC features.
 
 ## midi-qol 14.6.5  (requires DAE ≥14.6.4; dnd5e 6.0.x only — max 6.0.999)
 
@@ -311,6 +342,27 @@ Behaviour changes seen in play, not yet tied to a released version number.
   disadvantage are named rather than shown as internal keys.
 - *When an Incapacitated actor takes an action*: *Do nothing* → *Allow it*. Saves/checks shown on the
   use card no longer also pop up as chat notifications.
+
+## DAE 14.6.7
+
+- **A field-mapping key may carry `*` for one path segment**, and the new key takes that segment, so
+  one mapping can cover a whole family of deprecated keys (the changelog's example is
+  `flags.midi-qol.optional.*.ac` → `flags.midi-qol.optional.*.acOnAttack`). This only changes how a
+  mapping **matches** — it does nothing on its own.
+  **Not active on this stack:** no module registers that `.ac` mapping as of midi **14.6.8** — midi
+  still reads `flags.midi-qol.optional.<name>.ac` (`src/module/utils.ts`), and its
+  `dae.addFieldMappings` list (`src/midi-qol.ts`) has no optional entry. So on midi 14.6.8 + DAE
+  14.6.7 **nothing is renamed and `.ac` still works**. An effect using `.ac` becomes an audit target
+  only once a midi that renames the key (and registers the mapping) is installed — then it is
+  auto-mapped to `.acOnAttack` with a one-off deprecation warning. See the review checklist.
+- (Also in this range, and benign: DAE dropped its duplicate `flags.midi-qol.itemCondition` /
+  `reactionCondition` / `otherCondition` / `effectCondition` field specs from the effect editor,
+  because midi now supplies those itself.)
+
+## DAE 14.6.6
+
+- **DAE has moved to GitHub** (`github.com/tposney/dae`): updates and downloads come from its
+  releases, manifest `…/releases/download/latest-dnd6/module.json`. pt-BR translation updated.
 
 ## DAE 14.6.5
 
