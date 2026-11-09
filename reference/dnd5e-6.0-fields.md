@@ -554,11 +554,12 @@ Concentration, death and initiative have their own: `system.attributes.concentra
 Also note `flags.midi-qol.optional.<name>.<rollType>` **without** the `.all` suffix is no
 longer rewritten to `.all` — write `flags.midi-qol.optional.<name>.<rollType>.all`.
 
-The optional bonus's **AC** key is slated to be renamed: `flags.midi-qol.optional.<name>.ac` will
-become `…<name>.acOnAttack`, and DAE 14.6.7 added the `*`-segment field mapping that will carry the
-migration. It is **not active yet** — midi 14.6.8 still reads `.ac` and nothing registers the mapping
-— so keep writing `.ac` for now. The other optional roll types (`save`, `check`, `skill`, `damage`,
-`attack`) are unchanged. See `upstream-changelog.md`.
+The optional bonus's **AC** key was renamed: `flags.midi-qol.optional.<name>.ac` is now
+`…<name>.acOnAttack`. midi 14.6.9 registers a DAE field mapping (`optional.*.ac` → `.acOnAttack`,
+which needs DAE ≥14.6.7), so an effect still using `.ac` is auto-mapped with a one-off deprecation
+warning — write `acOnAttack`. A new sibling, `optional.<name>.acOnHit`, offers an AC bonus when an
+attack **hits** (the attack is then re-checked against the new AC). The other optional roll types
+(`save`, `check`, `skill`, `damage`, `attack`) are unchanged. See `upstream-changelog.md`.
 
 **These fields were partly broken until 14.6.4.** midi 14.6.3 shipped them with three
 check-activity bugs, all fixed in 14.6.4: a skill or tool check could lose the roller's

@@ -20,14 +20,14 @@ HOW TO USE
 
 PINNED
 
-- Reference synced to **CAT 0.1.7**, **CPR 2.1.7**, **midi-qol 14.6.8** and **DAE 14.6.7**
-  (CPR 2.1.7 requires CAT 0.1.7; midi 14.6.8 requires DAE ≥14.6.4 and is dnd5e **6.0.x only**, max
-  6.0.999 — dnd5e 6.1 breaks midi's damage card). midi and DAE both **moved to GitHub** at 14.6.8 /
-  14.6.6: the manifest is now a GitHub `latest-dnd6` release, and installing midi pulls DAE 6.
-- Previous sync: **CAT 0.1.7 / CPR 2.1.7** (midi 14.6.6 / DAE 14.6.5). Everything below is CAT
-  0.1.5–0.1.7, CPR 2.1.5–2.1.7, midi 14.6.5–14.6.8 and DAE 14.6.4–14.6.7. The change this sync is
-  **midi 14.6.7 and 14.6.8, and DAE 14.6.6 and 14.6.7**; the older CAT/CPR entries and the
-  midi 14.6.5 / DAE 14.6.4 ones are retained because an item built before this sync can still hit them.
+- Reference synced to **CAT 0.1.7**, **CPR 2.1.7**, **midi-qol 14.6.9** and **DAE 14.6.8**
+  (CPR 2.1.7 requires CAT 0.1.7; midi 14.6.9 requires DAE ≥14.6.4 and is dnd5e **6.0.x only**, max
+  6.0.999 — dnd5e 6.1 breaks midi's damage card). midi and DAE are on **GitHub** (manifest
+  `latest-dnd6`); installing midi pulls DAE 6.
+- Previous sync: **midi 14.6.7–14.6.8 / DAE 14.6.6–14.6.7** (CAT 0.1.7 / CPR 2.1.7 unchanged).
+  Everything below is CAT 0.1.5–0.1.7, CPR 2.1.5–2.1.7, midi 14.6.5–14.6.9 and DAE 14.6.4–14.6.8.
+  The change this sync is **midi 14.6.9 and DAE 14.6.8**; older entries are retained because an item
+  built before this sync can still hit them.
 - The full generic settings list for the current CPR is in `cpr-generic-config.md` (regenerated at
   **2.1.7** — **64 generics, 346 settings**; `contextAdvantage` and `firearm` are new, and
   `teleport` gained `visitedThisTurn`).
@@ -76,12 +76,13 @@ Run these searches, then read each hit's `flags.cat`:
       reaches only **hit** targets.
 - [ ] **DAE Replacement** (14.6.4) — any DAE item effect with **no Replacement**: its workflow
       references are now filled from the caster. See `dnd5e-6.0-fields.md` §7.
-- [ ] **Optional-bonus AC key** (DAE 14.6.7, *not yet active*) — DAE's field mappings now accept a `*`
-      for one path segment; the changelog's example is `flags.midi-qol.optional.*.ac` →
-      `flags.midi-qol.optional.*.acOnAttack`. **No module registers that mapping yet and midi 14.6.8
-      still reads `.ac`**, so nothing is renamed on this stack. Watch `flags.midi-qol.optional.<name>.ac`
-      for when a midi that renames the key ships; it will then be auto-mapped to `.acOnAttack` (with a
-      one-off deprecation warning). The other optional keys are unchanged.
+- [ ] **Optional-bonus AC keys** (midi 14.6.9) — `flags.midi-qol.optional.<name>.ac` is renamed
+      `…<name>.acOnAttack` and **the rename is now live**: midi 14.6.9 registers the DAE field mapping
+      (`optional.*.ac` → `.acOnAttack`, which needs DAE ≥14.6.7), so an effect still using `.ac` is
+      auto-mapped with a one-off deprecation warning — `.ac` keeps working meanwhile. New sibling
+      **`optional.<name>.acOnHit`**: an optional AC bonus offered when an attack **hits**, the attack
+      then re-checked against the new AC. **Look for:** `flags.midi-qol.optional` keys ending `.ac`
+      (update to `acOnAttack`) and any AC bonus that should fire on a hit (`acOnHit`).
 - [ ] **Mounted creatures & distance** (midi 14.6.7) — a rider's range and reach, and distances to it,
       come from its **mount's** space (Mechanics, on by default). **Look for:** any ability that
       measures range/reach/distance to a creature that may be mounted (`flags.midi-qol.mount`, a
@@ -89,6 +90,41 @@ Run these searches, then read each hit's `flags.cat`:
 - [ ] **`mx` critical-damage formulas** (midi 14.6.7) — *Double Rolled Damage* now doubles dice
       written with midi's `mx` modifier (`1d4mx2`), which previously mis-rolled as `1d4x2`. **Look
       for:** any damage formula using `mx`.
+- [ ] **Token sets — macros** (midi 14.6.9) — `workflow.targets`, `hitTargets`, `saves`,
+      `failedSaves`, `superSavers` and the other target collections are now
+      **`MidiQOL.TokenDocumentSet`s**. **Nothing has to change yet**: by default a set still reads as
+      the drawn Tokens, so existing macros keep working. The one change in *both* modes: **target hooks
+      and target macros now also run for a target that isn't drawn**, with its **TokenDocument** — so a
+      handler that assumes `token` is a Token must accept a TokenDocument
+      (`const doc = t instanceof TokenDocument ? t : t.document`). Reading as TokenDocuments (opt in
+      now with `MidiQOL.setTokenDocumentSets(true)`; the default later) adds `TokenDocument#document`
+      with a per-line deprecation warning until 14.8.0. **Look for:** abilities using
+      `workflow.targets`/`hitTargets`/`failedSaves`/`saves` and assuming a Token (canvas ops,
+      `.document`, `.actor`), and target macros/hooks (`midi-qol.preTargetSave`,
+      `preTargetDamageApplication`, `isDamaged`/`isHealed`, `targetAttack`/`targetDamage`) that assume
+      the passed `token`/`target` is a Token.
+- [ ] **Workflow state on the card** (midi 14.6.9) — a use's workflow is now stored on its card
+      (`system.midi.state` + `records`) so it rebuilds after a reload or on another client. The old
+      workflow keys in `card.flags.midi-qol.*` (`hitTargetUuids`, `saveUuids`, `targets`, …) are
+      **deprecated, warned, and removed in 14.8.0**. **Look for:** abilities that read workflow results
+      from `card.flags.midi-qol.*`, or that stash values on the workflow object expecting them to
+      survive a rebuild (persistent data belongs in your own flags on the card). Read the workflow:
+      `MidiQOL.Workflow.getWorkflow(card.uuid)`.
+- [ ] **Careful Spell / Sculpt Spells** (midi 14.6.9) — Careful Spell (`flags.midi-qol.carefulSpells`)
+      now follows the 2024 rules (spells only, the first creatures targeted, up to the caster's Charisma
+      modifier), and both Careful and Sculpt (`sculptSpells`) can be **conditions**. **Look for:** those
+      flags on items.
+- [ ] **Cover** (midi 14.6.9) — AutoCover needs ≥5.0.1; an area spell's cover is measured from the
+      **template origin** (its centre, or where a cone/line starts), not the caster; with AutoCover,
+      darkness counts as total cover. **Look for:** cover-check settings and any cover automation.
+- [ ] **midi removals/deprecations** (14.6.9) — `MidiQOL.DDBGameLogWorkflow`, `flags.midi-qol.origin`
+      and `workflow.flagTags` are gone; `workflow.noAutoDamage`/`noOptionalRules` and
+      `MidiQOL.debouncedUpdate` are deprecated. **Look for:** macros using any of these.
+- [ ] **Dependent Conditions** (DAE 14.6.8) — conditions are now added/removed within the change that
+      causes them, so importing an existing monster/character (ddb-importer) with items carrying a
+      status no longer stops, a newly created actor gets its items' statuses' conditions, and a
+      condition immunity set on the actor now removes a DAE-added condition. **Look for:** Dependent
+      Conditions and imported actors carrying statuses.
 
 ---
 
@@ -227,7 +263,7 @@ Run these searches, then read each hit's `flags.cat`:
 
 ## dnd5e 6.1.0 (pre-release) — NOT adopted; the gate is midi-qol
 
-- **Do not load the live world on 6.1.0.** midi-qol (through 14.6.7) caps dnd5e at **6.0.999**, and
+- **Do not load the live world on 6.1.0.** midi-qol (through 14.6.9) caps dnd5e at **6.0.999**, and
   its own 14.6.5 notes say 6.1 "changes damage application in ways that break midi's damage card."
   CAT/CPR/DAE already allow 6.1 on paper; midi is the only blocker.
 - **Nothing to audit yet.** CAT 0.1.7's 6.0.x range/activation/duration patch is a no-op on 6.1, and
@@ -252,6 +288,30 @@ Run these searches, then read each hit's `flags.cat`:
     due for removal at **6.2**, not here.
 
 ---
+
+## midi-qol 14.6.9
+
+A large release; the audit items are in the checklist, the shape is:
+
+- **Chat cards keep a use's progress** (state + one record per target on the card), so a use carries on
+  after a reload or on another client. *Save to Chat Card* is always on; **Chat Message Cache Time** is
+  replaced by a new *Chat card updates* setting (*At milestones* — default — or *At every step*). Cards
+  are smaller and written less often; targets on another scene/level are no longer dropped.
+- **Token sets** and **workflow-on-card** — the two macro-visible changes. See the checklist.
+- **Optional AC:** `optional.<name>.ac` → **`acOnAttack`** (auto-mapped now that midi registers the DAE
+  mapping; `.ac` still works, warned) and the new **`optional.<name>.acOnHit`**.
+- **Careful Spell** follows the 2024 rules and, with **Sculpt Spells**, can be a condition.
+- **Cover:** AutoCover needs ≥5.0.1; an area spell's cover comes from the template origin; with
+  AutoCover, darkness counts as total cover.
+- **New hook** `midi-qol.premades.checkHitTarget` — per target, after cover/AC/reactions/criticals,
+  before the result is recorded/shown; a changed `targetAC` is re-tested (unless an auto success/
+  failure decided it), a changed `isHit`/`isHitEC` is kept. `MidiQOL.toggleStatus` toggles a status
+  through midi's effect queue. `activity.rollAttack({ workflow })` on a completed use starts a new use
+  on a new card; `workflow.isHit`/`isHitEC` and `workflow.saveRoll(token)` added; a use's template
+  regions carry `flags.midi-qol.workflowId`/`itemCardUuid`.
+- **Removed:** `MidiQOL.DDBGameLogWorkflow`, `flags.midi-qol.origin`, `workflow.flagTags`, and a batch
+  of never-read workflow fields. **Deprecated:** `workflow.noAutoDamage`/`noOptionalRules`,
+  `MidiQOL.debouncedUpdate`, `DamageOnlyWorkflow#itemCard`.
 
 ## midi-qol 14.6.8
 
@@ -343,18 +403,26 @@ Seen in play before the release; the notes below are the release notes.
 - *When an Incapacitated actor takes an action*: *Do nothing* → *Allow it*. Saves/checks shown on the
   use card no longer also pop up as chat notifications.
 
+## DAE 14.6.8
+
+- Fixed: with *Dependent Conditions* on, updating an existing monster or character from ddb-importer
+  could stop with "ActiveEffect … does not exist"; DAE now adds and removes the conditions within the
+  change that causes them, so they are in place when it completes. An actor created with items carrying
+  a status (imported, or dragged from a compendium) now gets their conditions.
+- Fixed: a condition immunity set on the actor itself (not by an effect) now removes a condition DAE
+  added.
+
 ## DAE 14.6.7
 
 - **A field-mapping key may carry `*` for one path segment**, and the new key takes that segment, so
   one mapping can cover a whole family of deprecated keys (the changelog's example is
   `flags.midi-qol.optional.*.ac` → `flags.midi-qol.optional.*.acOnAttack`). This only changes how a
   mapping **matches** — it does nothing on its own.
-  **Not active on this stack:** no module registers that `.ac` mapping as of midi **14.6.8** — midi
-  still reads `flags.midi-qol.optional.<name>.ac` (`src/module/utils.ts`), and its
-  `dae.addFieldMappings` list (`src/midi-qol.ts`) has no optional entry. So on midi 14.6.8 + DAE
-  14.6.7 **nothing is renamed and `.ac` still works**. An effect using `.ac` becomes an audit target
-  only once a midi that renames the key (and registers the mapping) is installed — then it is
-  auto-mapped to `.acOnAttack` with a one-off deprecation warning. See the review checklist.
+  **Was inert when it shipped:** at midi 14.6.8 no module registered that `.ac` mapping (midi still
+  read `flags.midi-qol.optional.<name>.ac`, and its `dae.addFieldMappings` list had no optional entry),
+  so nothing was renamed. **midi 14.6.9 registers it** (`optional.*.ac` → `.acOnAttack`), so the
+  migration is now **live** — an effect using `.ac` is auto-mapped to `.acOnAttack` with a one-off
+  deprecation warning. See the review checklist and the midi-qol 14.6.9 section.
 - (Also in this range, and benign: DAE dropped its duplicate `flags.midi-qol.itemCondition` /
   `reactionCondition` / `otherCondition` / `effectCondition` field specs from the effect editor,
   because midi now supplies those itself.)

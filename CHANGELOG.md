@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.10] - 2026-11-09
+
+Syncs the reference to **midi-qol 14.6.9** and **DAE 14.6.8** (from 14.6.8 / 14.6.7). This one has
+real macro-visible changes — midi reworked how a workflow's targets and state are held.
+
+### Changed
+
+- `upstream-changelog.md` — PINNED → midi **14.6.9** / DAE **14.6.8**; new **midi-qol 14.6.9** and
+  **DAE 14.6.8** sections. New review-checklist entries, each with a search key:
+  - **Token sets** — `workflow.targets`/`hitTargets`/`saves`/`failedSaves`/… are now
+    `MidiQOL.TokenDocumentSet`s (still read as drawn Tokens by default), but **target hooks and target
+    macros now also run for undrawn targets, with a TokenDocument** instead of a Token.
+  - **Workflow state on the card** — a use's workflow is stored on its card and rebuilds after a
+    reload; the old `card.flags.midi-qol.*` workflow keys are deprecated and removed in 14.8.0.
+  - **Optional AC rename is now live** — `optional.<name>.ac` → `.acOnAttack` (auto-mapped via the DAE
+    field mapping midi 14.6.9 registers), plus new `optional.<name>.acOnHit`.
+  - **Careful/Sculpt Spells** as conditions; **cover** measured from the template origin; midi
+    removals (`DDBGameLogWorkflow`, `flags.midi-qol.origin`, `workflow.flagTags`); DAE 14.6.8 Dependent
+    Conditions.
+- `dnd5e-6.0-fields.md` — the optional-AC note now reads as a live rename (with `acOnHit`).
+- `midi-reactions.md` (banner → 14.6.9) and `dae-effect-expiry.md` (banner → 14.6.8) — labels only. The
+  reaction claims were re-checked at 14.6.9: `doReactions` widened to accept a TokenDocument, but its
+  call sites still never pass `reactiontargeted`, so the `isTargeted` note stands; the expiry content is
+  unchanged.
+- `README.md` requirements → `midi-qol` 14.6.9 / `dae` 14.6.8.
+- Curated extracts re-pinned and refreshed (25 files: 23 midi, 2 DAE).
+
 ## [0.7.9] - 2026-11-08
 
 Syncs the reference to **midi-qol 14.6.8** and **DAE 14.6.7** (from 14.6.6 / 14.6.5).
