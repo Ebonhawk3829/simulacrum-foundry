@@ -515,7 +515,11 @@ export function loadBrokerSession({
     throw new Error('External Foundry session file is unavailable');
   }
   const sessionStat = statSync(sessionPath);
-  if (!sessionStat.isFile() || (sessionStat.mode & 0o077) !== 0) {
+  // Windows has no POSIX permission bits: `mode` there is a fixed value and the real access
+  // control is ACLs, which it does not reflect. So the owner-only requirement can only be
+  // enforced where POSIX modes are meaningful — which is where the broker actually runs.
+  const ownerOnly = process.platform === 'win32' || (sessionStat.mode & 0o077) === 0;
+  if (!sessionStat.isFile() || !ownerOnly) {
     throw new Error('External Foundry session file must be a mode-0600 regular file');
   }
   const session = JSON.parse(readFileSync(sessionPath, 'utf8'));
