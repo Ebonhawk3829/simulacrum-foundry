@@ -20,17 +20,17 @@ HOW TO USE
 
 PINNED
 
-- Reference synced to **CAT 0.1.7**, **CPR 2.1.7**, **midi-qol 14.6.9** and **DAE 14.6.8**
-  (CPR 2.1.7 requires CAT 0.1.7; midi 14.6.9 requires DAE ≥14.6.4 and is dnd5e **6.0.x only**, max
+- Reference synced to **CAT 0.1.8**, **CPR 2.1.8**, **midi-qol 14.6.9** and **DAE 14.6.8**
+  (CPR 2.1.8 requires CAT 0.1.8; midi 14.6.9 requires DAE ≥14.6.4 and is dnd5e **6.0.x only**, max
   6.0.999 — dnd5e 6.1 breaks midi's damage card). midi and DAE are on **GitHub** (manifest
   `latest-dnd6`); installing midi pulls DAE 6.
-- Previous sync: **midi 14.6.7–14.6.8 / DAE 14.6.6–14.6.7** (CAT 0.1.7 / CPR 2.1.7 unchanged).
-  Everything below is CAT 0.1.5–0.1.7, CPR 2.1.5–2.1.7, midi 14.6.5–14.6.9 and DAE 14.6.4–14.6.8.
-  The change this sync is **midi 14.6.9 and DAE 14.6.8**; older entries are retained because an item
-  built before this sync can still hit them.
+- Previous sync: **midi 14.6.9 / DAE 14.6.8** (CAT 0.1.7 / CPR 2.1.7). Everything below is CAT
+  0.1.5–0.1.8, CPR 2.1.5–2.1.8, midi 14.6.5–14.6.9 and DAE 14.6.4–14.6.8. The change this sync is
+  **CAT 0.1.8 and CPR 2.1.8**; older entries are retained because an item built before this sync can
+  still hit them.
 - The full generic settings list for the current CPR is in `cpr-generic-config.md` (regenerated at
-  **2.1.7** — **64 generics, 346 settings**; `contextAdvantage` and `firearm` are new, and
-  `teleport` gained `visitedThisTurn`).
+  **2.1.8** — **71 generics (66 with settings, 5 with none), 363 settings**; `environment` and
+  `breathing` are new).
 
 ---
 
@@ -38,6 +38,35 @@ PINNED
 
 Run these searches, then read each hit's `flags.cat`:
 
+- [ ] **CAT distance API break** (0.1.8) — `tokenUtils.getDistance` no longer takes `convertToFt` and
+      **always returns feet**; every distance helper **takes feet** and converts to the scene's grid
+      units itself, so a caller that passed scene units must now pass feet. Covers
+      `tokenUtils.findNearby` / `slideToken` / `teleportToken` / `displaceToken` / `aimDestination` /
+      `movementSpent`, `crosshairUtils.aimCrosshair` (and `crosshairsConfig.size`), `drawPath` and
+      `horizontalReach`, `summonUtils.placeSummon` / `placeSummons`, `regionUtils.createPathRegions`
+      and the path drawing tool. `genericUtils.convertDistance` **moved to `distanceUtils`** and uses
+      the system's length units (5 ft is exactly 1.5 m); `distanceUtils.toFeet` converts back.
+      **Look for:** a macro calling any of those helpers with a scene-unit number, or
+      `genericUtils.convertDistance`. New read helpers also return feet: `activityUtils.getRange` /
+      `getTemplateSize`, `itemUtils.getRange`, `actorUtils.getSpeed` / `getSense`,
+      `workflowUtils.getRange`.
+- [ ] **New CPR generics** (2.1.8) — **`environment`** (bound on a scene, level or region: Underwater,
+      No Air, Breathable Air, Extreme Cold, Extreme Heat, High Altitude; starts Holding Breath or an
+      exposure effect as a token is placed, moves, enters or leaves) and **`breathing`** (bound on an
+      item or effect: the creature breathes water, or doesn't need to breathe). **Look for:** abilities
+      that hand-rolled underwater / holding-breath / exposure, or that set a breathing trait.
+- [ ] **CPR `hide` changed** (2.1.8) — it now gives the system's Hiding condition with the Stealth
+      total as the DC and gains a **`dc`** formula (the Stealth check must reach it); it **no longer
+      takes an effect or looks for a Supreme Sneak item**. `specialItemUse` follows an `attackTypes`
+      config on its item. **Look for:** `hide` generics (re-check their config) and `specialItemUse`.
+- [ ] **CAT/CPR units and grid** (0.1.8 / 2.1.8) — on a gridded scene a range in feet rounds to the
+      nearest whole grid space with a minimum of one, so an adjacent creature is within 5 feet at any
+      grid size (a gridless scene compares feet directly); `tokenUtils.isWithinDistance` and
+      `distanceUtils.isWithinRange` are new. Aura radii, the Weapon-Mastery Push buttons, summon
+      activity ranges and region per-distance triggers follow the scene's grid units. On a **metric**
+      world, applying an automation (CatKit or drop) converts its ranges, reach and areas, and its
+      effects' plain-number speed/sense changes, to meters — once. **Look for:** a fixed foot distance
+      in an ability on a metric world, and distance comparisons that assumed scene units.
 - [ ] **CPR attack riders** — any item with `flags.cat.genericConfig['chris-premades'].attackRider`
       (or an attack-rider automation). As of CPR **2.1.7** a rider is offered **only while the item
       is equipped**, and attuned when it needs attunement. An unequipped or unattuned item no longer
@@ -128,6 +157,33 @@ Run these searches, then read each hit's `flags.cat`:
 
 ---
 
+## CAT 0.1.8
+
+A distance/units release with two **API breaks**; the audit items are in the checklist.
+
+- **Distance is feet now.** `tokenUtils.getDistance` drops `convertToFt` and always returns feet; the
+  distance helpers take feet and convert to the scene's grid units themselves.
+  `genericUtils.convertDistance` moves to the new **`distanceUtils`** (system length units; new
+  `distanceUtils.toFeet`). New helpers: `activityUtils.getRange`/`getTemplateSize`, `itemUtils.getRange`,
+  `actorUtils.getSpeed`/`getSense`, `workflowUtils.getRange` (all return feet);
+  `distanceUtils.toPixels`/`toGridSpaces`/`fromGridSpaces`/`measureDistance`,
+  `tokenUtils.measureMovement`/`heightAboveFloor`, `regionUtils.createRegionLight`, and a `height`
+  option on `createPathRegions` (all take feet); `dialogUtils.distanceDialog`.
+- **Grid:** a range in feet rounds to whole grid spaces (minimum one) on a gridded scene; new
+  `tokenUtils.isWithinDistance` and `distanceUtils.isWithinRange`.
+- **Metric:** applying an automation through the CatKit or dropping an automated item converts its
+  ranges, reach and areas, and its effects' plain-number speed/sense changes, to meters (once);
+  `effectUtils.createEffects` converts the same way; enchantments convert range changes to the
+  enchanted item's units.
+- **New:** a `formula` config type (aura radius/value, summon bonuses and counts use it); generic
+  config options can take `showIf`; `actorUtils.hasTools`. `effectUtils.createEffects` passes
+  `effectOptions` for the user's own documents too, so `keepId` works either way. Pushes and pulls
+  round to whole grid spaces.
+- **Fixes:** `crosshairUtils.aimCrosshair` results carry the token's elevation (a teleport to an aimed
+  space no longer fails "elevation must be a number"); monster-feature automations only match their own
+  monster; the grapple and shove size-check macros receive the check's identifier and size in `data`;
+  `compendiumUtils.getDocumentByName` no longer errors on Item compendiums.
+
 ## CAT 0.1.7
 
 ### Update notes
@@ -197,6 +253,31 @@ Run these searches, then read each hit's `flags.cat`:
 - **Added:** `itemUtils.getBaseWeaponLabel`; `effectUtils.createItemEffect`; a summon `sourceItem`
   getter; and **hit-die roll passes** (`situational`, `bonus`, `post`) under descriptor key
   `hitDie` — `situational` can set `options.maximize`/`minimum`/`parts`/`multiplier`.
+
+## CPR 2.1.8  (requires CAT 0.1.8)
+
+- New **Game Mechanic Options** settings menu (DMG Cleave moved there; options add actions to
+  creatures when their tokens are placed). Configuration options that take a formula use CAT's formula
+  field.
+- **Grid units:** pushes, pulls, teleports, summon placement, walls, auras and area animations use the
+  scene's grid units; pushes/pulls round to whole spaces; gridded range checks count whole grid spaces
+  (an adjacent creature is within 5 feet at any grid size). Automations read item/activity/actor
+  distances in their own units — **midi's range check still needs the item and scene in the same
+  units**.
+- **Metric:** applying an automation or dropping an automated item converts its ranges, reach, areas
+  and speed/sense bonuses to meters.
+- **New generics:** **`environment`** and **`breathing`**; **`hide`** reworked (Hiding condition,
+  `dc` formula, no effect / Supreme Sneak lookup); `specialItemUse` follows `attackTypes`.
+- **Fixes:** the `teleport` generic's "near a target" measures from the target's **edge**, so spaces
+  beside Large and bigger creatures can be chosen; several effects end at the end of the current turn
+  rather than the next (2014/2024 Disengage, Brace, Aura of Alacrity, Dread Ambusher, Rage of the Wilds
+  (Eagle), Branches of the Tree); 2014 Giant's Havoc and 2024 Battering Roots add their reach bonus
+  once, not twice; mass apply / the medkit no longer match consumable-named items (Gems, Rowboat, Pit,
+  Iron Door, …).
+- Content: automated actions (Check Cover, Grapple, Hide, Knock Out, Ready, Search, Shove, Squeeze,
+  Underwater, Hold Breath, …); 2014/2024 Thief Supreme Sneak and a combined **Ready** item; 2014/2024
+  Water Breathing and Cap/Potion of Water Breathing; 2024 Manifold Tool, Wraps of Unarmed Power and
+  Shield Guardian; third-party Pugilist / Close Combat Artillerist.
 
 ## CPR 2.1.7  (requires CAT 0.1.7)
 

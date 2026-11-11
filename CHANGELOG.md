@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.11] - 2026-11-11
+
+Syncs the reference to **CAT 0.1.8** and **CPR 2.1.8** (from 0.1.7 / 2.1.7). CAT 0.1.8 carries a
+real **distance/units API break**, so this is one to audit macros against.
+
+### Changed
+
+- `upstream-changelog.md` — PINNED → CAT **0.1.8** / CPR **2.1.8**; new **CAT 0.1.8** and
+  **CPR 2.1.8** sections. New review-checklist entries: **the distance API break** (helpers now take
+  and return feet; `genericUtils.convertDistance` → `distanceUtils`), the new **`environment`** and
+  **`breathing`** generics, **`hide`** reworked, and **units/grid** behaviour (grid rounding; metric
+  conversion of applied automations).
+- `cpr-generic-config.md` — regenerated at 2.1.8: **71 generics (66 with settings, 5 with none), 363
+  settings**; `environment` and `breathing` are new. The generator's `evaluate` now provides Foundry's
+  `String.prototype.capitalize` / `titleCase` for the duration of a literal's evaluation — without it,
+  `environment`'s option labels threw during evaluation and the whole export was dropped (it logged
+  `UNRESOLVED`). Same "discipline didn't hold, so make it code" fix as the socketlib helper.
+- `cat-macro-flags.md` and `cat-embedded-macros.md` — pins → 0.1.8; `aimDestination`'s `range` (and a
+  summon generic's `range`) is now noted as **feet**.
+- `README.md` requirements → `cat` 0.1.8 / `chris-premades` 2.1.8.
+- Curated extracts re-pinned and refreshed (60 changed + 3 added: CAT `scripts/utilities/distanceUtils.mjs`,
+  CPR `scripts/macros/generic/{breathing,environment}.mjs`).
+
 ## [0.7.10] - 2026-11-09
 
 Syncs the reference to **midi-qol 14.6.9** and **DAE 14.6.8** (from 14.6.8 / 14.6.7). This one has

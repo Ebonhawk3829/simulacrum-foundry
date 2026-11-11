@@ -1,7 +1,7 @@
 # CPR generic macro settings
 
 Every generic macro in Chris's Premades and the settings each accepts in
-`flags.cat.genericConfig`. Generated from CPR source at **2.1.7** by
+`flags.cat.genericConfig`. Generated from CPR source at **2.1.8** by
 `resources/generate-cpr-config.mjs` — do not hand-edit; re-run the generator.
 
 Nothing publishes this list. CPR declares it in code, on each generic's exported
@@ -37,7 +37,7 @@ Types: `checkbox` (boolean), `text`, `number`, `select`, `select-many` (array),
 `selectIdentifiers` (array of item identifiers). Default is what is used when the
 setting is absent.
 
-**69 generics: 64 with settings, 5 with none (346 settings total).**
+**71 generics: 66 with settings, 5 with none (363 settings total).**
 
 ---
 
@@ -72,7 +72,7 @@ Offers a bonus formula on a d20 roll. Bound on an effect, an activity or an item
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `bonus` | text | `''` | Formula added to the roll when this bonus is taken. |
+| `bonus` | formula | `''` | Formula added to the roll when this bonus is taken. |
 | `phase` | select | `postResult` | When this bonus is offered during the roll. |
 | `ability` | select-many | `[]` | Limit this bonus to a list of abilities. |
 | `optional` | checkbox | `true` | Prompt before the bonus is added, rather than always adding it. |
@@ -90,12 +90,12 @@ Offers this activity as an optional damage bonus on a hit, then rolls it on the 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `animation` | selectAnimation | `[object Object]` | Played on the hit target when the rider is used. |
-| `bonus` | text | `''` | Extra damage added to the roll when this option is chosen. |
+| `bonus` | formula | `''` | Extra damage added to the roll when this option is chosen. |
 | `bonusDamageType` | select | `''` | Damage type of the extra damage. Uses the attack's damage type when empty. |
-| `creatureTypeBonus` | text | `''` | Extra damage added to the bonus when every hit target is one of the Target Creature Types. |
+| `creatureTypeBonus` | formula | `''` | Extra damage added to the bonus when every hit target is one of the Target Creature Types. |
 | `targetCreatureTypes` | select-many | `[]` | Creature types that receive the Creature Type Bonus. |
 | `tag` | text | `''` | Tagged options are offered as choices under the bonus that owns the tag instead of as separate bonuses. |
-| `limit` | text | `1` | How many tagged options can be chosen for one damage roll. |
+| `limit` | formula | `1` | How many tagged options can be chosen for one damage roll. |
 | `workflowProperty` | text | `''` | Only offer this option when an earlier bonus has set this workflow property. |
 | `identifiers` | selectIdentifiers | `[]` | Limit this feature to a list of specific items. |
 | `attackType` | select | `''` | Limit this feature by attack type. |
@@ -136,7 +136,7 @@ Makes an attack with one of the caster's equipped weapons against a single targe
 | `ability` | select | `default` | Ability used for the weapon's attack and damage rolls. Spellcasting uses this spell's spellcasting ability. |
 | `damageTypes` | select-many | `[]` | Damage types that can replace the weapon's damage type. |
 | `optionalDamageReplacement` | checkbox | `false` | Let the caster keep the weapon's normal damage type. |
-| `bonusDamageDieFormula` | text | `''` | Formula for the number of extra damage dice. Leave blank to use cantrip scaling. |
+| `bonusDamageDieFormula` | formula | `''` | Formula for the number of extra damage dice. Leave blank to use cantrip scaling. |
 | `bonusDamageDieDenomination` | number | `0` | Die size of the extra damage dice added to the weapon attack. 0 adds none. |
 | `bonusDamageTypes` | select-many | `[]` | Damage types of the extra damage dice. |
 | `onHitEffect` | selectEffect | `''` | Effect applied to the target when the weapon attack hits. |
@@ -148,11 +148,19 @@ Makes an attack with one of the caster's equipped weapons against a single targe
 | `activityNearbyRange` | number | `5` | Distance from the hit target in which creatures can be chosen for the nearby activity. |
 | `animation` | selectAnimation | `[object Object]` | Animation |
 
+## `breathing`
+
+Marks an item or effect that lets its creature breathe water, or not need to breathe at all. Environment areas skip Holding Breath for it. Bound on an item or effect. Fires on `created` and `deleted`.
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `mode` | select | `water` | Environment areas don't make the creature hold its breath where it can breathe. |
+
 ## `checkBonus`
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `bonus` | text | `''` | Formula added to the roll when this bonus is taken. |
+| `bonus` | formula | `''` | Formula added to the roll when this bonus is taken. |
 | `phase` | select | `postResult` | When this bonus is offered during the roll. |
 | `ability` | select-many | `[]` | Limit this bonus to a list of abilities. |
 | `optional` | checkbox | `true` | Prompt before the bonus is added, rather than always adding it. |
@@ -178,7 +186,7 @@ Prompts to remove listed conditions from the user or its target once the roll fi
 |---|---|---|---|
 | `conditions` | select-many | `[]` | Conditions |
 | `affects` | select | `self` | Remove conditions from the user of the activity or from its target. |
-| `count` | text | `1` | Formula for how many conditions can be removed per use. @scaling reads the activity's consumption scaling. |
+| `count` | formula | `1` | Formula for how many conditions can be removed per use. @scaling reads the activity's consumption scaling. |
 | `targetChooses` | checkbox | `false` | When removing from the target, the target's owner picks the conditions. |
 | `autoSingle` | checkbox | `false` | Skip the prompt when no more qualifying conditions are present than can be removed. |
 | `requireCondition` | checkbox | `true` | Cancel the use when the creature has none of the listed conditions. |
@@ -224,8 +232,9 @@ Offers a damage bonus on a matching damage or healing roll. Bound on an effect o
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `bonus` | text | `''` | Damage Bonus |
+| `bonus` | formula | `''` | Damage Bonus |
 | `bonusDamageType` | select-many | `[]` | Damage types to offer as choices for this bonus. |
+| `applyTo` | select | `damage` | This bonus applies to damage, healing, or both. |
 | `attackType` | select | `''` | Limit this feature by attack type. |
 | `damageType` | select-many | `[]` | Limit this feature by a list of dealt damage types. |
 | `healingType` | select-many | `[]` | Limit this feature by a list of dealt healing types. |
@@ -234,6 +243,7 @@ Offers a damage bonus on a matching damage or healing roll. Bound on an effect o
 | `itemType` | select-many | `[]` | Limit this feature to certain item types. |
 | `spellLevel` | select-many | `[]` | Limit this feature by spell level. |
 | `spellSchool` | select-many | `[]` | Limit this feature by spell school. |
+| `firstCastOnly` | checkbox | `false` | Bonus applies only on the initial cast for a spell. |
 | `rollActivity` | selectActivity | `''` | Roll this activity when used. |
 | `rollItem` | checkbox | `false` | Roll this item when used. |
 | `maxTargets` | number | `0` | Limit the bonus to this many targets. 0 applies it to every target. |
@@ -254,6 +264,24 @@ Ends concentration on the spell when the roll left no creature affected. Bound o
 |---|---|---|---|
 | `condition` | select | `failedSave` | End concentration on the spell when the roll has this outcome. |
 | `activityId` | selectActivity | `''` | Only check uses of this activity. Leave empty to check every activity. |
+
+## `environment`
+
+Applies environment effects to tokens in this scene, level or region. Underwater and No Air start Holding Breath unless the creature can breathe there. Breathable Air in any overlapping area cancels that. Extreme Cold and Extreme Heat roll a Constitution save each hour of world time. Extreme Heat grants a Drink Water item, and drinking skips the next heat save. Effects are removed once the token is in no matching area. Bound on a scene, level or region. Fires when a token is placed, moves, enters or leaves, and when combat starts.
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `environments` | select-many | `[]` | Environments |
+| `timing` | select | `always` | When tokens in this area are affected. |
+| `coldIdentifiers` | selectIdentifiers | `[]` | Identifiers of equipped items or effects that make the creature succeed on Extreme Cold saves. |
+| `heatIdentifiers` | selectIdentifiers | `[]` | Identifiers of equipped items or effects that make the creature succeed on Extreme Heat saves. |
+| `heatDisadvantageIdentifiers` | selectIdentifiers | `[]` | Identifiers of equipped items or effects that give disadvantage on Extreme Heat saves, such as heavy clothing. |
+| `saveInterval` | number | `3600` | Seconds of world time between Extreme Cold or Extreme Heat saves. A combat round is 6 seconds. |
+| `coldDC` | number | `10` | DC of the Extreme Cold save. |
+| `heatDC` | number | `5` | DC of the first Extreme Heat save. |
+| `heatDCIncrease` | number | `1` | Added to the Extreme Heat DC for each save after the first. |
+| `heatArmorTypes` | select-many | `[medium, heavy]` | Creatures wearing armor of these types have disadvantage on the Extreme Heat save. |
+| `exhaustion` | number | `1` | Exhaustion levels a failed Extreme Cold or Extreme Heat save gives. |
 
 ## `extraAttack`
 
@@ -284,7 +312,7 @@ Attempts to grapple each target before the activity rolls. Bound on an activity.
 |---|---|---|---|
 | `auto` | checkbox | `false` | Apply grapple without rolling dice. |
 | `checkSize` | checkbox | `true` | Check Target Size |
-| `dc` | text | `''` | Overrides activity info if present. |
+| `dc` | formula | `''` | Overrides activity info if present. |
 | `conditions` | select-many | `[]` | Additional conditions to attach to the grapple effect. |
 | `useActivityInfo` | checkbox | `true` | Icons, item name, and roll DC will be taken from the parent save activity. |
 | `replaceActivity` | checkbox | `true` | The parent activity roll will be discarded and replaced by the grapple macro. |
@@ -299,11 +327,11 @@ Gives Heroic Inspiration to the activity's user or its targets. Bound on an acti
 
 ## `hide`
 
-Applies a hide effect to the user once the roll finishes, unless any target failed its save. Bound on an activity. Fires on `activityRollFinished`.
+Gives the user the system's Hiding condition once the roll finishes, unless the check failed. The check total is the DC to find them, and attacking ends it. Bound on an activity. Fires on `activityRollFinished`.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `effect` | selectEffect | `''` | Effect |
+| `dc` | formula | `''` | Formula the Stealth check must reach to hide. Leave blank for no DC. |
 | `animation` | selectAnimation | `[object Object]` | Animation |
 
 ## `ignoreCover`
@@ -321,7 +349,7 @@ Enchants another item on the actor with an extra uses recovery entry. Bound on a
 |---|---|---|---|
 | `identifier` | text | `''` | Identifier |
 | `period` | select | `initiative` | Recovery Period |
-| `formula` | text | `''` | Formula for the uses recovered. Leave empty to recover all uses. |
+| `formula` | formula | `''` | Formula for the uses recovered. Leave empty to recover all uses. |
 
 ## `modifyNextDamage`
 
@@ -346,7 +374,7 @@ Prompts for locations within range once the roll finishes, then moves the user's
 
 ## `moveRegion`
 
-Name a placed region after its spell and show the spell's move activity until the region is gone. @param {object} region Placed region. @param {object} item Spell that placed it. @param {string} moveIdentifier Identifier of the activity that moves the region. @returns {Promise<void>} / export async function prepareMovableRegion(region, item, moveIdentifier) { await documentUtils.update(region, {name: item.name}); const move = itemUtils.getActivityByIdentifier(item, moveIdentifier); if (!move) return; const unhideEffect = await itemUtils.unhideActivities(item, [move.id], {ids: true, favorite: true}); if (unhideEffect) await documentUtils.makeDependent(region, [unhideEffect]); } export async function syncRegionLights(region) { const {x, y} = getRegionCenter(region); const updates = region.parent.lights.filter(light => light.flags.dnd5e?.dependentOn === region.uuid && (light.x !== x || light.y !== y)).map(light => ({_id: light.id, x, y})); if (updates.length) await documentUtils.updateEmbeddedDocuments(region.parent, 'AmbientLight', updates); } function getPlacedRegion(activity, scene) { return regionUtils.getPlacedRegions(scene, activity).at(-1); } async function use({document, workflow}) { const newRegion = workflow.template; if (!newRegion) return; const config = automationUtils.getGenericConfigValues(document, 'chris-premades', 'moveRegion', configKeys); const identifier = documentUtils.getIdentifier(workflow.item); const sourceActivity = workflow.item.system.activities.get(config.sourceActivityId); if (!sourceActivity) { await documentUtils.deleteDocument(newRegion); return Logging.addMacroWarning('CPR', identifier, 'CHRISPREMADES.Macros.Generic.MoveRegion.NoSourceActivity', {notify: 'warn'}); } const region = getPlacedRegion(sourceActivity, newRegion.parent); if (!region) { await documentUtils.deleteDocument(newRegion); return Logging.addMacroWarning('CPR', identifier, 'CHRISPREMADES.Macros.Generic.MoveRegion.NoRegion'); } if (config.maxRange) { const oldArea = regionUtils.getArea(region); const newArea = regionUtils.getArea(newRegion); const distance = Math.hypot(newArea.x - oldArea.x, newArea.y - oldArea.y) / region.parent.dimensions.distancePixels; if (distance > config.maxRange) { await documentUtils.deleteDocument(newRegion); return Logging.addMacroWarning('CPR', identifier, 'CHRISPREMADES.Macros.Generic.MoveRegion.TooFar', {notify: true, format: {maxRange: config.maxRange}}); } } const {shapes, elevation, levels} = newRegion.toObject(); await documentUtils.deleteDocument(newRegion); await documentUtils.update(region, {shapes, elevation, levels}); await syncRegionLights(region); } /** Moves the region an earlier activity placed to the area this activity places, then deletes the new area. Bound on an activity. Fires on `activityRollFinished`. Lights made dependent on the region follow it to its new centre.
+Name a placed region after its spell and show the spell's move activity until the region is gone. @param {object} region Placed region. @param {object} item Spell that placed it. @param {string} moveIdentifier Identifier of the activity that moves the region. @returns {Promise<void>} / export async function prepareMovableRegion(region, item, moveIdentifier) { await documentUtils.update(region, {name: item.name}); const move = itemUtils.getActivityByIdentifier(item, moveIdentifier); if (!move) return; const unhideEffect = await itemUtils.unhideActivities(item, [move.id], {ids: true, favorite: true}); if (unhideEffect) await documentUtils.makeDependent(region, [unhideEffect]); } export async function syncRegionLights(region) { const {x, y} = getRegionCenter(region); const updates = region.parent.lights.filter(light => light.flags.dnd5e?.dependentOn === region.uuid && (light.x !== x || light.y !== y)).map(light => ({_id: light.id, x, y})); if (updates.length) await documentUtils.updateEmbeddedDocuments(region.parent, 'AmbientLight', updates); } function getPlacedRegion(activity, scene) { return regionUtils.getPlacedRegions(scene, activity).at(-1); } async function use({document, workflow}) { const newRegion = workflow.template; if (!newRegion) return; const config = automationUtils.getGenericConfigValues(document, 'chris-premades', 'moveRegion', configKeys); const identifier = documentUtils.getIdentifier(workflow.item); const sourceActivity = workflow.item.system.activities.get(config.sourceActivityId); if (!sourceActivity) { await documentUtils.deleteDocument(newRegion); return Logging.addMacroWarning('CPR', identifier, 'CHRISPREMADES.Macros.Generic.MoveRegion.NoSourceActivity', {notify: 'warn'}); } const region = getPlacedRegion(sourceActivity, newRegion.parent); if (!region) { await documentUtils.deleteDocument(newRegion); return Logging.addMacroWarning('CPR', identifier, 'CHRISPREMADES.Macros.Generic.MoveRegion.NoRegion'); } if (config.maxRange) { const oldArea = regionUtils.getArea(region); const newArea = regionUtils.getArea(newRegion); const distance = distanceUtils.measureDistance(region.parent, [oldArea, newArea]); if (!distanceUtils.isWithinRange(region.parent, distance, config.maxRange)) { await documentUtils.deleteDocument(newRegion); return Logging.addMacroWarning('CPR', identifier, 'CHRISPREMADES.Macros.Generic.MoveRegion.TooFar', {notify: true, format: {maxRange: config.maxRange}}); } } const {shapes, elevation, levels} = newRegion.toObject(); await documentUtils.deleteDocument(newRegion); await documentUtils.update(region, {shapes, elevation, levels}); await syncRegionLights(region); } /** Moves the region an earlier activity placed to the area this activity places, then deletes the new area. Bound on an activity. Fires on `activityRollFinished`. Lights made dependent on the region follow it to its new centre.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -360,7 +388,7 @@ Splits a rolled number of single-target attacks among the selected targets. Boun
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `activityId` | selectActivity | `''` | Activity |
-| `formula` | text | `@item.level` | Formula |
+| `formula` | formula | `@item.level` | Formula |
 | `skipDeadAndUnconscious` | checkbox | `true` | Skip Dead And Unconscious |
 | `attackActivityId` | selectActivity | `''` | Attack Activity |
 | `animation` | selectAnimation | `[object Object]` | Animation |
@@ -384,7 +412,7 @@ Adds bonus damage to the next hit, then rolls a rider activity on the target and
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `animation` | selectAnimation | `[object Object]` | Played on the hit target when the rider is used. |
-| `bonus` | text | `''` | Extra damage added on the next hit. @scaling is the number of levels the spell was upcast. |
+| `bonus` | formula | `''` | Extra damage added on the next hit. @scaling is the number of levels the spell was upcast. |
 | `bonusDamageType` | select | `''` | Damage type of the bonus. None uses the attack's damage type. |
 | `attackType` | select | `''` | Limit this feature by attack type. |
 | `rollActivity` | selectActivity | `''` | Activity rolled on the hit target after the bonus damage. |
@@ -445,7 +473,7 @@ Knocks prone each target that was hit. Bound on an activity. Fires on `activityR
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `distance` | text | `5` | Maximum distance moved, in feet. Accepts a formula. |
+| `distance` | formula | `5` | Maximum distance moved, in feet. Accepts a formula. |
 | `choose` | checkbox | `false` | Prompt for the distance in 5 ft steps up to the maximum. When off, the target moves the full distance. |
 | `stopAdjacent` | checkbox | `false` | A pull never moves the target closer than adjacent to the user. |
 | `maxSize` | select | `''` | Targets larger than this size are not moved. |
@@ -455,7 +483,7 @@ Knocks prone each target that was hit. Bound on an activity. Fires on `activityR
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `distance` | text | `5` | Maximum distance moved, in feet. Accepts a formula. |
+| `distance` | formula | `5` | Maximum distance moved, in feet. Accepts a formula. |
 | `choose` | checkbox | `false` | Prompt for the distance in 5 ft steps up to the maximum. When off, the target moves the full distance. |
 | `stopAdjacent` | checkbox | `false` | A pull never moves the target closer than adjacent to the user. |
 | `maxSize` | select | `''` | Targets larger than this size are not moved. |
@@ -467,7 +495,7 @@ Moves targets toward or away from the user once the roll finishes. Bound on an a
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `distance` | text | `5` | Maximum distance moved, in feet. Accepts a formula. |
+| `distance` | formula | `5` | Maximum distance moved, in feet. Accepts a formula. |
 | `choose` | checkbox | `false` | Prompt for the distance in 5 ft steps up to the maximum. When off, the target moves the full distance. |
 | `stopAdjacent` | checkbox | `false` | A pull never moves the target closer than adjacent to the user. |
 | `maxSize` | select | `''` | Targets larger than this size are not moved. |
@@ -477,7 +505,7 @@ Moves targets toward or away from the user once the roll finishes. Bound on an a
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `distance` | text | `5` | Maximum distance moved, in feet. Accepts a formula. |
+| `distance` | formula | `5` | Maximum distance moved, in feet. Accepts a formula. |
 | `choose` | checkbox | `false` | Prompt for the distance in 5 ft steps up to the maximum. When off, the target moves the full distance. |
 | `stopAdjacent` | checkbox | `false` | A pull never moves the target closer than adjacent to the user. |
 | `maxSize` | select | `''` | Targets larger than this size are not moved. |
@@ -502,7 +530,7 @@ Reduces the hit point maximum of targets by the damage dealt or by a rolled form
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `reduceByRoll` | text | `''` | Reduce By Roll |
+| `reduceByRoll` | formula | `''` | Reduce By Roll |
 | `halfDamage` | checkbox | `false` | Half Damage |
 | `checkSaves` | checkbox | `true` | Check Saves |
 | `removeOnSave` | checkbox | `false` | Remove On Save |
@@ -529,7 +557,7 @@ Rerolls a d20 roll with an added bonus and keeps the new result. Bound on an ite
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `bonus` | text | `''` | Formula added to the roll when this bonus is taken. |
+| `bonus` | formula | `''` | Formula added to the roll when this bonus is taken. |
 | `ability` | select-many | `[]` | Limit this bonus to a list of abilities. |
 | `failedOnly` | checkbox | `true` | This feature can be used on failed rolls only. |
 | `oncePerRoll` | checkbox | `true` | This feature can be used once per roll. |
@@ -541,7 +569,7 @@ Rerolls a d20 roll with an added bonus and keeps the new result. Bound on an ite
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `bonus` | text | `''` | Formula added to the roll when this bonus is taken. |
+| `bonus` | formula | `''` | Formula added to the roll when this bonus is taken. |
 | `ability` | select-many | `[]` | Limit this bonus to a list of abilities. |
 | `failedOnly` | checkbox | `true` | This feature can be used on failed rolls only. |
 | `oncePerRoll` | checkbox | `true` | This feature can be used once per roll. |
@@ -553,7 +581,7 @@ Rerolls a d20 roll with an added bonus and keeps the new result. Bound on an ite
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `bonus` | text | `''` | Formula added to the roll when this bonus is taken. |
+| `bonus` | formula | `''` | Formula added to the roll when this bonus is taken. |
 | `ability` | select-many | `[]` | Limit this bonus to a list of abilities. |
 | `failedOnly` | checkbox | `true` | This feature can be used on failed rolls only. |
 | `oncePerRoll` | checkbox | `true` | This feature can be used once per roll. |
@@ -566,7 +594,7 @@ Rerolls a d20 roll with an added bonus and keeps the new result. Bound on an ite
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `bonus` | text | `''` | Formula added to the roll when this bonus is taken. |
+| `bonus` | formula | `''` | Formula added to the roll when this bonus is taken. |
 | `ability` | select-many | `[]` | Limit this bonus to a list of abilities. |
 | `failedOnly` | checkbox | `true` | This feature can be used on failed rolls only. |
 | `oncePerRoll` | checkbox | `true` | This feature can be used once per roll. |
@@ -591,14 +619,14 @@ Rolls the effect's duration when it is created. Bound on an effect. Fires on `cr
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `formula` | text | `1d4` | Formula |
+| `formula` | formula | `1d4` | Formula |
 | `units` | select | `hour` | Duration Units |
 
 ## `saveBonus`
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `bonus` | text | `''` | Formula added to the roll when this bonus is taken. |
+| `bonus` | formula | `''` | Formula added to the roll when this bonus is taken. |
 | `phase` | select | `postResult` | When this bonus is offered during the roll. |
 | `ability` | select-many | `[]` | Limit this bonus to a list of abilities. |
 | `optional` | checkbox | `true` | Prompt before the bonus is added, rather than always adding it. |
@@ -625,7 +653,7 @@ Rolls a save at the end of the creature's turn while it is far from the effect's
 
 ## `selectDamageType`
 
-Prompts for a damage type and applies it to every damage roll. With `atCast`, the choice is made once when the spell is cast. Bound on an item. Fires on `itemPreambleComplete` and `itemDamageRoll`. No prompt is shown when fewer than two types are available.
+Prompts for a damage type and applies it to every damage roll. With `atCast`, the choice is made once when the spell is cast. Bound on an item. Fires on `itemPreambleComplete` and `itemDamageRoll`. No prompt is shown when fewer than two types are available. When a damage part has several types, the system's damage dialog is skipped so only this prompt asks.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -637,7 +665,7 @@ Prompts for a damage type and applies it to every damage roll. With `atCast`, th
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `bonus` | text | `''` | Formula added to the roll when this bonus is taken. |
+| `bonus` | formula | `''` | Formula added to the roll when this bonus is taken. |
 | `phase` | select | `postResult` | When this bonus is offered during the roll. |
 | `ability` | select-many | `[]` | Limit this bonus to a list of abilities. |
 | `optional` | checkbox | `true` | Prompt before the bonus is added, rather than always adding it. |
@@ -658,7 +686,7 @@ Prompts for a damage type and applies it to every damage roll. With `atCast`, th
 
 ## `specialItemUse`
 
-Uses an activity from another of the user's items once the roll finishes. Bound on an activity. Fires on `activityRollFinished`. The item and activity are prompted for when more than one qualifies.
+Uses an activity from another of the user's items once the roll finishes. Bound on an activity. Fires on `activityRollFinished`. The item and activity are prompted for when more than one qualifies. An `attackTypes` config on the item limits it to attack activities of those attack types.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -705,7 +733,10 @@ Removes targets that do not match the configured creature types. Bound on an ite
 | `aliveOnly` | checkbox | `false` | Remove targets at 0 hit points. |
 | `maxSize` | select | `''` | Remove targets larger than this size. |
 | `maxCR` | number | `-1` | Remove targets above this challenge rating. -1 skips the check. |
-| `chooseTargets` | checkbox | `false` | For area activities, show a checklist of the remaining targets after filtering and keep only the ones picked. The user is always removed. |
+| `chooseTargets` | checkbox | `false` | For area activities, show a checklist of the remaining targets after filtering and keep only the ones picked. |
+| `excludeSelf` | checkbox | `true` | The user is removed from targets. |
+| `limit` | formula | `''` | A checklist of remaining targets is shown if the filtered list includes more than this limit. |
+| `canSee` | checkbox | `false` | Keep only targets visible to the attacker. |
 | `minIntelligence` | number | `0` | Remove targets with a lower Intelligence score. 0 turns the check off. |
 | `excludeSummoner` | checkbox | `false` | Remove the summoner when a summoned creature uses this item. |
 
@@ -716,7 +747,7 @@ Teleports the user, or each target that failed its save, once the roll finishes.
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `targets` | select | `self` | Teleport the user, each target that failed its save, or the user to a space near one of the targets. Range is measured from the user, or from the chosen target for Near a Target. |
-| `range` | text | `''` | Maximum teleport distance. Leave blank to use the activity's own range. |
+| `range` | formula | `''` | Maximum teleport distance. Leave blank to use the activity's own range. |
 | `rangeFromRoll` | checkbox | `false` | Use the activity's utility roll total as the maximum teleport distance. Falls back to Range, then the activity's own range, when nothing was rolled. |
 | `requireSight` | checkbox | `true` | Only allow spaces the user can see. |
 | `companions` | number | `0` | How many allies within Companion Range the user may bring along. They keep their position relative to the user. |
@@ -730,7 +761,7 @@ Teleports the user, or each target that failed its save, once the roll finishes.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
-| `bonus` | text | `''` | Formula added to the roll when this bonus is taken. |
+| `bonus` | formula | `''` | Formula added to the roll when this bonus is taken. |
 | `phase` | select | `postResult` | When this bonus is offered during the roll. |
 | `ability` | select-many | `[]` | Limit this bonus to a list of abilities. |
 | `optional` | checkbox | `true` | Prompt before the bonus is added, rather than always adding it. |
@@ -755,7 +786,7 @@ Teleports the user, or each target that failed its save, once the roll finishes.
 |---|---|---|---|
 | `conditions` | select-many | `[]` | Conditions |
 | `affects` | select | `self` | Remove conditions from the user of the activity or from its target. |
-| `count` | text | `1` | Formula for how many conditions can be removed per use. @scaling reads the activity's consumption scaling. |
+| `count` | formula | `1` | Formula for how many conditions can be removed per use. @scaling reads the activity's consumption scaling. |
 | `targetChooses` | checkbox | `false` | When removing from the target, the target's owner picks the conditions. |
 | `autoSingle` | checkbox | `false` | Skip the prompt when no more qualifying conditions are present than can be removed. |
 | `requireCondition` | checkbox | `true` | Cancel the use when the creature has none of the listed conditions. |
@@ -767,7 +798,7 @@ Teleports the user, or each target that failed its save, once the roll finishes.
 |---|---|---|---|
 | `conditions` | select-many | `[]` | Conditions |
 | `affects` | select | `self` | Remove conditions from the user of the activity or from its target. |
-| `count` | text | `1` | Formula for how many conditions can be removed per use. @scaling reads the activity's consumption scaling. |
+| `count` | formula | `1` | Formula for how many conditions can be removed per use. @scaling reads the activity's consumption scaling. |
 | `targetChooses` | checkbox | `false` | When removing from the target, the target's owner picks the conditions. |
 | `autoSingle` | checkbox | `false` | Skip the prompt when no more qualifying conditions are present than can be removed. |
 | `requireCondition` | checkbox | `true` | Cancel the use when the creature has none of the listed conditions. |

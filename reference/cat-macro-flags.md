@@ -6,7 +6,7 @@ documentation it ships — says nothing about flags. Its real documentation is a
 GitHub wiki, which is not installed with the module.
 
 The shapes below were read out of CAT's own schema at the version this world runs
-(v0.1.7, `scripts/lib/macros.mjs`) and out of a stored document that uses it.
+(v0.1.8, `scripts/lib/macros.mjs`) and out of a stored document that uses it.
 
 ---
 
@@ -214,18 +214,20 @@ For work that runs when a summon is created or removed (cleanup, a follow-up), f
    Spiritual Weapon has them. `genericConfig.cat.summon` takes `activityId`, `range`, `identifier`,
    `replaceExisting`, `maxDistance`, `disposition`, `size`, `initiative`, `dismissAtZero`,
    `hostileOnParentEnd`, `summons: [{profile, name}]`, plus the follow-up keys `followUpActivityId`,
-   `followUpTiming`, `followUpRange`, `followUpTargets`, `followUpConsume`. `range` is what confines
-   placement; `replaceExisting` enforces one summon at a time.
+    `followUpTiming`, `followUpRange`, `followUpTargets`, `followUpConsume`. `range` is what confines
+    placement (in **feet** since 0.1.8 — the helpers convert to the scene's units themselves);
+    `replaceExisting` enforces one summon at a time.
 2. **Placement confinement comes from CAT's `aimDestination` — dnd5e 6's own `#placeSummons` has
    NO range constraint at all.** CAT's `SummonsManager.placeSummon` calls
-   `cat.utils.tokenUtils.aimDestination(ownerToken, { range: t, ... })`, where `t` is the generic's
-   `range`, falling back to the activity's `range.value`, then 5. It is the SAME mechanism this
-   world's Find Familiar macro hand-rolls (`aimDestination(gTok, { range: FF_RANGE })`). To confine
-   a summon, use the generic and set `range`, rather than writing a crosshair by hand.
+    `cat.utils.tokenUtils.aimDestination(ownerToken, { range: t, ... })`, where `t` is the generic's
+    `range`, falling back to the activity's `range.value`, then 5. **Since CAT 0.1.8 `range` is in
+    feet** (the helper converts to the scene's grid units), so a hand-rolled crosshair — this world's
+    Find Familiar macro included (`aimDestination(gTok, { range: FF_RANGE })`) — must pass feet too.
+    To confine a summon, use the generic and set `range`, rather than writing a crosshair by hand.
 3. **The macro belongs on the item that SUMMONS.** CAT's `SummonEvent` builds its trigger from
-   `this.summon.sourceDocument` — the ITEM that created the summon — and only pushes it if that
-   document has a CAT flag. So author the follow-up on the summoning item, not the summoned actor's
-   items. `summonPasses` (0.1.7) = `preCreate`, `create`, `preDelete`, `delete`, `placed`,
+  `this.summon.sourceDocument` — the ITEM that created the summon — and only pushes it if that
+  document has a CAT flag. So author the follow-up on the summoning item, not the summoned actor's
+  items. `summonPasses` (0.1.8) = `preCreate`, `create`, `preDelete`, `delete`, `placed`,
    `removed`; concentration-end may route through `delete` OR `removed`, so attach to both and make
    the body idempotent.
 4. **An activity left on the summoner measures range from the summoner.** midi measures an
