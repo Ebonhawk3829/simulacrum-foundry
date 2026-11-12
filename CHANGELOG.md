@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.13] - 2026-11-12
+
+Adds **Aura Effects** and **Gambit's Premades** to the world as **second-class options**, and tells the
+agent how to use them: CAT's own `aura` generic keeps precedence, and Gambit's Premades is an idea
+source, not a runtime.
+
+### Added
+
+- `reference/aura-effects.md` — the second-class aura option: an Active Effect of type
+  `auraeffects.aura`, applied through a per-aura token-attached Region, with the full `system` config
+  (`distanceFormula`, `disposition`, `applyToSelf`, `canStack` / `bestFormula`, `evaluatePreApply`,
+  `collisionType`, `combatOnly`, `disableOnHidden`, …). Written against CAT's `aura`, which wins.
+- `reference/gambits-premades.md` — GPS as a **compendium of ideas**: what it is, where its 18 packs
+  live, and the rule that we draw from it but never depend on its identifiers or runtime (and that CPR
+  is the reference where both automate a thing).
+- Both files are in the module's `flags.simulacrum.reference`, and `read_reference` now also reads the
+  `auraeffects` and `gambits-premades` readmes.
+- `world-conventions.md` — convention 6 (auras: CAT first, Aura Effects the fallback, never both) and
+  convention 7 (Gambit's Premades is an idea source).
+
+### Changed
+
+- `module.json` — `relationships.recommends` gains `auraeffects` and `gambits-premades`, each with a
+  reason; the `read_reference` description now names the aura options and the GPS idea source and
+  describes the changelog as the delta since the last sweep (it is no longer CAT/CPR-only).
+- `refresh-extracts.mjs` / `EXTRACTS.md` — a new `aura-effects` extract pinned at **2.3.0** (from
+  **git.gay**, whose tags lead the GitHub mirror): `README.md`, `CHANGELOG.md`,
+  `scripts/AuraActiveEffectData.mjs`, `scripts/helpers.mjs`, `scripts/constants.mjs`,
+  `scripts/systems/dnd5e.mjs`. Seven extracts, 245 files.
+
 ## [0.7.12] - 2026-11-12
 
 Syncs the reference to **midi-qol 14.6.11** and **DAE 14.6.9** (from 14.6.9 / 14.6.8). 14.6.11 is a

@@ -59,6 +59,7 @@ It does not guess field names. It has tools for:
 | **dnd5e** | **6.x** (verified on 6.0.6) |
 | **Required modules** | `midi-qol` (v14.6.11), `dae` (v14.6.9), `cat` (Coven's Automation Toolkit, 0.1.8) |
 | **Recommended** | `chris-premades` (2.1.8), `dfreds-convenient-effects` |
+| **Second-class options** | `auraeffects` (Aura Effects, 2.3.0) — the aura fallback, CAT's own `aura` wins; `gambits-premades` (3.0.5) — a compendium of ideas the agent may draw on, not a dependency. See `reference/aura-effects.md` and `reference/gambits-premades.md`. |
 | **Model access** | An [OpenRouter](https://openrouter.ai/keys) API key, and a model that supports tool calling |
 
 > [!IMPORTANT]

@@ -52,6 +52,10 @@ const MODULE_DOCS = Object.freeze({
   // so its documentation is bundled in this module's own reference instead. Listing
   // a module with nothing behind it would advertise material that does not exist.
   cat: ['README.md'],
+  // Second-class companions: the aura fallback and the idea source. Their readmes are what the
+  // module's own reference files (aura-effects.md, gambits-premades.md) summarise.
+  auraeffects: ['README.md'],
+  'gambits-premades': ['README.md'],
   // Upstream CHANGELOGs are deliberately not listed. They are the bulk of the readable
   // module documentation (midi-qol alone is ~650 KB, Chris's Premades ~175 KB) and are
   // rarely what an answer needs, so listing them invites a context-filling read for a
@@ -86,7 +90,7 @@ export class ReadReferenceTool extends BaseTool {
   constructor() {
     super(
       'read_reference',
-      'List or search the reference material available for writing these automations: the dnd5e 6.x field guide shipped with this module, the CAT macro flag shapes, the CPR generic settings (every generic and every setting it accepts, with defaults), the DAE effect expiry vocabulary, the dnd5e text enrichers, how this world runs Simple Quest, and the upstream changelog of CAT/CPR changes since the last sync (read it when asked whether existing abilities need updating). Use this BEFORE authoring an activity or setting a flag, so the field names and shapes come from the actual system rather than from memory. This is the ONLY route to the documentation: run_javascript, document_search and asset_search read the world\'s documents, never these. A "how does this work" or "does this exist" question is answered here, by reading the owning file - not by searching the world and reporting that nothing was found. Read-only.'
+      'List or search the reference material available for writing these automations: the dnd5e 6.x field guide shipped with this module, the CAT macro flag shapes, the CPR generic settings (every generic and every setting it accepts, with defaults), the DAE effect expiry vocabulary, the dnd5e text enrichers, how this world runs Simple Quest, the two aura options (CAT first, Aura Effects as the fallback) and the Gambit\'s Premades idea source, and the upstream changelog of what changed since the world was last swept (read it before auditing existing abilities after a bump). Use this BEFORE authoring an activity or setting a flag, so the field names and shapes come from the actual system rather than from memory. This is the ONLY route to the documentation: run_javascript, document_search and asset_search read the world\'s documents, never these. A "how does this work" or "does this exist" question is answered here, by reading the owning file - not by searching the world and reporting that nothing was found. Read-only.'
     );
     this.requiresConfirmation = false; // read-only
     this._index = null; // in-memory only, for the life of the page

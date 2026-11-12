@@ -104,6 +104,22 @@ when a teleport has NEITHER (no native activity and no CPR generic, or some lega
 native activity carries BOTH blocks — `teleport.value/units` is dnd5e's, `midiTeleport.*` is
 midi's — so audit both when reading one.
 
+### 6. Auras: CAT's `aura` generic first; Aura Effects is the fallback
+
+Two aura systems are installed. **CAT's own `aura` generic is the first** (`source: 'cat'`,
+`identifier: 'aura'`; config at `flags.cat.genericConfig.cat.aura.<key>`; `cat-macro-flags.md`), and
+CPR's old `passiveAura` was removed in its favour. The `auraeffects` module is the **second-class**
+option — an Active Effect of type `auraeffects.aura` — for an aura CAT cannot express (a hand-built
+effect, or a recipient/stacking/source-relative need its descriptor model does not cover). **Never
+apply one aura with both systems.** See `aura-effects.md`.
+
+### 7. Gambit's Premades is an idea source, not a dependency
+
+GPS is installed as a compendium of worked examples to read from at the agent's discretion, not a
+runtime to build on. Where GPS and CPR both automate a thing, CPR is the reference. Do not put GPS
+identifiers or references into our hand-authored abilities, and do not assume GPS is present when one
+runs. See `gambits-premades.md`.
+
 ---
 
 ## Weapon mastery: two mechanisms, and a three-part test
