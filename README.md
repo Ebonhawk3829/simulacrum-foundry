@@ -57,7 +57,7 @@ It does not guess field names. It has tools for:
 |---|---|
 | **Foundry VTT** | 14.369 or higher (verified on 14.370) |
 | **dnd5e** | **6.x** (verified on 6.0.6) |
-| **Required modules** | `midi-qol` (v14.6.9), `dae` (v14.6.8), `cat` (Coven's Automation Toolkit, 0.1.8) |
+| **Required modules** | `midi-qol` (v14.6.11), `dae` (v14.6.9), `cat` (Coven's Automation Toolkit, 0.1.8) |
 | **Recommended** | `chris-premades` (2.1.8), `dfreds-convenient-effects` |
 | **Model access** | An [OpenRouter](https://openrouter.ai/keys) API key, and a model that supports tool calling |
 

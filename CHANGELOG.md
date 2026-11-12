@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.12] - 2026-11-12
+
+Syncs the reference to **midi-qol 14.6.11** and **DAE 14.6.9** (from 14.6.9 / 14.6.8). 14.6.11 is a
+large release with several macro-visible behaviour changes.
+
+### Changed
+
+- `upstream-changelog.md` — **reset to an overwrite**: a rolling window of the changes not yet swept in
+  world, never an append. The world was cleaned up to midi 14.6.9 / DAE 14.6.8 / CAT 0.1.8 / CPR 2.1.8,
+  so the spent CAT/CPR and earlier midi/DAE entries were dropped; the file now holds only this delta.
+- PINNED → midi **14.6.11** / DAE **14.6.9** (midi now requires DAE ≥14.6.7); new **midi-qol 14.6.11**,
+  **midi-qol 14.6.10** and **DAE 14.6.9** sections, with checklist entries: **an item's own macro no
+  longer runs implicitly**, **workflow rebuilt from a card** (and the new `midi-qol.workflowRebuilt`
+  hook), **`MidiQOL.socket()`**'s role check removed, **undrawn targets** now save and take damage,
+  **untyped damage → "No Type"**, **`applyTokenDamage`**'s save multiplier, **Waiting on players**
+  (`MidiQOL.playerWaits`), and **area heights**.
+- `midi-reactions.md` (banner → 14.6.11) — the reaction-dialog UI changed, but the trigger/condition
+  logic and the call sites the doc describes are unchanged (`reactiontargeted` is still never passed).
+- `dae-effect-expiry.md` (banner → 14.6.9) — labels only; 14.6.9 changes only how often a moved-bonus
+  deprecation warning is logged.
+- `README.md` requirements → `midi-qol` 14.6.11 / `dae` 14.6.9.
+- Curated extracts re-pinned and refreshed (21 files: 19 midi, 2 DAE; none added or pruned).
+
 ## [0.7.11] - 2026-11-11
 
 Syncs the reference to **CAT 0.1.8** and **CPR 2.1.8** (from 0.1.7 / 2.1.7). CAT 0.1.8 carries a
