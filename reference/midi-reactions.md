@@ -147,6 +147,33 @@ parts, in order; each one fails **silently**.
    that is what Insect Shield did wrong first time. This is midi's call, not CAT's
    `workflowUtils.completeActivityUse`; they are different namespaces.
 
+### Registering the socket handler — the trap that keeps the FIRST closure
+
+The socket in part 4 is a **world-hooks** socket, so register through world-hooks' own helper:
+**`game.worldHooks.register(name, fn)`**. It deletes the name first
+(`socket?.functions?.delete(name)`) and then registers — that is what makes an edited handler take
+effect on a reload.
+
+**Never call `game.worldHooks.socket.register(name, fn)` directly, and never guard with
+`if (socket.functions.has(name)) continue;`.** socketlib's `register` *refuses* a duplicate
+(`if (this.functions.has(name)) { console.warn('… already registered … Ignoring'); return; }`) and
+keeps the **first** closure for the life of the page: an edited handler is written, reloads, parses,
+and never runs, with no error — it reads as "my fix did nothing". The guard against the warning *is*
+the bug. On a world whose world-hooks predates the helper, delete first:
+`if (sock.functions?.has?.(name)) sock.functions.delete(name);`.
+
+Checking that handler **names** are present cannot detect staleness — a stale handler is present under
+the right name. Verify by source instead:
+`String(sock.functions.get(name)).includes('<a marker unique to the new code>')`.
+
+Scope: only handlers reached **through a socketlib name** are affected. A raw `game.socket.on(EVENT, …)`
+in a world-hooks script is torn down by the scope and re-registered fresh on reload, so it updates
+normally. And `game.socket.emit` does **not** echo to the sending client — an "everyone hears it, one
+claims it" arbiter stalls when the claimer *is* the sender; socketlib's
+`executeAsGM`/`executeAsUser` run the local path when the caller is already that user, so prefer
+socketlib for any cross-client call. (world-hooks' `runAll()` clears its scopes but deliberately not
+`socket.functions`, so a name registered outside the helper is never refreshed.)
+
 ---
 
 ## What this file is not

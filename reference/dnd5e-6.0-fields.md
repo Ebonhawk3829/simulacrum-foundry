@@ -666,7 +666,36 @@ prompts once per creature. The effect can live on an actor **outside** the area;
 necessarily whoever holds the effect. Deleting the concentration effect takes its dependents with
 it through dnd5e's registry; a dangling `dependentOn` should be treated as unlinked so the spell
 effect still ends. A spell effect's source is `flags.dnd5e.item.uuid`, its level
-`flags.dnd5e.spellLevel` (falling back to `system.level`).
+  `flags.dnd5e.spellLevel` (falling back to `system.level`).
+
+### A midi Region Behaviour's `activationEntry` is DERIVED, not a field you set
+
+For a midi area (AoE) activity, the activity's `system.activities.<id>.regionBehavior` block has
+exactly **twelve** fields — `enabled`, `dispositionFilter`, `excludeSource`, `oncePerTurn`,
+`wallRestriction`, `regionVisibility`, `attachToken`, `moveDistance`, `moveDirection`, `moveTiming`,
+`templateOrigin`, `rules` (`RegionBehaviourEditor.#onSave` writes those same twelve). **There is no
+`activationEntry` on the activity**, so a write of one cannot be stored or read. midi's shipped
+README's *Region Behaviour (AoE)* table presents *Entry On Activation* as an activity field to
+toggle — it is not; do not go looking for it.
+
+What is true: the **placed** `RegionBehaviour` document *does* have an `activationEntry`
+(BooleanField, `initial: true`), and that is what core reads in `_onTokenEnter`
+(`if (this._activating && !this.activationEntry) return;`). midi **hardcodes** it when it builds the
+placed behaviour (`_attachRegionActivityBehavior`): `activationEntry: !castAffectsTargets`, where
+`castAffectsTargets = ["attack","damage","save"].includes(this.type) && !!workflow?.targets?.size`.
+
+So you do not turn it off — you arrange for it to come out false: the cast activity's **type** must
+be `attack`/`damage`/`save` **and** the caster's workflow must have had at least one target (which
+needs the world's `autoTarget` to populate targets from the template). A `damage` cast with **empty**
+`damage.parts` satisfies this while rolling nothing — the standard "places an area, does nothing on
+cast" shape for a persistent-area spell.
+
+**Caveat:** `castAffectsTargets` is read at the **caster's** workflow, from the caster's
+auto-targeted targets — not from the creatures inside the drawn area. A caster who drops the area over
+a group without being among them can still yield `activationEntry: true`. Failing that, the only lever
+is to write `activationEntry: false` onto the **placed** RegionBehaviour after the region exists (a
+script, e.g. a CAT embedded macro). `Template Origin Height` in that same README table is the mirror
+case and *is* real — it maps to `templateOrigin` among the twelve.
 
 ## 13. Writing into embedded collections, and the traps that fail silently
 

@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.14] - 2026-11-13
+
+Corrections folded in from in-world lessons, as **overwrites** to the reference (these are
+current-state docs, so the wrong text is replaced, not annotated).
+
+### Fixed
+
+- `cat-embedded-macros.md` §1 — the host list was self-contradictory and incomplete. `embeddedMacros`
+  does **not** "must live on the item": the real hosts (from `CatEvent.getActorTriggers`) are
+  **Actor**, **Token**, **Item**, **ActiveEffect** (an applied enchantment, and the actor's own
+  effects) and **Activity** — the last present in the source but observed dead. The **Actor** host was
+  missing (33 actors in this world use it), and §7 already described it.
+- `cat-macro-flags.md` §6 — the *OnUse macro names* passage was labelled *midi 14.6.5* and claimed an
+  item's own macro runs when its On Use Macros list is empty. **midi 14.6.11 reverted that**; the
+  passage now states the current rule, plus the "a body is not a macro that fires" warning. Added the
+  generalisable note: a version label in a heading is a *scope*, and a **revert** can leave a labelled
+  passage describing behaviour that no longer exists while its neighbours stay correct.
+
+### Added
+
+- `dnd5e-6.0-fields.md` §12 — *A midi Region Behaviour's `activationEntry` is DERIVED, not a field you
+  set*: the activity's `regionBehavior` block is the twelve documented fields with **no**
+  `activationEntry`; the **placed** `RegionBehaviour` carries the real field and midi hardcodes it as
+  `!castAffectsTargets`; how to make "places an area, does nothing on cast" (cast type `damage`, empty
+  `damage.parts`, auto-targeted), and its caveat. Corrects midi's shipped README *Region Behaviour
+  (AoE)* table, whose *Entry On Activation* row is not an activity field.
+- `midi-reactions.md` §8 — *Registering the socket handler*: use `game.worldHooks.register(name, fn)`
+  (it deletes first); never register on the socket directly or guard with `if (functions.has(name))
+  continue` — that locks in the first closure. socketlib keeps the **first** closure, so an edited
+  handler is written, reloads, parses and never runs; verify by **source**, not by name;
+  `game.socket.emit` does not echo to the sender — prefer `executeAsGM`/`executeAsUser`.
+- `read_reference` now also reads the **`world-hooks`** readme (`MODULE_DOCS`).
+
 ## [0.7.13] - 2026-11-12
 
 Adds **Aura Effects** and **Gambit's Premades** to the world as **second-class options**, and tells the

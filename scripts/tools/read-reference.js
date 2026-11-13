@@ -56,6 +56,8 @@ const MODULE_DOCS = Object.freeze({
   // module's own reference files (aura-effects.md, gambits-premades.md) summarise.
   auraeffects: ['README.md'],
   'gambits-premades': ['README.md'],
+  // The world's own module. Its readme carries the socketlib registration rule the reference cites.
+  'world-hooks': ['README.md'],
   // Upstream CHANGELOGs are deliberately not listed. They are the bulk of the readable
   // module documentation (midi-qol alone is ~650 KB, Chris's Premades ~175 KB) and are
   // rarely what an answer needs, so listing them invites a context-filling read for a

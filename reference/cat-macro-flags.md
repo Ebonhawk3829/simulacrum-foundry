@@ -185,12 +185,26 @@ the claim that a space after the comma breaks later entries** — the source tri
 entries comma-separated and read the parsed macro list back rather than trusting either
 report.
 
-### OnUse macro names (midi 14.6.5)
+### OnUse macro names (midi 14.6.11)
 
-- A **blank** onUse macro name means the item's **own** macro (the used activity's, else the
-  item's; for an effect change, the effect's activity's, else its item's). An item with a macro but
-  **no** onUse macros runs the macro after active effects.
+- A **blank** onUse macro name means the item's **own** macro — the macro of the used activity if it
+  has one, else the item macro; for an effect change, the effect's activity's macro, else the macro
+  of the effect's item (its parent for a transfer effect, else its origin). With no such macro the
+  entry does nothing.
+- **An item's own macro does NOT run implicitly.** A macro *body* with no matching `onUseMacroName`
+  entry does **not** run: **14.6.11 reverted the 14.6.5 behaviour** where an item with a macro but no
+  onUse entry ran it after active effects (it double-ran macros the item's effects already called).
+  So a body is not a macro that fires — a DIME body (`flags.dae.macro.command`) or an activity body
+  (`system.activities.<id>.macroData.command`) with no `onUseMacroName` entry is dead, silently.
+  Add an entry; leave its name blank to mean the item's own macro. (`flags.cat.embeddedMacros` is
+  unaffected: CAT dispatches its own events, not midi's onUse list.)
 - An `onUseMacroName` effect change with **no pass** is ignored and reported.
+
+**A version label in a heading is a scope, not current state.** This sub-heading read "(midi 14.6.5)"
+and carried a claim the 14.6.11 **revert** killed: a version-labelled passage states behaviour *as of
+that version*, and a revert in the delta can leave it describing something that no longer exists
+while the unlabelled passages beside it stay correct. Check a labelled passage against the installed
+version; do not let it cast doubt on its neighbours, or vice versa.
 
 ### CAT embedded macro shape, restated
 

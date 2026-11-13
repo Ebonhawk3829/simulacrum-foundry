@@ -52,17 +52,30 @@ build_ability({
 The builder syntax-checks every script before writing anything, so a script that
 cannot parse is refused rather than stored.
 
-`embeddedMacros` must live on the **ITEM**. An activity-level `embeddedMacros` does
-**not fire** — not at any event or pass — even though CAT's schema accepts it, its
-`hasCatFlag` returns true for it, and its `getActorTriggers` builds a Trigger for it.
-The source reads as if it should work; observation disagrees, so treat an activity-level
-script as dead and author on the item. (The related-but-opposite result: `flags.cat.macros`,
-the fn-macro references, **do** work at activity level — that is the `cat-macro-flags.md`
-§4 distinction, and the two results must not be merged.)
+`embeddedMacros` may live on **any document CAT builds a trigger for**, and that list is wider than
+the item. From `CatEvent.getActorTriggers` (`lib/event.mjs:76`), which `hasCatFlag` (`:249`, true for
+anything carrying `flags.cat.embeddedMacros`) gates, the hosts are:
 
-A third host **does** fire: an **active applied effect** on the actor carries its own
-`embeddedMacros`, run with `actor` = the effect's bearer. It is the only way to give a
-debuff logic that runs on the victim's turn without an actor flag or a world macro.
+- **Actor** — the actor document itself. Its pass is scope-composed as `"actor" + Pass`
+  (`getActorTriggers(this.actor, 'actor' + passName, …)`, `:232`/`:369`), e.g. `actorTurnStart` —
+  §7. This is the host for logic that runs on the actor's own turn rather than on a use of an item;
+  33 actors in this world carry them.
+- **Token** — the TokenDocument (`:79`).
+- **Item** — the item (`:81`). The safe default for an ability's own code.
+- **ActiveEffect** — an **applied enchantment** effect on the item (`:82`), and the actor's own
+  active effects (`actorUtils.getEffects(actor)`, `:89`); run with `actor` = the effect's bearer.
+  This is the way to give a debuff logic that runs on the victim's turn without an actor flag or a
+  world macro.
+- **Activity** — *in the source, but observed dead* (`:85`). An activity-level `embeddedMacros` did
+  **not fire** at any event or pass, even though CAT's schema accepts it, `hasCatFlag` returns true
+  for it, and `getActorTriggers` builds a Trigger for it. Observation disagrees with the source here,
+  so treat an activity-level script as dead and author on the item instead. (The related-but-opposite
+  result: `flags.cat.macros`, the fn-macro references, **do** work at activity level — the
+  `cat-macro-flags.md` §4 distinction; the two results must not be merged.)
+
+So "author on the item" is the right default, but **do not read it as item-only**: actor-, token- and
+effect-hosted scripts are real, and the actor host is the one to reach for when the trigger is the
+actor's own turn.
 
 ## 2. What the script can see
 
