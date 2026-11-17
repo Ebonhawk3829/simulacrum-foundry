@@ -22,10 +22,13 @@ HOW TO USE
 
 PINNED
 
-- Reference synced to **CAT 0.1.8**, **CPR 2.1.8**, **midi-qol 14.6.11** and **DAE 14.6.9**
-  (midi 14.6.11 requires DAE ≥**14.6.7** and is dnd5e **6.0.x only**, max 6.0.999 — dnd5e 6.1 breaks
-  midi's damage card; CPR 2.1.8 requires CAT 0.1.8). midi and DAE are on **GitHub** (`latest-dnd6`).
-- **This delta:** midi **14.6.10 → 14.6.11** and DAE **14.6.8 → 14.6.9**. Everything up to midi 14.6.9
+- Reference synced to **CAT 0.1.8**, **CPR 2.1.8**, **midi-qol 14.6.13** and **DAE 14.6.10**
+  (midi 14.6.13 requires DAE ≥**14.6.7** and is dnd5e **6.0.x only**, max 6.0.999; CPR 2.1.8 requires
+  CAT 0.1.8). midi and DAE are on **GitHub** (`latest-dnd6`).
+- **midi 14.6.13 is the LAST 14.6 release.** 14.7.0 onward require dnd5e **6.1**; a world staying on
+  dnd5e 6.0 installs 14.6.13 from `releases/download/v14.6.13/module.json`. This is the terminal midi
+  for the 6.0 line — the next midi update is a 6.1-only release.
+- **This delta:** midi **14.6.10 → 14.6.13** and DAE **14.6.8 → 14.6.10**. Everything up to midi 14.6.9
   / DAE 14.6.8 / CAT 0.1.8 / CPR 2.1.8 was swept in world and is **not** repeated here.
 
 ---
@@ -70,15 +73,62 @@ PINNED
       origin and a creature shields it), a sphere or emanation reaches only its true height from its
       centre, and an emanation reaches below the feet and above the head. **Look for:** anything that
       depends on where an area was drawn, its template-origin height, or its elevation.
+- [ ] **Massive damage** (midi 14.6.13) — with *Enforce death saves* on, a **character** dropped to 0 hit
+      points **dies outright** when the damage left over equals or exceeds its hit point maximum: three
+      death save failures and the Dead status. Undo on the damage card reverses it, and the card's
+      multiplier (×2 and so on) counts the failures as the first application does. Characters only — not
+      with the vitality item, which takes the overflow. **Look for:** anything that assumed "0 HP =
+      unconscious" and never a straight death.
+- [ ] **Stanching wounds** (`flags.midi-qol.stanch`, midi 14.6.13) — a new flag on an effect (its own
+      flag, or a change with that key) marks an effect a **check** can end: `dc` (default 15), `skill`
+      (default `med`), `range` (default 5), `healing` (`none`|`spell`|`magical`|`any`). It ends when the
+      affected creature rolls that skill and reaches the DC, or when a creature within range rolls it
+      with the affected creature targeted (a Medicine roll from the sheet is enough); `healing` says
+      whether restoring hit points also ends it. **Look for:** a hand-rolled bleeding/wounded effect that
+      should use this instead.
+- [ ] **midi sample items handed to CPR** (midi 14.6.13) — midi **removed** its sample copies of *Aid*,
+      *Chill Touch*, *Command*, *Dragon's Breath*, *Guiding Bolt*, *Mass Cure Wounds*, *Pass without
+      Trace*, *Radiant Strikes*, *Sanctuary*, *Shield*, *Thunderwave*, *Toll the Dead*, and the actions
+      *Check Cover*, *Generic Actions*, *Hide*, *Influence*, *Knock Out*, *Ready*, *Shove*, *Squeeze*,
+      *Study*, *Suffocation*, *Underwater*, in favour of CPR 2.1.8's. Copies already on actors keep
+      their macros until 14.8.0. **Look for:** a world item that is a copy of one of those; switch it to
+      CPR's automation (CAT's CatKit → apply CPR). Also: midi's *Search* now finds creatures hidden with
+      CPR's *Hide*, and midi tests for CPR 2.1.8 correctly (it had checked a version named "2.1.18").
+- [ ] **DAE macro change with a non-string value** (DAE 14.6.10) — a `macro.itemMacro` /
+      `macro.activityMacro` / `macro.execute` change whose **value is a number or boolean** (Foundry 14
+      stores `0` as a number) threw `change.value.startsWith is not a function` and **never ran**; it now
+      runs with that argument. **Look for:** an effect whose `macro.*` change value is a number (e.g.
+      `0`) or `true`/`false`.
+- [ ] **`@item.classIdentifier` in an applied effect** (DAE 14.6.10) — it was not filled in for
+      **spells**; it now is. **Look for:** an applied effect referencing `@item.classIdentifier`.
 
 ---
+
+## midi-qol 14.6.13
+
+**The last 14.6 release** — 14.7.0 onward need dnd5e 6.1 (see PINNED). The audit items are in the
+checklist; the rest:
+
+- **Massive damage** (checklist) and **stanching wounds** (`flags.midi-qol.stanch`, checklist) are the
+  two new features. The sample *Infernal Glaive*, *Infernal Tail*, *Devil's Glaive*, *Wounding Weapon*
+  and *Longsword of Wounding* use `stanch`; their wounds can be stanched by a creature within 5 feet, and
+  *Devil's Glaive* no longer prompts at the start of the turn.
+- **Fixed:** a check activity that names no ability, skill or tool threw and scored the target 1 (it now
+  rolls a d20 with no modifier); with **CAT 0.1.8**, an item with a cast activity made every effect
+  pointing at it throw in CAT's effect hook (midi's workaround now covers 0.1.8); an item using **CPR's
+  Hide** macro was tested against a CPR version named "2.1.18" and so was handled as older CPR on CPR
+  2.1.8 (now correct); damage a macro set above the target's remaining HP logged a damage-list error; a
+  sample item dragged from the compendium showed in CAT's CatKit as not automated.
+- **Sample items removed** in favour of CPR 2.1.8 (checklist).
+- *(14.6.12)* *List Gambit's Premades prompts in the player list* is **off** by default.
 
 ## midi-qol 14.6.11
 
 A large release; the audit items are in the checklist. The rest:
 
 - **Waiting on players** (checklist) — plus a settings trio on the GM tab, all on: *GM can answer for
-  players*, *Players see who midi is waiting for*, *List Gambit's Premades prompts in the player list*.
+  players*, *Players see who midi is waiting for*, *List Gambit's Premades prompts in the player list*
+  (now off by default as of 14.6.12).
 - **Macros:** the implicit item-macro run removed (checklist); the card-rebuild and `workflowRebuilt`
   changes (checklist); `MidiQOL.socket()` (checklist).
 - **Countdowns:** dialogs that answer themselves when time runs out (reactions, optional bonuses,
@@ -99,6 +149,18 @@ A large release; the audit items are in the checklist. The rest:
 ## midi-qol 14.6.10
 
 - Reinstated the tab labels and language entries 14.6.9 shipped without.
+
+## DAE 14.6.10
+
+Mostly **dnd5e 6.1** work — a condition builder for rule changes, damage-type lists for the
+ignore/downgrade rules, and a migration of the attacker trait keys (`system.traits.idi` / `idr` / `idv`)
+into dnd5e 6.1's damage rules — **none of which applies on dnd5e 6.0**. What applies here:
+
+- **Fixed:** a `macro.*` change whose value is a number or boolean threw `change.value.startsWith is not
+  a function` and never ran (checklist); `@item.classIdentifier` in an applied effect was not filled in
+  for spells (checklist); changing a change's **key or type** kept the previous value in the value list;
+  an **enchantment's rider effect** applied to a creature kept dnd5e's rider mark, so its data
+  preparation threw and it could not be deleted cleanly.
 
 ## DAE 14.6.9
 

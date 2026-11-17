@@ -668,6 +668,16 @@ it through dnd5e's registry; a dangling `dependentOn` should be treated as unlin
 effect still ends. A spell effect's source is `flags.dnd5e.item.uuid`, its level
   `flags.dnd5e.spellLevel` (falling back to `system.level`).
 
+### `flags.midi-qol.stanch` — an effect a check can end (midi 14.6.13)
+
+An effect marked with **`flags.midi-qol.stanch`** (its own flag, or a change with that key) is one a
+**check** ends: `{ dc: 15, skill: "med", range: 5, healing: "none"|"spell"|"magical"|"any" }`. It ends
+when the affected creature rolls that skill and reaches the DC, or when a creature within `range` rolls
+it with the affected creature targeted (a Medicine roll from the sheet is enough). `healing` says
+whether restoring hit points also ends it — `none` (the default), `spell`, `magical` or `any`. midi's
+sample *Infernal Glaive*, *Infernal Tail*, *Devil's Glaive*, *Wounding Weapon* and *Longsword of
+Wounding* use it; it is a natural home for a hand-rolled bleeding/wounded effect.
+
 ### A midi Region Behaviour's `activationEntry` is DERIVED, not a field you set
 
 For a midi area (AoE) activity, the activity's `system.activities.<id>.regionBehavior` block has

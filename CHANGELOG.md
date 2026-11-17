@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.15] - 2026-11-17
+
+Syncs the reference to **midi-qol 14.6.13** and **DAE 14.6.10** (from 14.6.11 / 14.6.9).
+
+### Changed
+
+- `upstream-changelog.md` — PINNED → midi **14.6.13** / DAE **14.6.10**, and the window extended to
+  midi 14.6.10–14.6.13 / DAE 14.6.8–14.6.10 (the previous 14.6.10–14.6.11 window was not reported
+  swept, so it is kept and this batch added). New checklist entries: **massive damage**, **stanching
+  wounds** (`flags.midi-qol.stanch`), **midi's sample items handed to CPR 2.1.8**, and the DAE fixes for
+  a **`macro.*` change with a numeric/boolean value** and **`@item.classIdentifier` in applied
+  effects**. New sections for **midi-qol 14.6.13** and **DAE 14.6.10**.
+- **midi 14.6.13 is the last 14.6 release** — 14.7.0 onward require dnd5e 6.1; noted in the PINNED
+  block, since it is the terminal midi for the dnd5e 6.0 line.
+- `midi-reactions.md` (banner → 14.6.13) and `dae-effect-expiry.md` (banner → 14.6.10) — labels only;
+  the reaction and expiry content was re-checked against the new tags and is unchanged.
+- `README.md` requirements → `midi-qol` 14.6.13 / `dae` 14.6.10.
+- Curated extracts re-pinned to `v14.6.13` / `v14.6.10`.
+
 ## [0.7.14] - 2026-11-13
 
 Corrections folded in from in-world lessons, as **overwrites** to the reference (these are
