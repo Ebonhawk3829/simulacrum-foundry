@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.16] - 2026-11-19
+
+**The dnd5e 6.1 move.** Reference synced to **dnd5e 6.1.1**, **midi-qol 14.7.0**, **CAT 0.1.9** and
+**CPR 2.1.9** (DAE stays 14.6.10). The whole stack moved together: midi 14.7.0 requires dnd5e
+6.1.0–6.1.999, and CAT 0.1.9 / CPR 2.1.9 require dnd5e 6.1 + midi 14.7 + DAE 14.6.10.
+
+### Changed
+
+- `upstream-changelog.md` — the delta window for the 6.1 round: **dnd5e 6.1.1** (attacker damage rules,
+  antimagic, falling-damage traits, renown/factions, and the two breaking removals), **midi 14.7.0**
+  (adapts to 6.1; the `applyTokenDamage` ignore-trait fix; the removed Replace-activities setting),
+  **CAT 0.1.9** (`getDistance` → Infinity, `consumeUsage` → `consumeResources`, antimagic, grapple
+  drag) and **CPR 2.1.9** (generic changes plus five new generics).
+- `cpr-generic-config.md` — regenerated at 2.1.9: **76 generics (71 with settings, 5 with none), 402
+  settings** (was 71 / 363). New: `conditionGainedChoiceRemoveCondition`, `featAbility`,
+  `grappleAttackAdvantage`, `reduceDamageTaken`, `skillAbility`.
+- `dnd5e-6.0-fields.md` — verified against 6.1.1, with a new "What 6.1 changed, on top of 6.0" section.
+- `midi-reactions.md` (banner → 14.7.0) and `cat-macro-flags.md` / `cat-embedded-macros.md` (banner →
+  0.1.9) — labels only; their content was re-checked and is unchanged.
+- `README.md` requirements and `module.json` system compatibility → dnd5e **6.1.1**.
+- Curated extracts re-pinned and refreshed: 130 changed, 1 moved (CPR `wardingFlare` → `all/`), 1
+  pruned (CPR `discipleOfLife` is gone at 2.1.9). Seven extracts, 244 files.
+
 ## [0.7.15] - 2026-11-17
 
 Syncs the reference to **midi-qol 14.6.13** and **DAE 14.6.10** (from 14.6.11 / 14.6.9).

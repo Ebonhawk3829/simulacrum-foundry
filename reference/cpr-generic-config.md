@@ -1,7 +1,7 @@
 # CPR generic macro settings
 
 Every generic macro in Chris's Premades and the settings each accepts in
-`flags.cat.genericConfig`. Generated from CPR source at **2.1.8** by
+`flags.cat.genericConfig`. Generated from CPR source at **2.1.9** by
 `resources/generate-cpr-config.mjs` — do not hand-edit; re-run the generator.
 
 Nothing publishes this list. CPR declares it in code, on each generic's exported
@@ -37,7 +37,7 @@ Types: `checkbox` (boolean), `text`, `number`, `select`, `select-many` (array),
 `selectIdentifiers` (array of item identifiers). Default is what is used when the
 setting is absent.
 
-**71 generics: 66 with settings, 5 with none (363 settings total).**
+**76 generics: 71 with settings, 5 with none (402 settings total).**
 
 ---
 
@@ -95,10 +95,16 @@ Offers this activity as an optional damage bonus on a hit, then rolls it on the 
 | `creatureTypeBonus` | formula | `''` | Extra damage added to the bonus when every hit target is one of the Target Creature Types. |
 | `targetCreatureTypes` | select-many | `[]` | Creature types that receive the Creature Type Bonus. |
 | `tag` | text | `''` | Tagged options are offered as choices under the bonus that owns the tag instead of as separate bonuses. |
+| `ownsTag` | text | `''` | Offer this bonus once, with the options carrying this tag as choices. At least one must be chosen. |
 | `limit` | formula | `1` | How many tagged options can be chosen for one damage roll. |
 | `workflowProperty` | text | `''` | Only offer this option when an earlier bonus has set this workflow property. |
 | `identifiers` | selectIdentifiers | `[]` | Limit this feature to a list of specific items. |
 | `attackType` | select | `''` | Limit this feature by attack type. |
+| `damageTypes` | select-many | `[]` | Limit this feature by a list of dealt damage types. |
+| `criticalOnly` | checkbox | `false` | Only offer this option on a critical hit. |
+| `singleTarget` | checkbox | `false` | Only offer this option when the attack hits exactly one target. |
+| `automatic` | checkbox | `false` | Apply this option without offering it as a choice. |
+| `weaponTypes` | select-many | `[]` | Only offer this option for attacks with weapons of one of these types. |
 | `attackAbility` | select-many | `[]` | Limit this bonus to a list of abilities. |
 | `maxSize` | select | `''` | Only offer this option when every hit target is this size or smaller. |
 | `requiredItems` | selectIdentifiers | `[]` | Only offer this option when the actor has an item with one of these identifiers. |
@@ -191,6 +197,7 @@ Prompts to remove listed conditions from the user or its target once the roll fi
 | `autoSingle` | checkbox | `false` | Skip the prompt when no more qualifying conditions are present than can be removed. |
 | `requireCondition` | checkbox | `true` | Cancel the use when the creature has none of the listed conditions. |
 | `reactionConditions` | select-many | `[]` | Conditions the creature can end by using its reaction. Its owner is asked after the roll. |
+| `minimumRoll` | text | `0` | Conditions are only removed from the user when the activity's roll total reaches this. 0 removes them on any roll. |
 
 ## `conditionAutoSave`
 
@@ -202,6 +209,19 @@ Makes the actor automatically succeed on saves against activities that apply one
 | `magical` | checkbox | `false` | Magical |
 | `display` | checkbox | `true` | Display |
 
+## `conditionGainedChoiceRemoveCondition`
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `conditions` | select-many | `[]` | Conditions |
+| `affects` | select | `self` | Remove conditions from the user of the activity or from its target. |
+| `count` | formula | `1` | Formula for how many conditions can be removed per use. @scaling reads the activity's consumption scaling. |
+| `targetChooses` | checkbox | `false` | When removing from the target, the target's owner picks the conditions. |
+| `autoSingle` | checkbox | `false` | Skip the prompt when no more qualifying conditions are present than can be removed. |
+| `requireCondition` | checkbox | `true` | Cancel the use when the creature has none of the listed conditions. |
+| `reactionConditions` | select-many | `[]` | Conditions the creature can end by using its reaction. Its owner is asked after the roll. |
+| `minimumRoll` | text | `0` | Conditions are only removed from the user when the activity's roll total reaches this. 0 removes them on any roll. |
+
 ## `contestedCheck`
 
 Rolls a check for the user and sets the activity's check DC to the result. Bound on an activity. Fires on `activityTargeting` and `activityPreambleComplete`.
@@ -212,6 +232,7 @@ Rolls a check for the user and sets the activity's check DC to the result. Bound
 | `sourceAbilities` | select-many | `[]` | Ability checks the user contests with when no skill is set. The highest modifier is rolled. |
 | `advantageMaxSize` | select | `''` | Roll the contest with advantage when every target is this size or smaller. |
 | `sizeCheck` | select | `''` | Remove targets that are too large or immune for this grapple or shove. |
+| `grappledOnly` | checkbox | `false` | Remove targets the user is not grappling. Cancels the use when no target is left. |
 
 ## `contextAdvantage`
 
@@ -233,9 +254,11 @@ Offers a damage bonus on a matching damage or healing roll. Bound on an effect o
 | Setting | Type | Default | What it does |
 |---|---|---|---|
 | `bonus` | formula | `''` | Damage Bonus |
+| `contextual` | checkbox | `false` | This bonus always applies when its conditions are met, but may still prompt for damage type or target. |
 | `bonusDamageType` | select-many | `[]` | Damage types to offer as choices for this bonus. |
 | `applyTo` | select | `damage` | This bonus applies to damage, healing, or both. |
 | `attackType` | select | `''` | Limit this feature by attack type. |
+| `thrownRanged` | checkbox | `false` | Also trigger for ranged weapon attacks made with a thrown weapon. |
 | `damageType` | select-many | `[]` | Limit this feature by a list of dealt damage types. |
 | `healingType` | select-many | `[]` | Limit this feature by a list of dealt healing types. |
 | `identifiers` | selectIdentifiers | `[]` | Limit this feature to a list of specific items. |
@@ -255,6 +278,9 @@ Offers a damage bonus on a matching damage or healing roll. Bound on an effect o
 | `targetCreatureTypes` | select-many | `[]` | Only apply this bonus to hit targets of these creature types. |
 | `useActivityCosts` | checkbox | `false` | Use Activity Costs |
 | `allowCritical` | checkbox | `true` | Critical hit rules can be applied to this bonus. |
+| `oncePerTurn` | checkbox | `false` | Limit this bonus to one use per turn. |
+| `oncePerTurnPerTarget` | checkbox | `false` | Each creature can take this bonus once per turn. |
+| `excludeSelf` | checkbox | `false` | Do not offer this bonus on rolls made with the item that carries it. |
 
 ## `endIfUnaffected`
 
@@ -295,6 +321,14 @@ Splits a number of attacks with another item among nearby enemies once the roll 
 | `identifier` | text | `unarmed-strike` | Identifier of the attack item. |
 | `animation` | selectAnimation | `[object Object]` | Animation |
 
+## `featAbility`
+
+Uses the ability chosen for a feat's ability score increase in the item's save DCs, attacks and cast spells. Bound on an item. Fires on `created`, `medkit`, and `munched`. The choice is read from the item, the feature that granted it, or the feat it is part of. Without a recorded choice, save DCs keep their formula and attacks and spells use the highest listed ability.
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `abilities` | select-many | `[]` | Abilities the feat chooses between. The ability picked in the feat's Ability Score Improvement sets save DCs, attack rolls and cast spells. Without a recorded pick, save DCs keep their formula and the others use the highest listed ability. |
+
 ## `firearm`
 
 Firearm rules. A natural roll at or below the misfire score turns the attack into a miss and damages the firearm, and a damaged or broken firearm can't attack. Weapon properties: `explosive` makes creatures within 5 feet of each hit target save (Dex, DC 8 + Dex + proficiency) or take 1d8 Fire; `recoil` blocks attacks beyond the weapon's normal range for the rest of the turn after an attack in combat; `blaring` gives Disadvantage on Stealth until the start of the user's next turn. Bound on an item. Fires on `itemPreTargeting`, `itemPreambleComplete`, `itemAttackRollComplete` and `itemRollFinished`. The item's `repair` activity rolls a tinker's tools check against 8 + the misfire score; a failure breaks the firearm.
@@ -313,9 +347,18 @@ Attempts to grapple each target before the activity rolls. Bound on an activity.
 | `auto` | checkbox | `false` | Apply grapple without rolling dice. |
 | `checkSize` | checkbox | `true` | Check Target Size |
 | `dc` | formula | `''` | Overrides activity info if present. |
+| `bonus` | formula | `''` | Rolled and added to the grappler's Athletics check when no DC is given. |
 | `conditions` | select-many | `[]` | Additional conditions to attach to the grapple effect. |
 | `useActivityInfo` | checkbox | `true` | Icons, item name, and roll DC will be taken from the parent save activity. |
 | `replaceActivity` | checkbox | `true` | The parent activity roll will be discarded and replaced by the grapple macro. |
+
+## `grappleAttackAdvantage`
+
+Grants advantage on attack rolls against creatures grappled by the attacker. Bound on an item or an effect. Fires on `actorAttackRollConfig`.
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `attackType` | select | `attack` | Limit this feature by attack type. |
 
 ## `heroicInspiration`
 
@@ -431,7 +474,7 @@ Grants advantage on attack rolls if an ally is near the target. - `attackType`: 
 
 ## `preventDeath`
 
-Offers to use this item when a hit would drop the actor to 0 hit points, keeping the actor alive. Bound on an item. Fires on `targetDamageComplete`.
+Offers to use this item when a hit would drop the actor to 0 hit points, keeping the actor alive. Bound on an item. Fires on `targetDamageComplete`. Runs the called event `preventDeath` with `{item, workflow}` after it keeps the actor alive.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -442,6 +485,9 @@ Offers to use this item when a hit would drop the actor to 0 hit points, keeping
 | `excludeCritical` | checkbox | `false` | Ignore Critical Hits |
 | `excludeDamageTypes` | select-many | `[]` | Ignored Damage Types |
 | `display` | checkbox | `true` | Display |
+| `targetHP` | text | `''` | Formula for the hit points the creature is left on. Blank leaves it on 1. |
+| `healingTraits` | checkbox | `false` | Healing immunity stops the feature; healing resistance halves the hit points left. |
+| `useActivity` | selectActivity | `''` | Roll this activity when the feature triggers, in place of the item. |
 
 ## `proficiencyChoice`
 
@@ -523,6 +569,21 @@ Offers to redirect an attack against the user to another nearby creature. Bound 
 | `sizes` | select-many | `[]` | Limit the new target to these sizes. |
 | `swapPlaces` | checkbox | `false` | The creature being attacked and the new target swap places. |
 | `requireCover` | checkbox | `false` | Only offer the redirect while the creature being attacked has cover from the attacker. |
+
+## `reduceDamageTaken`
+
+Rolls an activity to reduce damage taken by the owner, or by creatures near it. Bound on an item. Fires on `sceneDamageFlatReductions`.
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `rollActivity` | selectActivities | `[]` | Rolled when the feature triggers. Its roll total is subtracted from the damage, and its costs are spent. |
+| `range` | text | `0` | Also protect other creatures within this distance. 0 protects the owner only. |
+| `alliesOnly` | checkbox | `true` | Allies Only |
+| `source` | select | `any` | Damage Source |
+| `attackType` | select | `''` | Limit this feature by attack type. |
+| `damageTypes` | select-many | `[]` | Limit this feature by a list of dealt damage types. |
+| `skipIncapacitated` | checkbox | `false` | Not While Incapacitated |
+| `confirm` | checkbox | `true` | Prompt Before Use |
 
 ## `reduceMaxHP`
 
@@ -661,6 +722,16 @@ Prompts for a damage type and applies it to every damage roll. With `atCast`, th
 | `rememberChoice` | checkbox | `false` | Offer "Don't ask again this combat" on the damage type prompt. |
 | `atCast` | checkbox | `false` | Prompt once when the spell is cast and use that damage type for every later damage roll. |
 
+## `skillAbility`
+
+Listed skill checks use whichever listed ability gives the higher modifier. Bound on an item. Fires on `actorSituational`.
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `skills` | select-many | `[]` | Skills |
+| `abilities` | select-many | `[]` | Abilities |
+| `useItem` | checkbox | `true` | Use the item when a check switches ability, so the swap shows in chat. |
+
 ## `skillBonus`
 
 | Setting | Type | Default | What it does |
@@ -696,7 +767,6 @@ Uses an activity from another of the user's items once the roll finishes. Bound 
 | `activityIdentifier` | text | `''` | Use only the activity with this identifier. Leave blank to allow any matching activity. |
 | `activationTypes` | select-many | `[]` | Only activities with one of these activation types can be used. Leave empty to allow any. |
 | `excludeActivityTypes` | select-many | `[]` | Activities of these types cannot be used. |
-| `consumeUsage` | checkbox | `false` | Spend the used item or activity's own uses. |
 | `consumeResources` | checkbox | `false` | Spend the resources the used activity consumes. |
 
 ## `spellAnimation`
@@ -742,7 +812,7 @@ Removes targets that do not match the configured creature types. Bound on an ite
 
 ## `teleport`
 
-Teleports the user, or each target that failed its save, once the roll finishes. Bound on an activity. Fires on `activityRollFinished`. Provide preselected targets by setting the workflow property `chris-premades.teleportCompanions` to an array of token ids or token documents.
+Teleports the user, or each target that failed its save, once the roll finishes. Bound on an activity. Fires on `activityRollFinished`. Provide preselected targets by setting the workflow property `chris-premades.teleportCompanions` to an array of token ids.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -791,6 +861,7 @@ Teleports the user, or each target that failed its save, once the roll finishes.
 | `autoSingle` | checkbox | `false` | Skip the prompt when no more qualifying conditions are present than can be removed. |
 | `requireCondition` | checkbox | `true` | Cancel the use when the creature has none of the listed conditions. |
 | `reactionConditions` | select-many | `[]` | Conditions the creature can end by using its reaction. Its owner is asked after the roll. |
+| `minimumRoll` | text | `0` | Conditions are only removed from the user when the activity's roll total reaches this. 0 removes them on any roll. |
 
 ## `turnStartChoiceRemoveCondition`
 
@@ -803,6 +874,7 @@ Teleports the user, or each target that failed its save, once the roll finishes.
 | `autoSingle` | checkbox | `false` | Skip the prompt when no more qualifying conditions are present than can be removed. |
 | `requireCondition` | checkbox | `true` | Cancel the use when the creature has none of the listed conditions. |
 | `reactionConditions` | select-many | `[]` | Conditions the creature can end by using its reaction. Its owner is asked after the roll. |
+| `minimumRoll` | text | `0` | Conditions are only removed from the user when the activity's roll total reaches this. 0 removes them on any roll. |
 
 ## `unhideActivities`
 

@@ -7,11 +7,29 @@ for the specific traps described below.
 and more fields than are described here, and the system is the source of truth —
 `inspect_document_schema` and `list_document_schemas` will show the current shape
 of anything. What follows is the set of things that were found to matter while
-building abilities against **6.x specifically** (verified against 6.0.6), most of
+building abilities against **6.x specifically** (verified against 6.1.1), most of
 which fail *quietly* rather than erroring.
 
-Everything here was read out of the dnd5e source. Where something was inferred
-rather than confirmed, it says so.
+Everything here was read out of the dnd5e source. Where something was inferred rather
+than confirmed, it says so.
+
+### What 6.1 changed, on top of 6.0
+
+- **Rule changes can target damage on the attacker.** New change types **ignore / downgrade** a
+  target's immunity, resistance or vulnerability to a damage type; they sit on the **attacker** and are
+  checked at each damage roll. This supersedes DAE's `system.traits.idi` / `idr` / `idv` (deprecated;
+  DAE 14.6.10 migrates them). **Ignoring immunity now gives full damage (it was half).**
+- **Antimagic.** A status and a region behavior; an item can read `item.magicAvailable` (false while it
+  needs attunement it lacks, or under antimagic). Enchantments are suppressed by antimagic.
+- **Falling damage** has its own resistance/immunity/vulnerability sub-category.
+- **Renown / factions** (optional rule): a **Faction** actor type and **Renown** items.
+- **Authoring additions:** `ActiveEffect5e.getRollData`; `item.classIdentifier` in feature roll data;
+  `@item.type.document`; equipped armour/shield are known during base data prep (so effects can be
+  conditional on them); a change type can define **limited key options** (a select in the change dialog
+  and readable labels in the list); hooks `dnd5e.dropCreateItems` and `dnd5e.advancementCreateItemData`.
+- **Breaking:** the `dnd5e-textFormat` Handlebars helper and the `formatText` utility were **removed
+  without deprecation**; `price.valueInGP` and `getCraftCost`'s gold cost are **no longer rounded**. The
+  `system.bonuses.*` shim (`ActiveEffect5e.SHIM_FIELDS`) is still present, removed at 6.2.
 
 ### What 6.x actually changed, for someone who knew 5.3.3
 
