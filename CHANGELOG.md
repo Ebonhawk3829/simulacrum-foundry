@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.17] - 2026-11-21
+
+Small CAT + CPR sync: **CAT 0.1.10** and **CPR 2.1.10** (from 0.1.9 / 2.1.9). dnd5e, midi and DAE do
+not move.
+
+### Changed
+
+- `upstream-changelog.md` — the delta window: CAT's new **Third-Party Reactions** setting (and the
+  `thirdParty` pass opt-in), CPR's `attackRider` / `preventDeath` / `reduceDamageTaken` changes, and four
+  new generics (`languageChoice`, `willingFail`, `moveTargets`, `touchDelivery`).
+- `cpr-generic-config.md` — regenerated at 2.1.10: **80 generics (74 with settings, 6 with none), 415
+  settings** (was 76 / 402).
+- `cat-macro-flags.md` / `cat-embedded-macros.md` — banners → 0.1.10.
+- `README.md` requirements → CAT 0.1.10 / CPR 2.1.10.
+- Curated extracts re-pinned and refreshed (21 changed; nothing added or pruned).
+
 ## [0.7.16] - 2026-11-19
 
 **The dnd5e 6.1 move.** Reference synced to **dnd5e 6.1.1**, **midi-qol 14.7.0**, **CAT 0.1.9** and

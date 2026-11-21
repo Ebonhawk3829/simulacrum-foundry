@@ -57,8 +57,8 @@ It does not guess field names. It has tools for:
 |---|---|
 | **Foundry VTT** | 14.369 or higher (verified on 14.370) |
 | **dnd5e** | **6.x** (verified on 6.1.1) |
-| **Required modules** | `midi-qol` (v14.7.0), `dae` (v14.6.10), `cat` (Coven's Automation Toolkit, 0.1.9) |
-| **Recommended** | `chris-premades` (2.1.9), `dfreds-convenient-effects` |
+| **Required modules** | `midi-qol` (v14.7.0), `dae` (v14.6.10), `cat` (Coven's Automation Toolkit, 0.1.10) |
+| **Recommended** | `chris-premades` (2.1.10), `dfreds-convenient-effects` |
 | **Second-class options** | `auraeffects` (Aura Effects, 2.3.0) — the aura fallback, CAT's own `aura` wins; `gambits-premades` (3.0.5) — a compendium of ideas the agent may draw on, not a dependency. See `reference/aura-effects.md` and `reference/gambits-premades.md`. |
 | **Model access** | An [OpenRouter](https://openrouter.ai/keys) API key, and a model that supports tool calling |
 

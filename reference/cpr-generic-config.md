@@ -1,7 +1,7 @@
 # CPR generic macro settings
 
 Every generic macro in Chris's Premades and the settings each accepts in
-`flags.cat.genericConfig`. Generated from CPR source at **2.1.9** by
+`flags.cat.genericConfig`. Generated from CPR source at **2.1.10** by
 `resources/generate-cpr-config.mjs` — do not hand-edit; re-run the generator.
 
 Nothing publishes this list. CPR declares it in code, on each generic's exported
@@ -37,7 +37,7 @@ Types: `checkbox` (boolean), `text`, `number`, `select`, `select-many` (array),
 `selectIdentifiers` (array of item identifiers). Default is what is used when the
 setting is absent.
 
-**76 generics: 71 with settings, 5 with none (402 settings total).**
+**80 generics: 74 with settings, 6 with none (415 settings total).**
 
 ---
 
@@ -107,6 +107,8 @@ Offers this activity as an optional damage bonus on a hit, then rolls it on the 
 | `weaponTypes` | select-many | `[]` | Only offer this option for attacks with weapons of one of these types. |
 | `attackAbility` | select-many | `[]` | Limit this bonus to a list of abilities. |
 | `maxSize` | select | `''` | Only offer this option when every hit target is this size or smaller. |
+| `sizeAboveUser` | text | `''` | Only offer this option when every hit target is at most this many sizes larger than the attacker. Leave blank to ignore size. |
+| `attackModes` | select-many | `[]` | Attack Modes |
 | `requiredItems` | selectIdentifiers | `[]` | Only offer this option when the actor has an item with one of these identifiers. |
 | `suppressedBy` | selectIdentifiers | `[]` | Do not offer this option when the actor has an item with one of these identifiers. |
 | `ownTurn` | checkbox | `false` | In combat, only offer this option on the attacker's own turn. |
@@ -394,6 +396,16 @@ Enchants another item on the actor with an extra uses recovery entry. Bound on a
 | `period` | select | `initiative` | Recovery Period |
 | `formula` | formula | `''` | Formula for the uses recovered. Leave empty to recover all uses. |
 
+## `languageChoice`
+
+Prompts for languages the actor doesn't know and grants them with an effect. Bound on an activity. Fires on `activityRollFinished`.
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `count` | formula | `1` | Languages |
+| `replace` | checkbox | `true` | Replace Previous Choice |
+| `replaceLimit` | formula | `''` | Languages Replaced Per Use |
+
 ## `modifyNextDamage`
 
 Maximizes or doubles the bearer's next damage roll. Bound on an effect. Fires on `actorDamageRollComplete`.
@@ -423,6 +435,14 @@ Name a placed region after its spell and show the spell's move activity until th
 |---|---|---|---|
 | `sourceActivityId` | selectActivity | `''` | Activity that placed the region this activity moves. |
 | `maxRange` | number | `0` | Furthest the region's centre can move from its old centre. 0 ignores distance. |
+
+## `moveTargets`
+
+Lets each target of the activity move to a spot it picks with a crosshair, without provoking opportunity attacks. Bound on an activity. Fires on `activityRollFinished`.
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `fraction` | number | `0.5` | Speed Fraction |
 
 ## `multiSingleTarget`
 
@@ -474,7 +494,7 @@ Grants advantage on attack rolls if an ally is near the target. - `attackType`: 
 
 ## `preventDeath`
 
-Offers to use this item when a hit would drop the actor to 0 hit points, keeping the actor alive. Bound on an item. Fires on `targetDamageComplete`. Runs the called event `preventDeath` with `{item, workflow}` after it keeps the actor alive.
+Offers to use this item when a hit would drop the actor to 0 hit points, keeping the actor alive. Bound on an item. Fires on `targetDamageComplete`, and on `sceneDamageComplete` for other creatures when `range` is set. Runs the called event `preventDeath` with `{item, workflow}` after it keeps the actor alive.
 
 | Setting | Type | Default | What it does |
 |---|---|---|---|
@@ -488,6 +508,9 @@ Offers to use this item when a hit would drop the actor to 0 hit points, keeping
 | `targetHP` | text | `''` | Formula for the hit points the creature is left on. Blank leaves it on 1. |
 | `healingTraits` | checkbox | `false` | Healing immunity stops the feature; healing resistance halves the hit points left. |
 | `useActivity` | selectActivity | `''` | Roll this activity when the feature triggers, in place of the item. |
+| `range` | text | `0` | Also protect other creatures within this distance. 0 protects only the owner. |
+| `alliesOnly` | checkbox | `true` | Allies Only |
+| `othersOnly` | checkbox | `false` | Protect Others Only |
 
 ## `proficiencyChoice`
 
@@ -583,6 +606,7 @@ Rolls an activity to reduce damage taken by the owner, or by creatures near it. 
 | `attackType` | select | `''` | Limit this feature by attack type. |
 | `damageTypes` | select-many | `[]` | Limit this feature by a list of dealt damage types. |
 | `skipIncapacitated` | checkbox | `false` | Not While Incapacitated |
+| `seeSource` | checkbox | `false` | Source Must Be Visible |
 | `confirm` | checkbox | `true` | Prompt Before Use |
 
 ## `reduceMaxHP`
@@ -850,6 +874,16 @@ Teleports the user, or each target that failed its save, once the roll finishes.
 | `ability` | select-many | `[]` | Abilities |
 | `tool` | select-many | `[]` | Tools |
 
+## `touchDelivery`
+
+Delivers the user's next touch spell through one of their summons, spending that summon's reaction. Bound on an activity. Fires on `activityRollFinished`, then on the user's next spell at `actorPreambleComplete`.
+
+| Setting | Type | Default | What it does |
+|---|---|---|---|
+| `summonIdentifier` | text | `''` | Summons with this identifier deliver the spell. Leave blank to use summons created by this item. |
+| `range` | number | `100` | Range |
+| `specialDuration` | select | `1Attack` | Ends After |
+
 ## `turnEndChoiceRemoveCondition`
 
 | Setting | Type | Default | What it does |
@@ -929,6 +963,10 @@ Turns a patch or card into the item or creatures it stores when it is used. Boun
 ### `useOnDeath`
 
 Uses this item when its owner gains the dead status. Bound on an item. Fires on `actorCreated`. Unequipped items are skipped.
+
+### `willingFail`
+
+Lets each non-hostile target that succeeds on the save choose to fail it instead. Bound on an activity. Fires on `activitySavesComplete`. The target's owner is asked, or the GM when no player owns it.
 
 
 ---
